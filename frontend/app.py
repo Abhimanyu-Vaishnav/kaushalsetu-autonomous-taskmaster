@@ -392,7 +392,7 @@ with tabs[1]:
                         st.metric("Final Total Score", f"{eval_out['total_score']} / 100 pts")
                     with mc4:
                         ready = eval_out['placement_ready']
-                        st.metric("Verification Gate", "PASSED 🚀" if ready else "REMEDIAL comb")
+                        st.metric("Verification Gate", "PASSED 🚀" if ready else "REMEDIAL 🟠")
                         
                     st.divider()
                     
@@ -447,7 +447,7 @@ with tabs[1]:
                 st.error(f"Connection error: {e}")
 
 # --- TAB 3: AUTONOMOUS PLACEMENT & RECRUITER OUTBOX ---
-elif role_view == "🚀 Autonomous Placement & Recruiter Outbox":
+with tabs[2]:
     st.subheader("🚀 Autonomous Placement & Dispatch Audit Ledger")
     st.markdown("Immutable ledger tracking candidate job applications, employer interview dispatches, and verification hashes.")
     
@@ -463,7 +463,7 @@ elif role_view == "🚀 Autonomous Placement & Recruiter Outbox":
         st.error(f"Could not load placement ledger: {e}")
 
 # --- TAB 4: SYSTEM GUIDE, ARCHITECTURE & TECH INSPECTOR ---
-elif role_view == "📖 System Guide, Architecture & Tech Inspector":
+with tabs[3]:
     st.subheader("📖 System Architecture, Docs & Technology Inspector")
     st.markdown("Full transparency hub detailing BYOF problem statement, dual-AI pipeline, security consent gates, and infrastructure stack.")
     
@@ -480,7 +480,7 @@ elif role_view == "📖 System Guide, Architecture & Tech Inspector":
         """)
         
     with st.expander("⚙️ Section 2: Step-by-Step System Workflow Guide"):
-        st.markdown("""
+        st.markdown(r"""
         1. **Center Governance Setup (Tab 1)**: Institute admins define placement thresholds (e.g., 70%), interview attempt caps (max 3), registered branches, and enroll student rosters.
         2. **Interactive Exam Synthesis & Test Taking (Tab 2)**: Gemini 3.5 Pro generates 5-MCQ exams + practical project challenges. Candidates log in, review consent, select answers via unselected radio buttons, and submit diagnostic logs or hardware photos.
         3. **Dual-AI Dynamic Evaluation (Tab 2)**:
