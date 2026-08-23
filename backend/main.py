@@ -1,9 +1,12 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import csv
 import io
+import os
 
 from database import (
     get_institute,
@@ -18,14 +21,14 @@ from database import (
 )
 from agent_engine import (
     generate_assessment,
-    evaluate_submission,
-    dispatch_autonomous_placement
+    generate_verified_certificate
 )
+from recruiter_agent import AutonomousRecruiterAgent
 
 app = FastAPI(
     title="SkillForge Autonomous - Enterprise Multi-Tenant Platform",
     description="Autonomous Vocational Operations, Multimodal Grading & Placement Action Engine",
-    version="3.6.0",
+    version="3.7.0",
 )
 
 app.add_middleware(
@@ -35,6 +38,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount Static Portfolios Directory if exists
+PORTFOLIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "portfolios")
+os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 
 # --- Pydantic Schemas ---
 
@@ -78,7 +85,19 @@ class FullEvaluationReq(BaseModel):
     practical_task: str
     grading_rubric: List[str]
     submission_text: str
+    github_url: Optional[str] = None
+    live_url: Optional[str] = None
     image_base64: Optional[str] = None
+
+class CertificateReq(BaseModel):
+    candidate_name: str
+    student_id: str
+    course_name: str
+    branch_name: str
+    total_score: int
+    mcq_score: float
+    practical_score: float
+    metric_hash: str
 
 
 # --- REST API Endpoints ---
@@ -87,9 +106,19 @@ class FullEvaluationReq(BaseModel):
 def health_check():
     return {
         "status": "healthy",
-        "service": "SkillForge Enterprise Multi-Tenant Platform",
-        "version": "3.6.0"
+        "service": "SkillForge Autonomous Background Action Platform",
+        "version": "3.7.0"
     }
+
+# Portfolio HTML Route
+@app.get("/portfolio/{student_id}", response_class=HTMLResponse)
+def get_student_portfolio(student_id: str):
+    file_path = os.path.join(PORTFOLIO_DIR, f"{student_id}.html")
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    else:
+        raise HTTPException(status_code=404, detail=f"Dossier portfolio for student '{student_id}' not found")
 
 # 1. Institute & Branch Management
 @app.get("/api/institute/info")
@@ -154,11 +183,12 @@ def api_generate_exam(req: AssessmentGenReq):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 4. Student Submission & Dynamic Evaluation Pipeline
+# 4. Autonomous Agent Pipeline Execution
 @app.post("/api/student/evaluate-and-dispatch")
 def api_student_pipeline(req: FullEvaluationReq):
     try:
-        res = dispatch_autonomous_placement(
+        agent = AutonomousRecruiterAgent()
+        res = agent.execute_autonomous_pipeline(
             student_id=req.student_id,
             assessment_id=req.assessment_id,
             mcq_answers=req.mcq_answers,
@@ -166,6 +196,8 @@ def api_student_pipeline(req: FullEvaluationReq):
             submission_text=req.submission_text,
             practical_task=req.practical_task,
             rubric=req.grading_rubric,
+            github_url=req.github_url,
+            live_url=req.live_url,
             image_base64=req.image_base64
         )
         return {"success": True, "data": res}
@@ -178,19 +210,8 @@ def api_get_placements():
     return {"success": True, "data": get_job_applications()}
 
 # 6. Verified Certificate Generator Endpoint
-class CertificateReq(BaseModel):
-    candidate_name: str
-    student_id: str
-    course_name: str
-    branch_name: str
-    total_score: int
-    mcq_score: float
-    practical_score: float
-    metric_hash: str
-
 @app.post("/api/certificate/generate")
 def api_generate_certificate(req: CertificateReq):
-    from agent_engine import generate_verified_certificate
     cert = generate_verified_certificate(
         req.candidate_name,
         req.student_id,

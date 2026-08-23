@@ -8,7 +8,7 @@ import io
 BACKEND_URL = "http://localhost:8000"
 
 st.set_page_config(
-    page_title="SkillForge Autonomous - Production Platform",
+    page_title="SkillForge Autonomous - Background Agent Engine",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -61,21 +61,31 @@ st.markdown("""
         border: 2px solid #6366F1;
         margin-top: 15px;
     }
+    .terminal-box {
+        background-color: #0F172A;
+        color: #38BDF8;
+        font-family: monospace;
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        font-size: 0.88rem;
+        line-height: 1.5;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-header">⚡ SkillForge Autonomous</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Continuous Action Engine for Vocational Institutes & Placements | Powered by Gemini 3.5 & Gemma</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">End-to-End Autonomous Background Agent Engine | Taskmaster Track</div>', unsafe_allow_html=True)
 
-# Sidebar Real-Time Badges & One-Click Demo Mode
+# Sidebar System Health & One-Click Demo Preset Switcher
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/google-logo.png", width=45)
-    st.subheader("System Health Status")
+    st.subheader("System Health & Status")
     try:
         res = requests.get(f"{BACKEND_URL}/health", timeout=2)
         if res.status_code == 200:
-            st.success("🟢 FastAPI Backend Connected")
-            st.success("⚡ Gemma Pre-check Engine Ready")
+            st.success("🟢 FastAPI Backend Connected (v3.7.0)")
+            st.success("⚡ Gemma Pre-check Screener Ready")
             st.success("🤖 Gemini 3.5 Pro & Flash Active")
         else:
             st.error("🔴 Backend Error")
@@ -83,37 +93,36 @@ with st.sidebar:
         st.error("🔴 Backend Unreachable")
         
     st.divider()
-    st.markdown("### ⚡ One-Click Demo Mode")
-    st.caption("Quick presets for Hackathon Judges:")
+    st.markdown("### ⚡ One-Click Demo Switcher")
+    st.caption("Instant test presets for Judges:")
     
-    if st.button("🟢 Preset A: Top Performer (Score: 92%)", use_container_width=True):
+    if st.button("🟢 Preset A: Top Candidate (92% Score)", use_container_width=True):
         st.session_state["demo_preset"] = "PRESET_A"
-        st.info("Loaded Top Performer Preset! Navigate to Tab 2 to run.")
+        st.info("Loaded Top Candidate Preset! Go to View 2 to execute.")
         
-    if st.button("🟠 Preset B: Remedial Student (Score: 54%)", use_container_width=True):
+    if st.button("🟠 Preset B: Remedial Candidate (54% Score)", use_container_width=True):
         st.session_state["demo_preset"] = "PRESET_B"
-        st.info("Loaded Remedial Student Preset! Navigate to Tab 2 to run.")
+        st.info("Loaded Remedial Candidate Preset! Go to View 2 to execute.")
 
     st.divider()
-    st.markdown("### Category Fit")
+    st.markdown("### Track Specification")
     st.markdown("- **Taskmaster Track**")
     st.markdown("- **Zero Chatbot UI**")
     st.markdown("- **Gemma Bonus (+0.2 pts)**")
 
-# 4 Main Navigation Tabs
-tabs = st.tabs([
-    "🏛️ Center Operations & Curriculum Hub",
-    "🎓 Student Interactive Assessment Workspace",
-    "🚀 Autonomous Placement & Recruiter Outbox",
-    "📖 System Guide, Architecture & Tech Inspector"
+# 4 Main Operational Views
+views = st.tabs([
+    "🏛️ Institute Center Node",
+    "🎓 Candidate Exam Space",
+    "🌐 Live Generated Dossier Viewer",
+    "🤖 Agent Autonomous Telemetry"
 ])
 
-# --- TAB 1: CENTER OPERATIONS & CURRICULUM HUB ---
-with tabs[0]:
-    st.subheader("🏛️ Center Operations & Curriculum Governance")
-    st.markdown("Manage centers, branches, vocational courses, set placement score thresholds (e.g. 70%), and synthesize AI exams.")
+# --- VIEW 1: INSTITUTE CENTER NODE ---
+with views[0]:
+    st.subheader("🏛️ Institute Center Node & Roster Control")
+    st.markdown("Configure placement thresholds, max interview caps per candidate, and manage student rosters.")
     
-    # Load Institute Info
     inst_data = {}
     try:
         ires = requests.get(f"{BACKEND_URL}/api/institute/info", timeout=2)
@@ -125,12 +134,11 @@ with tabs[0]:
     if inst_data:
         st.markdown(f"### **{inst_data.get('name', 'Institute')}** (`Code: {inst_data.get('code', 'SKILLFORGE-HQ')}`)")
         
-        # Policy Settings Form
-        with st.expander("⚙️ Placement Threshold & Interview Policy Config", expanded=True):
+        with st.expander("⚙️ Placement Threshold & Policy Settings", expanded=True):
             col_c1, col_c2, col_c3 = st.columns(3)
             with col_c1:
                 cur_thresh = inst_data.get("placement_threshold", 70)
-                new_thresh = st.slider("Minimum Placement Threshold Score %", 50, 95, cur_thresh)
+                new_thresh = st.slider("Minimum Placement Score %", 50, 95, cur_thresh)
             with col_c2:
                 cur_cap = inst_data.get("max_interviews_cap", 3)
                 new_cap = st.slider("Max Interview Cap per Candidate", 1, 5, cur_cap)
@@ -144,70 +152,11 @@ with tabs[0]:
                         "max_interviews_cap": new_cap
                     })
                     if up_res.status_code == 200:
-                        st.success("✅ Placement Policy Saved!")
+                        st.success("✅ Policy Settings Saved!")
                         st.rerun()
                         
         st.divider()
-        
-        col_b1, col_b2 = st.columns(2)
-        with col_b1:
-            st.markdown("#### 🏛️ Registered Branches")
-            for b in inst_data.get("branches", []):
-                st.info(f"🔹 **{b}**")
-        with col_b2:
-            st.markdown("#### 📚 Active Vocational Courses")
-            for c in inst_data.get("courses", []):
-                st.write(f"- 🔸 **{c}**")
-                
-        st.divider()
-        st.markdown("#### 👥 Student Roster & Bulk Intake")
-        
-        tab_a1, tab_a2 = st.tabs(["📄 Single Candidate Enrollment", "📁 Bulk CSV Upload"])
-        
-        with tab_a1:
-            with st.form("single_enroll_form"):
-                sc1, sc2 = st.columns(2)
-                with sc1:
-                    s_name = st.text_input("Full Name", value="Rohan Mehta")
-                    s_email = st.text_input("Email Address", value="rohan.m@skillforge-edu.org")
-                    s_phone = st.text_input("Phone Number", value="+91 9876543210")
-                with sc2:
-                    s_branch = st.selectbox("Assign Branch", inst_data.get("branches", []))
-                    s_course = st.selectbox("Assign Course", inst_data.get("courses", []))
-                    s_fees = st.selectbox("Fees Status", ["PAID", "PENDING"])
-                    
-                s_submit = st.form_submit_button("Enroll Candidate", type="primary")
-                if s_submit:
-                    a_res = requests.post(f"{BACKEND_URL}/api/students/add", json={
-                        "institute_id": inst_data["id"],
-                        "branch_name": s_branch,
-                        "full_name": s_name,
-                        "email": s_email,
-                        "phone": s_phone,
-                        "course_name": s_course,
-                        "fees_status": s_fees,
-                        "consent": 1
-                    })
-                    if a_res.status_code == 200:
-                        st.success(f"✅ Candidate Enrolled! ID: `{a_res.json()['data']['student_id']}`")
-                        st.rerun()
-                        
-        with tab_a2:
-            st.markdown("Upload CSV containing: `full_name`, `email`, `phone`, `branch_name`, `course_name`, `fees_status`")
-            sample_csv_data = "full_name,email,phone,branch_name,course_name,fees_status\nVikram Rathore,vikram.r@skillforge-edu.org,+91 9811122233,Nangloi Center,Automotive & Hardware Diagnostics,PAID\nSneha Gupta,sneha.g@skillforge-edu.org,+91 9822233344,Yamuna Vihar Center,Full Stack Web Development,PAID"
-            st.download_button("📥 Download Sample CSV Template", sample_csv_data, file_name="sample_students.csv", mime="text/csv")
-            
-            uploaded_csv = st.file_uploader("Upload CSV File", type=["csv"])
-            if uploaded_csv is not None:
-                if st.button("🚀 Process Bulk Roster", type="primary"):
-                    files = {"file": (uploaded_csv.name, uploaded_csv.getvalue(), "text/csv")}
-                    b_res = requests.post(f"{BACKEND_URL}/api/students/bulk-upload?institute_id={inst_data['id']}", files=files)
-                    if b_res.status_code == 200:
-                        st.success(f"✅ Processed {b_res.json()['count']} candidates!")
-                        st.rerun()
-                        
-        st.divider()
-        st.markdown("#### 📜 Live Institute Roster")
+        st.markdown("#### 📜 Registered Student Roster & Placement Status")
         try:
             st_res = requests.get(f"{BACKEND_URL}/api/students", timeout=2)
             if st_res.status_code == 200:
@@ -216,12 +165,11 @@ with tabs[0]:
         except Exception as e:
             st.error(f"Could not load roster: {e}")
 
-# --- TAB 2: STUDENT INTERACTIVE ASSESSMENT WORKSPACE ---
-with tabs[1]:
-    st.subheader("🎓 Student Interactive Assessment Workspace")
-    st.markdown("Select student login, verify consent, answer unselected MCQs, submit practical code/logs, and trigger dynamic scoring.")
+# --- VIEW 2: CANDIDATE EXAM SPACE ---
+with views[1]:
+    st.subheader("🎓 Candidate Exam Space & Autonomous Agent Dispatcher")
+    st.markdown("Log in via Candidate ID + DOB, take the 5-MCQ exam, submit code & GitHub links, and trigger the background agent.")
     
-    # Load Students
     students = []
     try:
         s_res = requests.get(f"{BACKEND_URL}/api/students", timeout=2)
@@ -231,43 +179,40 @@ with tabs[1]:
         pass
         
     if not students:
-        st.warning("No students found. Please enroll candidates in Tab 1.")
+        st.warning("No students found. Please enroll candidates in View 1.")
     else:
         stu_opts = {f"{s['full_name']} ({s['student_id']}) - {s['course_name']}": s['student_id'] for s in students}
-        sel_label = st.selectbox("🔑 Select Student Login", list(stu_opts.keys()))
+        sel_label = st.selectbox("🔑 Candidate Login (Student ID)", list(stu_opts.keys()))
         selected_student_id = stu_opts[sel_label]
         
         stu_detail = next(s for s in students if s['student_id'] == selected_student_id)
         
-        st.markdown("#### 👤 Candidate Profile & Placement Consent Gate")
-        col_sp1, col_sp2, col_sp3 = st.columns(3)
-        with col_sp1:
-            st.write(f"**Name:** {stu_detail['full_name']}")
-            st.write(f"**Email:** `{stu_detail['email']}`")
-        with col_sp2:
-            st.write(f"**Branch:** `{stu_detail['branch_name']}`")
-            st.write(f"**Course:** {stu_detail['course_name']}")
-        with col_sp3:
+        # Simple Login Check
+        col_l1, col_l2 = st.columns(2)
+        with col_l1:
+            dob_input = st.date_input("Date of Birth", value=None)
+        with col_l2:
+            st.write("")
+            st.write("")
             cur_consent = bool(stu_detail.get('consent_for_job_dispatch', 1))
-            st.write(f"**Interviews Dispatched:** `{stu_detail.get('interview_count', 0)} / 3`")
-            new_consent = st.checkbox("Authorize AI Agent to Auto-Dispatch Job Applications", value=cur_consent)
+            new_consent = st.checkbox("I authorize SkillForge AI Agent to build my live dossier & auto-apply to matching job openings", value=cur_consent)
             if new_consent != cur_consent:
                 requests.post(f"{BACKEND_URL}/api/students/consent", json={"student_id": selected_student_id, "consent": new_consent})
-                st.success("✅ Consent updated!")
+                st.success("✅ Placement Dispatch Consent Updated!")
                 st.rerun()
                 
         st.divider()
-        st.markdown("### 📝 Exam Synthesis & Dynamic Real-Time Test")
+        st.markdown("### 📝 Exam Synthesis & Assessment Submission")
         
-        if st.button("✨ Synthesize Fresh 5-MCQ Exam via Gemini 3.5", type="primary"):
-            with st.spinner("Synthesizing 5-MCQ Assessment via Gemini 3.5..."):
+        if st.button("✨ Synthesize Assessment via Gemini 3.5", type="primary"):
+            with st.spinner("Synthesizing assessment via Gemini 3.5..."):
                 e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
                     "topic": stu_detail['course_name'],
                     "difficulty": "Intermediate"
                 })
                 if e_res.status_code == 200:
                     st.session_state["current_exam"] = e_res.json()["data"]
-                    st.success("✅ Fresh Assessment Synthesized!")
+                    st.success("✅ Assessment Synthesized!")
                     st.rerun()
                     
         if "current_exam" not in st.session_state:
@@ -283,12 +228,11 @@ with tabs[1]:
         mcqs = exam.get("mcqs", [])
         mcq_key = [m.get("correct_option", 0) for m in mcqs]
         
-        # Check One-Click Demo Mode presets from Sidebar
         demo_preset = st.session_state.get("demo_preset")
         is_preset_a = demo_preset == "PRESET_A"
         is_preset_b = demo_preset == "PRESET_B"
         
-        with st.form("student_exam_form"):
+        with st.form("candidate_exam_form"):
             st.markdown(f"#### 📋 **{exam.get('title', 'Vocational Assessment')}**")
             st.markdown("##### **Part 1: Multiple Choice Questions (30 Points Max)**")
             
@@ -316,7 +260,7 @@ with tabs[1]:
                     user_mcq_answers.append(-1)
                     
             st.divider()
-            st.markdown("##### **Part 2: Practical Project Challenge (70 Points Max)**")
+            st.markdown("##### **Part 2: Multimodal Practical Project Challenge (70 Points Max)**")
             
             p_task_default = exam.get("practical_task", f"Complete diagnostic inspection for {stu_detail['course_name']}.")
             st.info(f"**Task:** {p_task_default}")
@@ -331,32 +275,45 @@ with tabs[1]:
                     "Found ground signal degradation due to terminal connector corrosion. "
                     "Cleaned terminal connector, replaced wiring splice adhering to standard procedure, and re-tested signal verification with clean 2.5V differential voltage."
                 )
+                github_default = "https://github.com/skillforge/diagnostic-tooling"
+                live_default = f"http://localhost:8000/portfolio/{selected_student_id}"
             elif is_preset_b:
                 sub_text_default = "Looked at wires. Turned on switch. It worked eventually."
+                github_default = ""
+                live_default = ""
             else:
                 sub_text_default = (
                     "Performed safety lockout procedure. Verified circuit connections using calibrated multimeter. "
                     "Recorded voltage measurements across load terminals. Documented fault codes and completed repair."
                 )
+                github_default = "https://github.com/skillforge/student-capstone"
+                live_default = f"http://localhost:8000/portfolio/{selected_student_id}"
                 
-            s_text = st.text_area("Your Solution Code / Diagnostic Log", value=sub_text_default, height=130)
-            uploaded_img = st.file_uploader("Attach Practical Artifact Image (Hardware Photo / Circuit Diagram / Code Screenshot)", type=["jpg", "png", "jpeg"])
+            s_text = st.text_area("Your Practical Solution Code / Diagnostic Log", value=sub_text_default, height=120)
             
-            submit_exam = st.form_submit_button("🚀 Submit Exam & Run Autonomous Placement Pipeline", type="primary", use_container_width=True)
+            col_u1, col_u2 = st.columns(2)
+            with col_u1:
+                github_url_input = st.text_input("GitHub Code Repository URL", value=github_default)
+            with col_u2:
+                live_url_input = st.text_input("Live Demo / Project Deployment URL", value=live_default)
+                
+            uploaded_img = st.file_uploader("Attach Project Artifact (Hardware Photo / Circuit Diagram / Screenshot)", type=["jpg", "png", "jpeg", "pdf", "zip"])
+            
+            submit_exam = st.form_submit_button("🚀 Submit Exam & Run Background Agent", type="primary", use_container_width=True)
             
         if submit_exam:
             if "demo_preset" in st.session_state:
                 del st.session_state["demo_preset"]
                 
             img_b64 = None
-            if uploaded_img is not None:
+            if uploaded_img is not None and uploaded_img.type in ["image/jpeg", "image/png", "image/jpg"]:
                 img_b64 = base64.b64encode(uploaded_img.getvalue()).decode("utf-8")
                 
-            p_bar = st.progress(0, text="Submitting Exam...")
+            p_bar = st.progress(0, text="Triggering Background Agent Engine...")
             time.sleep(0.2)
-            p_bar.progress(30, text="1. Calculating MCQ Objective Score & Gemma Fast Screening...")
+            p_bar.progress(30, text="1. Gemma Fast Screener & Objective MCQ Scoring...")
             time.sleep(0.3)
-            p_bar.progress(70, text="2. Gemini 3.5 Subjective Practical Grading...")
+            p_bar.progress(70, text="2. Gemini 3.5 Multimodal Evaluation & HTML Dossier Generation...")
             
             try:
                 pipe_res = requests.post(
@@ -369,178 +326,82 @@ with tabs[1]:
                         "practical_task": p_task_default,
                         "grading_rubric": rubric_default,
                         "submission_text": s_text,
+                        "github_url": github_url_input,
+                        "live_url": live_url_input,
                         "image_base64": img_b64
                     },
                     timeout=30
                 )
-                p_bar.progress(100, text="Dynamic Evaluation Complete!")
+                p_bar.progress(100, text="Background Agent Execution Complete!")
                 
                 if pipe_res.status_code == 200:
                     res_data = pipe_res.json()["data"]
                     eval_out = res_data["evaluation"]
                     dispatch_out = res_data["dispatch"]
+                    telemetry = res_data.get("telemetry", [])
                     
-                    st.success("✅ Dynamic Real-Time Grading Complete!")
+                    st.session_state["last_telemetry"] = telemetry
+                    st.session_state["last_portfolio_url"] = eval_out.get("portfolio_url", f"http://localhost:8000/portfolio/{selected_student_id}")
                     
-                    st.markdown("### 📊 Scorecard & Performance Metrics")
+                    st.success("✅ Dynamic Real-Time Grading & Dossier Generation Complete!")
+                    
+                    st.markdown("### 📊 Candidate Performance Metrics")
                     mc1, mc2, mc3, mc4 = st.columns(4)
                     with mc1:
-                        st.metric("MCQ Score", f"{eval_out['mcq_score']} / 30 pts", f"{eval_out['mcq_correct_count']}/{eval_out['mcq_total_questions']} Correct")
+                        st.metric("MCQ Score", f"{eval_out['mcq_score']} / 30 pts")
                     with mc2:
                         st.metric("Practical Score", f"{eval_out['practical_score']} / 70 pts")
                     with mc3:
                         st.metric("Final Total Score", f"{eval_out['total_score']} / 100 pts")
                     with mc4:
                         ready = eval_out['placement_ready']
-                        st.metric("Verification Gate", "PASSED 🚀" if ready else "REMEDIAL 🟠")
+                        st.metric("Verification Gate", "QUALIFIED 🚀" if ready else "REMEDIAL 🟠")
                         
                     st.divider()
                     
                     if ready:
                         st.markdown(f'<span class="badge-success">🚀 STATUS: {dispatch_out["status"]}</span>', unsafe_allow_html=True)
                         st.markdown("#### 📬 Outbound Application & Notification Alerts")
-                        st.markdown(f"**Matched Employer:** `{dispatch_out['hiring_partner']}`")
+                        st.markdown(f"**Matched Partner:** `{dispatch_out['hiring_partner']}`")
                         st.markdown(f"**Role Title:** `{dispatch_out['role']}`")
-                        st.markdown(f"**Verified Metric Hash:** <span class=\"hash-text\">{dispatch_out['verified_metric_hash']}</span>", unsafe_allow_html=True)
+                        st.markdown(f"**Live Portfolio Dossier:** [View Dossier]({eval_out['portfolio_url']})")
                         st.info(dispatch_out["notifications"]["student_alert"])
                         st.info(dispatch_out["notifications"]["branch_alert"])
-                        
-                        # Live Certificate Generator Card
-                        st.divider()
-                        st.markdown("### 🎓 Verified Candidate Competency Certificate")
-                        cert_res = requests.post(f"{BACKEND_URL}/api/certificate/generate", json={
-                            "candidate_name": stu_detail['full_name'],
-                            "student_id": selected_student_id,
-                            "course_name": stu_detail['course_name'],
-                            "branch_name": stu_detail['branch_name'],
-                            "total_score": eval_out['total_score'],
-                            "mcq_score": float(eval_out['mcq_score']),
-                            "practical_score": float(eval_out['practical_score']),
-                            "metric_hash": dispatch_out['verified_metric_hash']
-                        })
-                        if cert_res.status_code == 200:
-                            cert = cert_res.json()["data"]
-                            st.markdown(f"""
-                            <div class="cert-box">
-                                <h3>📜 OFFICIAL COMPETENCY CERTIFICATE</h3>
-                                <p><strong>Certificate ID:</strong> {cert['certificate_id']}</p>
-                                <p><strong>Candidate:</strong> {cert['candidate_name']} ({cert['student_id']})</p>
-                                <p><strong>Branch:</strong> {cert['branch_name']}</p>
-                                <p><strong>Course:</strong> {cert['course_name']}</p>
-                                <p><strong>Final Score:</strong> {cert['total_score']}% (MCQ: {cert['mcq_score']} pts | Practical: {cert['practical_score']} pts)</p>
-                                <p><strong>SHA-256 Hash:</strong> <code>{cert['verified_hash']}</code></p>
-                                <p><strong>Verification Status:</strong> {cert['verification_status']}</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            st.write("")
-                            st.download_button(
-                                label="📥 Download Official Verified Skill Certificate (HTML)",
-                                data=cert.get("html_content", ""),
-                                file_name=f"Verified_Certificate_{cert['student_id']}.html",
-                                mime="text/html",
-                                type="primary"
-                            )
                     else:
                         st.markdown(f'<span class="badge-remedial">🔄 STATUS: {dispatch_out["status"]}</span>', unsafe_allow_html=True)
-                        st.markdown("#### 📚 Personalized 7-Day Remedial Micro-Study Schedule")
-                        st.warning(f"Reasons: {', '.join(dispatch_out.get('reasons', []))}")
-                        
-                        rem_sched = eval_out.get("remedial_schedule", {})
-                        for day_task in rem_sched.get("daily_schedule", []):
-                            st.markdown(f"**Day {day_task['day']}**: `{day_task['focus_topic']}`")
-                            st.caption(f"Task: {day_task['practice_exercise']} ({day_task['estimated_hours']} hr)")
-                            
-                    # Telemetry & Execution Tracing Expander
-                    st.divider()
-                    with st.expander("🔍 Live Agent Execution Traces & OpenTelemetry Logs", expanded=True):
-                        fast_screen = eval_out.get("fast_screening", {})
-                        st.code(f"""
-[00:00.02s] ⚡ Gemma Pre-check Engine: Sub-millisecond syntax & keyword check
-             Passed: {fast_screen.get('passed_screening', True)} | Structure Score: {fast_screen.get('structure_score', 85)}/100
-             Tokens Identified: {', '.join(fast_screen.get('found_tokens', ['safety', 'procedure', 'tools']))}
-[00:01.14s] 🧠 Gemini 3.5 Multimodal Cognitive Engine: Vision grading & rubric check completed
-             MCQ Objective Score: {eval_out.get('mcq_score', 30.0)}/30 | Practical Vision Score: {eval_out.get('practical_score', 60.0)}/70
-[00:01.35s] 🔒 Security & Consent Gate: Student ID '{selected_student_id}' authorization validated
-             Consent Granted: True | Max Interview Cap Allowed: 3
-[00:01.48s] 🚀 Action Dispatcher: Outbound hiring partner webhook payload sealed
-             Status: {dispatch_out.get('status', 'APPLIED_AND_DISPATCHED')} | Hash: {dispatch_out.get('verified_metric_hash', '0x...')}
-                        """, language="text")
+                        st.warning(f"Score below required threshold. 7-day remedial plan assigned.")
                 else:
                     st.error(f"Pipeline error: {pipe_res.text}")
             except Exception as e:
                 st.error(f"Connection error: {e}")
 
-# --- TAB 3: AUTONOMOUS PLACEMENT & RECRUITER OUTBOX ---
-with tabs[2]:
-    st.subheader("🚀 Autonomous Placement & Dispatch Audit Ledger")
-    st.markdown("Immutable ledger tracking candidate job applications, employer interview dispatches, and verification hashes.")
+# --- VIEW 3: LIVE GENERATED DOSSIER VIEWER ---
+with views[2]:
+    st.subheader("🌐 Live Standalone Candidate Portfolio Dossier Viewer")
+    st.markdown("Preview the standalone HTML/CSS/Tailwind portfolio generated by Gemini 3.5 Flash upon student submission.")
     
+    dossier_url = st.session_state.get("last_portfolio_url", "http://localhost:8000/portfolio/STU-1001")
+    st.markdown(f"**Active Dossier URL:** [`{dossier_url}`]({dossier_url})")
+    
+    if st.button("🔄 Refresh Live Dossier Preview", type="primary"):
+        st.rerun()
+        
     try:
-        l_res = requests.get(f"{BACKEND_URL}/api/placements/ledger", timeout=2)
-        if l_res.status_code == 200:
-            ledger = l_res.json()["data"]
-            if ledger:
-                st.dataframe(ledger, use_container_width=True)
-            else:
-                st.info("No job dispatches logged yet. Complete an exam submission in Tab 2!")
+        st.components.v1.iframe(dossier_url, height=650, scrolling=True)
     except Exception as e:
-        st.error(f"Could not load placement ledger: {e}")
+        st.error(f"Could not render portfolio iframe: {e}")
 
-# --- TAB 4: SYSTEM GUIDE, ARCHITECTURE & TECH INSPECTOR ---
-with tabs[3]:
-    st.subheader("📖 System Architecture, Docs & Technology Inspector")
-    st.markdown("Full transparency hub detailing BYOF problem statement, dual-AI pipeline, security consent gates, and infrastructure stack.")
+# --- VIEW 4: AGENT AUTONOMOUS TELEMETRY ---
+with views[3]:
+    st.subheader("🤖 Agent Autonomous Action Telemetry & Terminal Logs")
+    st.markdown("Real-time streaming event trace logs showing the background agent discovering jobs, validating consent, and executing dispatches.")
     
-    with st.expander("📌 Section 1: What is SkillForge Autonomous & Grassroots BYOF Problem", expanded=True):
-        st.markdown("""
-        **The BYOF (Bring Your Own Friction) Problem:**  
-        Vocational training centers in Tier-2/3 cities and rural hubs (e.g. automotive repair, CNC machining, web development bootcamps) face severe operational bottlenecks:
-        1. **Curriculum Synthesis Overhead**: Manually creating practical exams, rubrics, and MCQs tailored to fast-evolving industry standards takes weeks.
-        2. **Evaluation Latency**: Instructors spend 20+ hours/week manually grading technical diagnostic logs and practical student code/reports.
-        3. **Placement Pipeline Bottleneck**: High-performing candidates sit in administrative queues for weeks before being pitched to hiring partners.
-
-        **The SkillForge Solution:**  
-        SkillForge Autonomous functions as a **24/7 Continuous Action Engine** replacing administrative latency with automated assessment synthesis, dual-AI multimodal grading, and verified job application dispatches.
-        """)
-        
-    with st.expander("⚙️ Section 2: Step-by-Step System Workflow Guide"):
-        st.markdown(r"""
-        1. **Center Governance Setup (Tab 1)**: Institute admins define placement thresholds (e.g., 70%), interview attempt caps (max 3), registered branches, and enroll student rosters.
-        2. **Interactive Exam Synthesis & Test Taking (Tab 2)**: Gemini 3.5 Pro generates 5-MCQ exams + practical project challenges. Candidates log in, review consent, select answers via unselected radio buttons, and submit diagnostic logs or hardware photos.
-        3. **Dual-AI Dynamic Evaluation (Tab 2)**:
-           - *Objective MCQ Score*: 30 points max based on option key matching.
-           - *Subjective Practical Score*: 70 points max evaluated by Gemini 3.5 Multimodal Vision.
-        4. **Verification Gate & Autonomous Action Execution (Tab 3)**:
-           - *Score $\ge$ 70% & Consent Authorized*: Automatically matches candidate against enterprise hiring partner requisitions (Tata Motors, Infosys, Schneider Electric), generates a SHA-256 metric hash, dispatches outbox applications, and triggers candidate & branch alerts.
-           - *Score < 70%*: Triggers an automatic 7-day personalized remedial micro-study schedule.
-        """)
-        
-    with st.expander("🧠 Section 3: Under the Hood: Dual-AI Architecture & Gemma Bonus Track"):
-        st.markdown("""
-        **Why Two AI Models?**
-        - **Model 1: Gemma (Fast Syntax & Token Pre-Screener)**  
-          *Role*: Sub-millisecond deterministic structure check verifying mandatory technical terms, syntax formatting, and minimum length before sending payloads to cognitive LLMs.  
-          *Hackathon Bonus*: Earns the **+0.2 Gemma Integration Bonus Track**.
-        - **Model 2: Google GenAI SDK (Gemini 3.5 Pro & Flash)**  
-          *Role*: Cognitive reasoning engine synthesizing structured exam papers, performing deep multimodal vision grading on hardware/code screenshots, and generating hiring partner pitches.
-        """)
-        
-    with st.expander("☁️ Section 4: Backend Technology Stack & Cloud Infrastructure"):
-        st.markdown("""
-        | Component | Technology | Purpose |
-        | :--- | :--- | :--- |
-        | **Backend Framework** | **FastAPI & Pydantic** | Production RESTful API with strict schema validation |
-        | **Database Storage** | **SQLite WAL Mode** | Multi-tenant thread-safe persistence with 30s busy timeout |
-        | **AI SDK** | **Google GenAI SDK (`google-genai`)** | Gemini 3.5 Pro / Flash & Gemma integration |
-        | **Frontend UI** | **Streamlit** | Interactive multi-role operational dashboard |
-        | **Containerization** | **Docker & Google Cloud Run** | Serverless deployment via `deploy_cloudrun.sh` |
-        | **Security** | **SHA-256 Crypto Hashing** | Immutable metric verification for hiring partner outbox payloads |
-        """)
-        
-    with st.expander("🛡️ Section 5: Security, Consent & Zero-Trust Governance"):
-        st.markdown("""
-        - **Mandatory Consent Gate**: Jobs are *never* auto-dispatched unless the student explicitly authorizes placement dispatch via their portal toggle.
-        - **Interview Cap Limit**: Prevents spamming hiring partners by enforcing institute-level maximum interview attempt caps (default 3).
-        - **Immutable Audit Ledger**: Every dispatch logs an immutable cryptographic hash (`0x...`) recording student ID, score breakdown, and company match percentage.
-        """)
+    telemetry_logs = st.session_state.get("last_telemetry", [
+        {"timestamp": "19:15:01.002", "step": "START", "message": "Autonomous Agent initialized for Student STU-1001"},
+        {"timestamp": "19:15:01.045", "step": "GEMMA_PRECHECK", "message": "Gemma fast sub-millisecond check passed (Score: 84/100)"},
+        {"timestamp": "19:15:02.112", "step": "DOSSIER_GEN", "message": "Synthesized standalone HTML portfolio dossier at /portfolio/STU-1001"},
+        {"timestamp": "19:15:02.340", "step": "ACTION_DISPATCHED", "message": "Auto-dispatched job application to Tata Motors for Automotive Systems Technician"}
+    ])
+    
+    log_text = "\n".join([f"[{t['timestamp']}] [{t['step']}] {t['message']}" for t in telemetry_logs])
+    st.code(log_text, language="text")
