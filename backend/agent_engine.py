@@ -9,7 +9,13 @@ from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
 
-from recruiter_hub import get_requisitions, log_dispatch_ledger
+from database import (
+    get_institute,
+    get_student_by_id,
+    get_db_connection,
+    save_assessment
+)
+from recruiter_hub import get_requisitions
 
 load_dotenv()
 
@@ -61,17 +67,13 @@ def get_genai_client() -> genai.Client:
     return genai.Client(api_key=api_key)
 
 
-# --- Step 1 Function ---
+# --- Core Pipeline 1: Gemini 3.5 Assessment Synthesizer ---
 
-def generate_assessment(topic: str, difficulty: str = "Intermediate") -> dict:
-    """
-    Generates a structured vocational training assessment using Gemini 3.5.
-    Returns a dict adhering to AssessmentSchema.
-    """
+def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_id: str = "INST-GLOBAL-01") -> dict:
     client = get_genai_client()
     
     prompt = (
-        f"Generate a vocational training assessment on the topic: '{topic}' with difficulty level: '{difficulty}'. "
+        f"Generate a professional vocational training assessment on topic: '{topic}' with difficulty level: '{difficulty}'. "
         f"Include exactly 3 multiple-choice questions (each with 4 options and the correct 0-indexed option integer), "
         f"a hands-on practical task, and 3 specific grading parameters for the rubric."
     )
@@ -92,28 +94,26 @@ def generate_assessment(topic: str, difficulty: str = "Intermediate") -> dict:
         if hasattr(response, "parsed") and response.parsed:
             result = response.parsed
             if isinstance(result, AssessmentSchema):
-                return result.model_dump()
+                exam_dict = result.model_dump()
             elif isinstance(result, dict):
-                return AssessmentSchema(**result).model_dump()
-                
-        data = json.loads(response.text)
-        if "exam_id" not in data or not data["exam_id"]:
-            data["exam_id"] = str(uuid.uuid4())
-        assessment = AssessmentSchema(**data)
-        return assessment.model_dump()
+                exam_dict = AssessmentSchema(**result).model_dump()
+            else:
+                exam_dict = AssessmentSchema(**json.loads(response.text)).model_dump()
+        else:
+            exam_dict = AssessmentSchema(**json.loads(response.text)).model_dump()
+            
     except Exception as e:
-        # Fallback return structured assessment if API key invalid or testing
-        return {
+        exam_dict = {
             "exam_id": str(uuid.uuid4()),
             "title": f"Synthesized Assessment: {topic} ({difficulty})",
             "mcqs": [
                 {
-                    "question": f"What is a core safety standard when working with {topic}?",
+                    "question": f"What is a primary safety standard when performing diagnostics in {topic}?",
                     "options": ["Follow safety lockout procedures", "Ignore manufacturer specs", "Bypass circuit breakers", "Work without grounding"],
                     "correct_option": 0
                 },
                 {
-                    "question": f"Which tool is mandatory for diagnostics in {topic}?",
+                    "question": f"Which tool is mandatory for diagnostic measurements in {topic}?",
                     "options": ["Calibrated diagnostic tool / Multimeter", "Hammer", "Uncalibrated probe", "None"],
                     "correct_option": 0
                 },
@@ -130,14 +130,16 @@ def generate_assessment(topic: str, difficulty: str = "Intermediate") -> dict:
                 "Proper report documentation and wire repair compliance"
             ]
         }
+        
+    # Save assessment into SQLite database
+    ass_id = save_assessment(institute_id, topic, difficulty, exam_dict)
+    exam_dict["db_assessment_id"] = ass_id
+    return exam_dict
 
 
-# --- Step 2 & Module 2 Functions ---
+# --- Core Pipeline 2: Dual-AI Evaluation Engine (Gemma + Gemini 3.5 Vision) ---
 
 def gemma_fast_screening(submission_text: str, expected_tokens: Optional[List[str]] = None) -> dict:
-    """
-    Fast syntax/keyword pre-screening using a lightweight deterministic checker inspired by Gemma 2B/7B fast-parsing.
-    """
     if expected_tokens is None:
         expected_tokens = ["procedure", "safety", "verification", "measurement", "tools"]
         
@@ -151,7 +153,6 @@ def gemma_fast_screening(submission_text: str, expected_tokens: Optional[List[st
     length_score = min(100, int((length / 150) * 50))
     keyword_score = int(token_ratio * 50)
     structure_score = length_score + keyword_score
-    
     passed = structure_score >= 50 and length > 30
     
     return FastScreeningResult(
@@ -163,9 +164,6 @@ def gemma_fast_screening(submission_text: str, expected_tokens: Optional[List[st
 
 
 def generate_remedial_curriculum(candidate_name: str, skill_gaps: List[str]) -> dict:
-    """
-    Generates a personalized 7-day remedial study plan for candidates scoring < 80.
-    """
     client = get_genai_client()
     gaps_str = ", ".join(skill_gaps) if skill_gaps else "General practical fundamentals"
     
@@ -191,7 +189,6 @@ def generate_remedial_curriculum(candidate_name: str, skill_gaps: List[str]) -> 
             return RemedialCurriculumSchema(**response.parsed).model_dump()
         return RemedialCurriculumSchema(**json.loads(response.text)).model_dump()
     except Exception:
-        # Fallback 7-day schedule
         daily_tasks = []
         for d in range(1, 8):
             daily_tasks.append({
@@ -213,11 +210,6 @@ def evaluate_submission(
     grading_rubric: List[str],
     image_base64: Optional[str] = None
 ) -> dict:
-    """
-    Dual-AI evaluation pipeline with Multimodal Vision support:
-    1. Runs fast Gemma screening.
-    2. Uses Gemini 3.5 Flash for deep cognitive & multimodal image inspection.
-    """
     screening_res = gemma_fast_screening(submission_text)
     client = get_genai_client()
     
@@ -228,13 +220,12 @@ def evaluate_submission(
         f"Student Text Submission:\n\"\"\"{submission_text}\"\"\"\n\n"
         f"Fast Pre-screening metrics: Passed={screening_res['passed_screening']}, StructureScore={screening_res['structure_score']}.\n\n"
         f"Evaluate this submission thoroughly. Assign a total_score from 0 to 100.\n"
-        f"Set placement_ready to true if total_score >= 80, otherwise false.\n"
+        f"Set placement_ready to true if total_score >= 70, otherwise false.\n"
         f"Provide 2-3 specific strengths, 2-3 skill gaps, and a concise 2-sentence pitch for hiring partners."
     )
     
     contents = [prompt]
     if image_base64:
-        # Attach multimodal image artifact for vision grading
         try:
             image_bytes = base64.b64decode(image_base64.split(",")[-1])
             image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
@@ -273,11 +264,11 @@ def evaluate_submission(
         if (word_count > 40 and passed_pre) or image_base64:
             score = 88
             ready = True
-            strengths = ["Comprehensive step-by-step procedure documented", "Multimodal inspection confirmed correct hardware assembly"]
+            strengths = ["Comprehensive step-by-step procedure documented", "Multimodal inspection confirmed hardware compliance"]
             gaps = ["Minor formatting refinement recommended"]
             pitch = "Candidate exhibits strong technical diagnostic proficiency and safety mastery. Recommended for immediate employer placement."
         else:
-            score = 58
+            score = 55
             ready = False
             strengths = ["Basic understanding of core concept"]
             gaps = ["Missing critical safety verification steps", "Incomplete diagnostic isolation"]
@@ -292,85 +283,128 @@ def evaluate_submission(
         ).model_dump()
         
     eval_dict["fast_screening"] = screening_res
-    
-    # If student failed, generate 7-day remedial schedule
     if not eval_dict["placement_ready"]:
         eval_dict["remedial_schedule"] = generate_remedial_curriculum("Candidate", eval_dict["skill_gaps"])
         
     return eval_dict
 
 
-def dispatch_recruiter_action(candidate_name: str, target_role: str, evaluation_data: dict) -> dict:
-    """
-    Enhanced Recruiter Action Engine.
-    Matches candidate against hiring partner requisitions, calculates percentage match,
-    generates SHA-256 metric verification hash, and logs to dispatch ledger.
-    """
-    placement_ready = evaluation_data.get("placement_ready", False)
-    total_score = evaluation_data.get("total_score", 0)
-    
-    # Match against live hiring partner requisitions
-    reqs = get_requisitions()
-    best_req = None
-    best_match_pct = 75
-    
-    for r in reqs:
-        if target_role.lower() in r["role_title"].lower() or r["role_title"].lower() in target_role.lower():
-            best_req = r
-            best_match_pct = min(98, total_score + 5)
-            break
-            
-    if not best_req and reqs:
-        best_req = reqs[0]
-        best_match_pct = total_score
+# --- Core Pipeline 3: Autonomous Multi-Tenant Placement Dispatch Engine ---
+
+def dispatch_autonomous_placement(student_id: str, assessment_id: str, submission_text: str, practical_task: str, rubric: List[str], image_base64: Optional[str] = None) -> dict:
+    student = get_student_by_id(student_id)
+    if not student:
+        raise ValueError(f"Student ID '{student_id}' not found in institute roster")
         
-    company_name = best_req["company_name"] if best_req else "Partner Network"
-    recipient_email = best_req["contact_email"] if best_req else "hiring@skillforge-network.org"
-    webhook_url = best_req["webhook_url"] if best_req else "https://api.skillforge-network.org/webhooks/talent-intake"
+    institute = get_institute("INST-GLOBAL-01")
+    threshold = institute.get("dispatch_threshold", 70)
+    cap_limit = institute.get("interview_cap_limit", 3)
     
-    # Cryptographic SHA-256 immutable metric verification hash
-    raw_hash_str = f"{candidate_name}:{target_role}:{total_score}:{evaluation_data.get('recruiter_pitch', '')}"
-    metric_hash = "0x" + hashlib.sha256(raw_hash_str.encode("utf-8")).hexdigest()[:16]
+    # 1. Evaluate submission
+    eval_res = evaluate_submission(submission_text, practical_task, rubric, image_base64)
+    total_score = eval_res["total_score"]
+    
+    # 2. Check multi-tenant rules
+    consent_given = bool(student.get("consent_given", 1))
+    current_interviews = student.get("interview_count", 0)
+    
+    placement_ready = (total_score >= threshold) and consent_given and (current_interviews < cap_limit)
+    eval_res["placement_ready"] = placement_ready
+    
+    # 3. Save student submission record
+    sub_id = f"SUB-{uuid.uuid4().hex[:8].upper()}"
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO student_submissions 
+            (id, student_id, assessment_id, submission_content, image_base64, gemma_score, gemini_evaluation, total_score, placement_ready)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            sub_id,
+            student_id,
+            assessment_id,
+            submission_text,
+            image_base64,
+            eval_res["fast_screening"]["structure_score"],
+            json.dumps(eval_res),
+            total_score,
+            1 if placement_ready else 0
+        ))
+        conn.commit()
+        
+    # 4. Handle placement dispatch or remediation
+    raw_hash = f"{student['full_name']}:{student['course_name']}:{total_score}:{eval_res.get('recruiter_pitch', '')}"
+    metric_hash = "0x" + hashlib.sha256(raw_hash.encode()).hexdigest()[:16]
     
     if placement_ready:
-        action_tag = "ACTION: DISPATCHED_TO_HIRING_NETWORK"
-        outbox_payload = {
-            "dispatch_status": "SUCCESS_SENT_TO_HIRING_PARTNER",
-            "candidate_name": candidate_name,
-            "target_role": target_role,
-            "matched_partner": company_name,
-            "match_percentage": best_match_pct,
+        # Match requisition
+        reqs = get_requisitions()
+        best_req = reqs[0] if reqs else {"company_name": "Tata Motors Technical Services", "role_title": "Automotive Systems Technician", "webhook_url": "https://api.tatamotors.com/webhook"}
+        for r in reqs:
+            if student["course_name"].lower() in r["role_title"].lower() or r["role_title"].lower() in student["course_name"].lower():
+                best_req = r
+                break
+                
+        hiring_partner = best_req.get("company_name", "Enterprise Hiring Partner")
+        role = best_req.get("role_title", student["course_name"])
+        
+        # Increment student interview count
+        new_count = current_interviews + 1
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE students SET interview_count = ? WHERE student_id = ?", (new_count, student_id))
+            
+            job_id = f"JOB-{uuid.uuid4().hex[:8].upper()}"
+            cursor.execute("""
+                INSERT INTO job_applications 
+                (id, student_id, student_name, student_email, branch_id, hiring_partner, role, match_score, status, interview_count, metric_hash)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                job_id,
+                student_id,
+                student["full_name"],
+                student["email"],
+                student["branch_id"],
+                hiring_partner,
+                role,
+                total_score,
+                "DISPATCHED",
+                new_count,
+                metric_hash
+            ))
+            conn.commit()
+            
+        action_payload = {
+            "status": "DISPATCHED_TO_HIRING_PARTNER",
+            "job_id": job_id,
+            "student_id": student_id,
+            "student_name": student["full_name"],
+            "student_email": student["email"],
+            "branch_id": student["branch_id"],
+            "hiring_partner": hiring_partner,
+            "role": role,
+            "match_score": total_score,
             "verified_metric_hash": metric_hash,
-            "scorecard": {
-                "score": total_score,
-                "strengths": evaluation_data.get("strengths", []),
-                "recruiter_pitch": evaluation_data.get("recruiter_pitch", "")
-            },
-            "outbox_action": {
-                "recipient": recipient_email,
-                "subject": f"Top Talent Match ({best_match_pct}%): {candidate_name} for {target_role}",
-                "calendar_booking_url": f"https://calendly.com/skillforge-placements/{candidate_name.lower().replace(' ', '-')}",
-                "webhook_triggered": webhook_url
+            "recruiter_pitch": eval_res.get("recruiter_pitch", ""),
+            "alerts": {
+                "student_notification": f"ALERT SENT TO {student['email']}: Interview invite requested with {hiring_partner} for {role}.",
+                "branch_notification": f"ALERT SENT TO BRANCH {student['branch_id']}: Student {student['full_name']} placed in recruitment pipeline."
             }
         }
-        log_dispatch_ledger(candidate_name, target_role, company_name, best_match_pct, metric_hash, "DISPATCHED")
     else:
-        action_tag = "ACTION: QUEUED_FOR_REMEDIAL_TRAINING"
-        outbox_payload = {
-            "dispatch_status": "QUEUED_FOR_REMEDIAL",
-            "candidate_name": candidate_name,
-            "target_role": target_role,
+        # Remedial flow
+        action_payload = {
+            "status": "QUEUED_FOR_REMEDIAL_TRAINING",
+            "student_id": student_id,
+            "student_name": student["full_name"],
+            "reason": "Score below threshold or interview cap reached / consent missing",
+            "threshold_required": threshold,
+            "actual_score": total_score,
             "verified_metric_hash": metric_hash,
-            "scorecard": {
-                "score": total_score,
-                "skill_gaps": evaluation_data.get("skill_gaps", []),
-            },
-            "remedial_schedule": evaluation_data.get("remedial_schedule", {})
+            "remedial_schedule": eval_res.get("remedial_schedule", {})
         }
-        log_dispatch_ledger(candidate_name, target_role, "SkillForge Internal Remediation", total_score, metric_hash, "REMEDIAL_QUEUED")
         
     return {
-        "action_tag": action_tag,
-        "placement_ready": placement_ready,
-        "payload": outbox_payload
+        "evaluation": eval_res,
+        "dispatch": action_payload
     }

@@ -3,22 +3,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-from center_manager import get_centers, get_batches, get_candidates
-from recruiter_hub import get_hiring_partners, get_requisitions, get_dispatch_ledger
+from database import (
+    get_institute,
+    update_institute_config,
+    get_all_students,
+    get_student_by_id,
+    add_student,
+    get_assessments,
+    get_job_applications
+)
 from agent_engine import (
     generate_assessment,
     evaluate_submission,
-    dispatch_recruiter_action,
-    generate_remedial_curriculum
+    dispatch_autonomous_placement
 )
 
 app = FastAPI(
-    title="SkillForge Autonomous - Institutional Operations Engine API",
-    description="Autonomous Vocational Institute Operations, Multimodal Grading & Recruiter Action Engine",
-    version="2.0.0",
+    title="SkillForge Autonomous - Multi-Tenant Operations API",
+    description="Multi-Tenant Vocational Institute Platform & Autonomous Placement Engine",
+    version="3.0.0",
 )
 
-# Enable CORS for cross-origin frontend communication
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,98 +32,93 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class AssessmentRequest(BaseModel):
-    center_id: Optional[str] = None
-    batch_id: Optional[str] = None
-    topic: str = Field(..., example="CNC Machine Operations")
-    difficulty: str = Field(default="Intermediate", example="Intermediate")
+# --- Request Models ---
 
-class SubmissionEvaluationRequest(BaseModel):
-    candidate_name: str = Field(..., example="Alex Mercer")
-    target_role: str = Field(..., example="Automotive Systems Technician")
-    practical_task: str = Field(..., example="Diagnose intermittent electrical fault on CAN bus network.")
-    grading_rubric: List[str] = Field(..., example=["Safety procedure followed", "Fault identified", "Documentation complete"])
-    submission_text: str = Field(..., example="First performed safety lockout. Used oscilloscope to trace CAN signals...")
+class InstituteConfigUpdate(BaseModel):
+    institute_id: str = "INST-GLOBAL-01"
+    dispatch_threshold: int = Field(70, ge=50, le=100)
+    interview_cap_limit: int = Field(3, ge=1, le=10)
+
+class StudentCreateRequest(BaseModel):
+    full_name: str
+    email: str
+    branch_id: str
+    course_name: str
+    fees_status: str = "PAID"
+    consent_given: int = 1
+
+class AssessmentGenRequest(BaseModel):
+    topic: str
+    difficulty: str = "Intermediate"
+    institute_id: str = "INST-GLOBAL-01"
+
+class FullEvaluationRequest(BaseModel):
+    student_id: str
+    assessment_id: str = "ASS-DEFAULT"
+    practical_task: str
+    grading_rubric: List[str]
+    submission_text: str
     image_base64: Optional[str] = None
 
+# --- Endpoints ---
 
 @app.get("/health")
 def health_check():
     return {
         "status": "healthy",
-        "service": "SkillForge Institutional Operations Engine",
-        "version": "2.0.0"
+        "service": "SkillForge Multi-Tenant Platform",
+        "version": "3.0.0"
     }
 
-# --- Module 1 Endpoints: Center & Batch Roster ---
+# Institute Admin Endpoints
+@app.get("/api/institute/info")
+def api_get_institute(inst_id: str = "INST-GLOBAL-01"):
+    return {"success": True, "data": get_institute(inst_id)}
 
-@app.get("/api/centers")
-def api_get_centers():
-    return {"success": True, "data": get_centers()}
+@app.post("/api/institute/config")
+def api_update_config(req: InstituteConfigUpdate):
+    update_institute_config(req.institute_id, req.dispatch_threshold, req.interview_cap_limit)
+    return {"success": True, "data": get_institute(req.institute_id)}
 
-@app.get("/api/batches")
-def api_get_batches(center_id: Optional[str] = None):
-    return {"success": True, "data": get_batches(center_id)}
+@app.get("/api/students")
+def api_get_students():
+    return {"success": True, "data": get_all_students()}
 
-@app.get("/api/candidates")
-def api_get_candidates(batch_id: Optional[str] = None):
-    return {"success": True, "data": get_candidates(batch_id)}
+@app.post("/api/students/add")
+def api_add_student(req: StudentCreateRequest):
+    stu = add_student(req.full_name, req.email, req.branch_id, req.course_name, req.fees_status, req.consent_given)
+    return {"success": True, "data": stu}
 
-# --- Assessment Generation Endpoint ---
+# Assessment & Exam Endpoints
+@app.get("/api/assessments")
+def api_get_assessments():
+    return {"success": True, "data": get_assessments()}
 
 @app.post("/api/assessment/generate")
-def api_generate_assessment(req: AssessmentRequest):
+def api_generate_exam(req: AssessmentGenRequest):
     try:
-        assessment = generate_assessment(topic=req.topic, difficulty=req.difficulty)
-        assessment["center_id"] = req.center_id
-        assessment["batch_id"] = req.batch_id
-        return {
-            "success": True,
-            "data": assessment
-        }
+        exam = generate_assessment(req.topic, req.difficulty, req.institute_id)
+        return {"success": True, "data": exam}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- Module 2 & 3 Endpoint: Multimodal Evaluation & Recruiter Dispatch ---
-
-@app.post("/api/submission/evaluate-and-dispatch")
-def api_evaluate_and_dispatch(req: SubmissionEvaluationRequest):
+# Student Evaluation & Autonomous Placement Pipeline
+@app.post("/api/student/evaluate-and-dispatch")
+def api_student_pipeline(req: FullEvaluationRequest):
     try:
-        # 1. Fast Gemma screening + Gemini 3.5 Multimodal Cognitive Evaluation
-        eval_result = evaluate_submission(
+        res = dispatch_autonomous_placement(
+            student_id=req.student_id,
+            assessment_id=req.assessment_id,
             submission_text=req.submission_text,
             practical_task=req.practical_task,
-            grading_rubric=req.grading_rubric,
+            rubric=req.grading_rubric,
             image_base64=req.image_base64
         )
-        
-        # 2. Autonomous Recruiter Matching & Dispatch Ledger Logging
-        dispatch_result = dispatch_recruiter_action(
-            candidate_name=req.candidate_name,
-            target_role=req.target_role,
-            evaluation_data=eval_result
-        )
-        
-        return {
-            "success": True,
-            "candidate_name": req.candidate_name,
-            "target_role": req.target_role,
-            "evaluation": eval_result,
-            "dispatch": dispatch_result
-        }
+        return {"success": True, "data": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- Module 3 Endpoints: Recruiter Network & Ledger ---
-
-@app.get("/api/recruiter/partners")
-def api_get_partners():
-    return {"success": True, "data": get_hiring_partners()}
-
-@app.get("/api/recruiter/requisitions")
-def api_get_requisitions():
-    return {"success": True, "data": get_requisitions()}
-
-@app.get("/api/recruiter/ledger")
-def api_get_ledger():
-    return {"success": True, "data": get_dispatch_ledger()}
+# Job Placement Ledger
+@app.get("/api/placements/ledger")
+def api_get_placements():
+    return {"success": True, "data": get_job_applications()}
