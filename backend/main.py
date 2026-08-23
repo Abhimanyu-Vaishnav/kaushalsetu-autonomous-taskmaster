@@ -52,6 +52,8 @@ os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 class InstituteCreateReq(BaseModel):
     name: str
     code: str
+    initial_branch_name: str = "Main Center"
+    initial_city: str = "Delhi"
     placement_threshold: int = 70
     max_interviews_cap: int = 3
 
@@ -119,7 +121,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "SkillForge Autonomous Multi-Tenant Architecture Engine",
-        "version": "4.0.0"
+        "version": "4.1.0"
     }
 
 # Standalone Portfolio HTML Route
@@ -139,7 +141,7 @@ def api_get_all_institutes():
 
 @app.post("/api/institutes/create")
 def api_create_institute(req: InstituteCreateReq):
-    inst = create_institute(req.name, req.code, req.placement_threshold, req.max_interviews_cap)
+    inst = create_institute(req.name, req.code, req.initial_branch_name, req.initial_city, req.placement_threshold, req.max_interviews_cap)
     return {"success": True, "data": inst}
 
 @app.get("/api/branches")

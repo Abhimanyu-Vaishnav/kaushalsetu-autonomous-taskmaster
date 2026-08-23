@@ -221,7 +221,7 @@ def get_institute_by_code(code: str) -> Optional[Dict[str, Any]]:
         row = cursor.fetchone()
         return dict(row) if row else None
 
-def create_institute(name: str, code: str, threshold: int = 70, cap: int = 3) -> Dict[str, Any]:
+def create_institute(name: str, code: str, initial_branch_name: str = "Main Center", initial_city: str = "Delhi", threshold: int = 70, cap: int = 3) -> Dict[str, Any]:
     inst_id = f"INST-{uuid.uuid4().hex[:6].upper()}"
     with get_db_connection() as conn:
         cursor = conn.cursor()
@@ -229,6 +229,13 @@ def create_institute(name: str, code: str, threshold: int = 70, cap: int = 3) ->
             INSERT INTO institutes (id, name, code, placement_threshold, max_interviews_cap)
             VALUES (?, ?, ?, ?, ?)
         """, (inst_id, name, code, threshold, cap))
+        
+        # Create mandatory initial branch
+        branch_id = f"BR-{uuid.uuid4().hex[:6].upper()}"
+        cursor.execute("""
+            INSERT INTO branches (id, institute_id, branch_name, city)
+            VALUES (?, ?, ?, ?)
+        """, (branch_id, inst_id, initial_branch_name, initial_city))
         conn.commit()
     return get_institute_by_id(inst_id)
 

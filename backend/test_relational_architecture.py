@@ -35,8 +35,8 @@ def test_relational_architecture():
     # 2. Test API Health v4.0.0
     res = client.get("/health")
     assert res.status_code == 200
-    assert res.json()["version"] == "4.0.0"
-    print("[OK] FastAPI v4.0.0 Multi-Tenant Health verified")
+    assert res.json()["version"] == "4.1.0"
+    print("[OK] FastAPI v4.1.0 Multi-Tenant Health verified")
     
     # 3. Test Agent Execution & Human Intervention Ledger
     agent = AutonomousRecruiterAgent()
