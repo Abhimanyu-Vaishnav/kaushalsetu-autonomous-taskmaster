@@ -30,8 +30,8 @@ def test_enterprise_schema():
     # 3. Test API Health
     res = client.get("/health")
     assert res.status_code == 200
-    assert res.json()["version"] == "3.5.0"
-    print("[OK] FastAPI v3.5.0 Enterprise Health verified")
+    assert res.json()["version"] == "3.6.0"
+    print("[OK] FastAPI v3.6.0 Enterprise Health verified")
     
     # 4. Test Verification Gate & Placement Dispatch
     mock_eval = {

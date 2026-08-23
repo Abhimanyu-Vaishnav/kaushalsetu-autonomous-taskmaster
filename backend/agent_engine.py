@@ -490,24 +490,80 @@ def dispatch_autonomous_placement(
 
 def generate_verified_certificate(candidate_name: str, student_id: str, course_name: str, branch_name: str, score_breakdown: dict, metric_hash: str) -> dict:
     """
-    Generates a live Verified Skill & Competency Dossier certificate.
+    Generates a live Verified Skill & Competency Dossier certificate with downloadable HTML.
     """
+    cert_id = f"CERT-{uuid.uuid4().hex[:8].upper()}"
+    total_score = score_breakdown.get("total_score", 90)
+    mcq_score = score_breakdown.get("mcq_score", 30.0)
+    practical_score = score_breakdown.get("practical_score", 60.0)
+    
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Verified Skill Certificate - {candidate_name}</title>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0F172A; color: #F8FAFC; margin: 0; padding: 40px; }}
+        .cert-card {{ max-width: 800px; margin: 0 auto; background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%); border: 3px solid #6366F1; border-radius: 16px; padding: 40px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }}
+        .header {{ text-align: center; border-bottom: 2px solid #4F46E5; padding-bottom: 20px; margin-bottom: 30px; }}
+        .header h1 {{ color: #818CF8; font-size: 32px; margin: 0; text-transform: uppercase; letter-spacing: 2px; }}
+        .header p {{ color: #94A3B8; font-size: 14px; margin-top: 8px; }}
+        .content {{ font-size: 16px; line-height: 1.6; }}
+        .highlight {{ color: #38BDF8; font-weight: bold; }}
+        .score-box {{ display: flex; justify-content: space-around; background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 12px; margin: 25px 0; border: 1px solid #475569; }}
+        .score-item {{ text-align: center; }}
+        .score-val {{ font-size: 28px; font-weight: bold; color: #34D399; }}
+        .footer {{ margin-top: 40px; text-align: center; border-top: 1px solid #334155; padding-top: 20px; font-size: 12px; color: #64748B; }}
+        .hash-tag {{ font-family: monospace; background: #0F172A; color: #818CF8; padding: 6px 12px; border-radius: 6px; border: 1px solid #475569; display: inline-block; margin-top: 10px; }}
+    </style>
+</head>
+<body>
+    <div class="cert-card">
+        <div class="header">
+            <h1>⚡ SkillForge Autonomous</h1>
+            <p>OFFICIAL VERIFIED CANDIDATE COMPETENCY DOSSIER</p>
+        </div>
+        <div class="content">
+            <p>This document officially certifies that candidate <span class="highlight">{candidate_name}</span> (ID: <code>{student_id}</code>) from branch <span class="highlight">{branch_name}</span> has successfully passed the multimodal practical diagnostic examination for:</p>
+            <h2 style="color: #F43F5E; text-align: center; margin: 20px 0;">{course_name}</h2>
+            
+            <div class="score-box">
+                <div class="score-item">
+                    <div style="font-size: 12px; color: #94A3B8;">MCQ OBJECTIVE</div>
+                    <div class="score-val">{mcq_score} / 30</div>
+                </div>
+                <div class="score-item">
+                    <div style="font-size: 12px; color: #94A3B8;">PRACTICAL VISION</div>
+                    <div class="score-val">{practical_score} / 70</div>
+                </div>
+                <div class="score-item">
+                    <div style="font-size: 12px; color: #94A3B8;">TOTAL COMBINED</div>
+                    <div class="score-val" style="color: #60A5FA;">{total_score}%</div>
+                </div>
+            </div>
+            
+            <p>Verified Competencies: <strong>Hardware Circuit Isolation, Safety Protocol Compliance, Automated Fault Diagnostics</strong></p>
+        </div>
+        <div class="footer">
+            <p>Issued by SkillForge Autonomous Continuous Placement Engine | 2026-08-23</p>
+            <div class="hash-tag">CRYPTOGRAPHIC VERIFICATION HASH: {metric_hash}</div>
+        </div>
+    </div>
+</body>
+</html>"""
+
     return {
-        "certificate_id": f"CERT-{uuid.uuid4().hex[:8].upper()}",
+        "certificate_id": cert_id,
         "issuer": "SkillForge Vocational Foundation & Placement Engine",
         "candidate_name": candidate_name,
         "student_id": student_id,
         "course_name": course_name,
         "branch_name": branch_name,
-        "total_score": score_breakdown.get("total_score", 90),
-        "mcq_score": score_breakdown.get("mcq_score", 30.0),
-        "practical_score": score_breakdown.get("practical_score", 60.0),
-        "competencies_verified": [
-            "Hardware & Diagnostic Circuit Testing",
-            "Safety Lockout & Protocol Adherence",
-            "Technical Report Documentation & Analysis"
-        ],
+        "total_score": total_score,
+        "mcq_score": mcq_score,
+        "practical_score": practical_score,
         "verified_hash": metric_hash,
         "issued_at": "2026-08-23",
-        "verification_status": "AUTHENTICATED & IMMUTABLE"
+        "verification_status": "AUTHENTICATED & IMMUTABLE",
+        "html_content": html_content
     }
