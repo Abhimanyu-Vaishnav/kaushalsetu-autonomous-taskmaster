@@ -37,6 +37,7 @@ def init_db():
             institute_id TEXT NOT NULL,
             branch_name TEXT NOT NULL,
             full_name TEXT NOT NULL,
+            dob TEXT DEFAULT '2002-01-01',
             email TEXT NOT NULL,
             phone TEXT DEFAULT '',
             course_name TEXT NOT NULL,
@@ -120,19 +121,30 @@ def seed_initial_data(conn: sqlite3.Connection):
     """, (inst_id, "SkillForge Vocational Foundation", code, branches, courses, 70, 3))
     
     students = [
-        ("STU-1001", inst_id, "Nangloi Center", "Alex Mercer", "alex.mercer@skillforge-edu.org", "+91 9876543210", "Automotive & Hardware Diagnostics", "PAID", 1, 0),
-        ("STU-1002", inst_id, "Nangloi Center", "Priya Sundaram", "priya.s@skillforge-edu.org", "+91 9876543211", "Full Stack Web Development", "PAID", 1, 0),
-        ("STU-1003", inst_id, "Yamuna Vihar Center", "Jordan Smith", "jordan.s@skillforge-edu.org", "+91 9876543212", "Accounting & Financial Tally", "PAID", 1, 0),
-        ("STU-1004", inst_id, "Jwalapur Center", "Amitabh Choudhury", "amitabh.c@skillforge-edu.org", "+91 9876543213", "Automotive & Hardware Diagnostics", "PAID", 1, 0)
+        ("STU-1001", inst_id, "Nangloi Center", "Alex Mercer", "2002-01-15", "alex.mercer@skillforge-edu.org", "+91 9876543210", "Automotive & Hardware Diagnostics", "PAID", 1, 0),
+        ("STU-1002", inst_id, "Nangloi Center", "Priya Sundaram", "2001-05-20", "priya.s@skillforge-edu.org", "+91 9876543211", "Full Stack Web Development", "PAID", 1, 0),
+        ("STU-1003", inst_id, "Yamuna Vihar Center", "Jordan Smith", "2000-11-10", "jordan.s@skillforge-edu.org", "+91 9876543212", "Accounting & Financial Tally", "PAID", 1, 0),
+        ("STU-1004", inst_id, "Jwalapur Center", "Amitabh Choudhury", "1999-08-04", "amitabh.c@skillforge-edu.org", "+91 9876543213", "Automotive & Hardware Diagnostics", "PAID", 1, 0)
     ]
     cursor.executemany("""
-        INSERT OR IGNORE INTO students (student_id, institute_id, branch_name, full_name, email, phone, course_name, fees_status, consent_for_job_dispatch, interview_count)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR IGNORE INTO students (student_id, institute_id, branch_name, full_name, dob, email, phone, course_name, fees_status, consent_for_job_dispatch, interview_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, students)
     
     conn.commit()
 
 # --- Helper Functions ---
+
+def get_all_institutes() -> List[Dict[str, Any]]:
+    with get_db_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM institutes ORDER BY created_at DESC")
+        rows = [dict(r) for r in cursor.fetchall()]
+        for r in rows:
+            r["branches"] = json.loads(r["branches"])
+            r["courses"] = json.loads(r["courses"])
+        return rows
 
 def get_institute(inst_id: str = "INST-GLOBAL-01") -> Dict[str, Any]:
     with get_db_connection() as conn:
@@ -167,11 +179,13 @@ def create_institute(name: str, code: str, branches: List[str], courses: List[st
         conn.commit()
     return get_institute(inst_id)
 
-def get_all_students(institute_id: Optional[str] = None) -> List[Dict[str, Any]]:
+def get_all_students(institute_id: Optional[str] = None, branch_name: Optional[str] = None) -> List[Dict[str, Any]]:
     with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        if institute_id:
+        if institute_id and branch_name:
+            cursor.execute("SELECT * FROM students WHERE institute_id = ? AND branch_name = ? ORDER BY registered_at DESC", (institute_id, branch_name))
+        elif institute_id:
             cursor.execute("SELECT * FROM students WHERE institute_id = ? ORDER BY registered_at DESC", (institute_id,))
         else:
             cursor.execute("SELECT * FROM students ORDER BY registered_at DESC")
@@ -185,14 +199,14 @@ def get_student_by_id(student_id: str) -> Optional[Dict[str, Any]]:
         row = cursor.fetchone()
         return dict(row) if row else None
 
-def add_student(institute_id: str, branch_name: str, full_name: str, email: str, phone: str, course_name: str, fees_status: str = "PAID", consent: int = 1) -> Dict[str, Any]:
+def add_student(institute_id: str, branch_name: str, full_name: str, email: str, phone: str, course_name: str, dob: str = "2002-01-01", fees_status: str = "PAID", consent: int = 1) -> Dict[str, Any]:
     student_id = f"STU-{uuid.uuid4().hex[:6].upper()}"
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO students (student_id, institute_id, branch_name, full_name, email, phone, course_name, fees_status, consent_for_job_dispatch, interview_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-        """, (student_id, institute_id, branch_name, full_name, email, phone, course_name, fees_status, consent))
+            INSERT INTO students (student_id, institute_id, branch_name, full_name, dob, email, phone, course_name, fees_status, consent_for_job_dispatch, interview_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        """, (student_id, institute_id, branch_name, full_name, dob, email, phone, course_name, fees_status, consent))
         conn.commit()
     return get_student_by_id(student_id)
 

@@ -62,6 +62,7 @@ class StudentCreateReq(BaseModel):
     institute_id: str = "INST-GLOBAL-01"
     branch_name: str
     full_name: str
+    dob: str = "2002-01-01"
     email: str
     phone: str = ""
     course_name: str
@@ -107,7 +108,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "SkillForge Autonomous Background Action Platform",
-        "version": "3.7.0"
+        "version": "3.8.0"
     }
 
 # Portfolio HTML Route
@@ -121,6 +122,11 @@ def get_student_portfolio(student_id: str):
         raise HTTPException(status_code=404, detail=f"Dossier portfolio for student '{student_id}' not found")
 
 # 1. Institute & Branch Management
+@app.get("/api/institutes")
+def api_get_all_institutes():
+    from database import get_all_institutes
+    return {"success": True, "data": get_all_institutes()}
+
 @app.get("/api/institute/info")
 def api_get_institute(inst_id: str = "INST-GLOBAL-01"):
     return {"success": True, "data": get_institute(inst_id)}
@@ -137,12 +143,12 @@ def api_update_config(req: InstituteConfigReq):
 
 # 2. Student Roster & CSV Bulk Upload
 @app.get("/api/students")
-def api_get_students(institute_id: Optional[str] = None):
-    return {"success": True, "data": get_all_students(institute_id)}
+def api_get_students(institute_id: Optional[str] = None, branch_name: Optional[str] = None):
+    return {"success": True, "data": get_all_students(institute_id, branch_name)}
 
 @app.post("/api/students/add")
 def api_add_student(req: StudentCreateReq):
-    stu = add_student(req.institute_id, req.branch_name, req.full_name, req.email, req.phone, req.course_name, req.fees_status, req.consent)
+    stu = add_student(req.institute_id, req.branch_name, req.full_name, req.email, req.phone, req.course_name, req.dob, req.fees_status, req.consent)
     return {"success": True, "data": stu}
 
 @app.post("/api/students/consent")

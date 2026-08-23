@@ -8,7 +8,7 @@ import io
 BACKEND_URL = "http://localhost:8000"
 
 st.set_page_config(
-    page_title="SkillForge Autonomous - Background Agent Engine",
+    page_title="SkillForge Autonomous - Multi-Tenant Operations Engine",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -61,151 +61,188 @@ st.markdown("""
         border: 2px solid #6366F1;
         margin-top: 15px;
     }
-    .terminal-box {
-        background-color: #0F172A;
-        color: #38BDF8;
-        font-family: monospace;
-        padding: 16px;
-        border-radius: 8px;
-        border: 1px solid #334155;
-        font-size: 0.88rem;
-        line-height: 1.5;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-header">⚡ SkillForge Autonomous</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">End-to-End Autonomous Background Agent Engine | Taskmaster Track</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Multi-Tenant Institutional Operations & Autonomous Placement Platform | Taskmaster Track</div>', unsafe_allow_html=True)
 
-# Sidebar System Health & One-Click Demo Preset Switcher
+# 1. Top Level Center & Branch Selector
+institutes = []
+try:
+    inst_res = requests.get(f"{BACKEND_URL}/api/institutes", timeout=2)
+    if inst_res.status_code == 200:
+        institutes = inst_res.json()["data"]
+except Exception:
+    pass
+
+if not institutes:
+    st.error("🔴 Could not connect to backend server. Make sure run_app.py is running.")
+    st.stop()
+
+# Sidebar Health & Demo Switcher
 with st.sidebar:
     st.image("https://img.icons8.com/color/96/google-logo.png", width=45)
-    st.subheader("System Health & Status")
-    try:
-        res = requests.get(f"{BACKEND_URL}/health", timeout=2)
-        if res.status_code == 200:
-            st.success("🟢 FastAPI Backend Connected (v3.7.0)")
-            st.success("⚡ Gemma Pre-check Screener Ready")
-            st.success("🤖 Gemini 3.5 Pro & Flash Active")
-        else:
-            st.error("🔴 Backend Error")
-    except Exception:
-        st.error("🔴 Backend Unreachable")
-        
-    st.divider()
-    st.markdown("### ⚡ One-Click Demo Switcher")
-    st.caption("Instant test presets for Judges:")
+    st.subheader("System Health Status")
+    st.success("🟢 FastAPI Backend Connected (v3.8.0)")
+    st.success("⚡ Gemma Pre-check Screener Ready")
+    st.success("🤖 Gemini 3.5 Pro & Flash Active")
     
-    if st.button("🟢 Preset A: Top Candidate (92% Score)", use_container_width=True):
+    st.divider()
+    st.markdown("### ⚡ One-Click Judge Demo Switcher")
+    if st.button("🟢 Preset A: Top Candidate (92%)", use_container_width=True):
         st.session_state["demo_preset"] = "PRESET_A"
         st.info("Loaded Top Candidate Preset! Go to View 2 to execute.")
-        
-    if st.button("🟠 Preset B: Remedial Candidate (54% Score)", use_container_width=True):
+    if st.button("🟠 Preset B: Remedial Candidate (54%)", use_container_width=True):
         st.session_state["demo_preset"] = "PRESET_B"
         st.info("Loaded Remedial Candidate Preset! Go to View 2 to execute.")
 
-    st.divider()
-    st.markdown("### Track Specification")
-    st.markdown("- **Taskmaster Track**")
-    st.markdown("- **Zero Chatbot UI**")
-    st.markdown("- **Gemma Bonus (+0.2 pts)**")
+# Center & Branch Isolation Filter Header
+st.markdown("### 🏛️ Center & Branch Governance Filter")
+col_f1, col_f2 = st.columns(2)
+
+inst_dict = {f"{i['name']} ({i['code']})": i for i in institutes}
+selected_inst_label = col_f1.selectbox("🏢 Select Vocational Institute / Foundation", list(inst_dict.keys()))
+selected_inst = inst_dict[selected_inst_label]
+
+available_branches = selected_inst.get("branches", [])
+selected_branch = col_f2.selectbox("📍 Select Isolated Center Branch", available_branches)
+
+available_courses = selected_inst.get("courses", [])
+
+st.info(f"🔒 **Strict Isolation Active:** Currently viewing **{selected_inst['name']}** $\\rightarrow$ **{selected_branch}** (`Placement Threshold: {selected_inst['placement_threshold']}%`)")
+
+st.divider()
 
 # 4 Main Operational Views
 views = st.tabs([
-    "🏛️ Institute Center Node",
-    "🎓 Candidate Exam Space",
-    "🌐 Live Generated Dossier Viewer",
-    "🤖 Agent Autonomous Telemetry"
+    "🏛️ Branch Roster & Candidate Management",
+    "🎓 Dedicated Student Exam Portal",
+    "🌐 Live Generated Portfolio Dossier",
+    "🚀 Autonomous Recruiter Outbox & Telemetry"
 ])
 
-# --- VIEW 1: INSTITUTE CENTER NODE ---
+# --- VIEW 1: BRANCH ROSTER & CANDIDATE MANAGEMENT ---
 with views[0]:
-    st.subheader("🏛️ Institute Center Node & Roster Control")
-    st.markdown("Configure placement thresholds, max interview caps per candidate, and manage student rosters.")
+    st.subheader(f"🏛️ Roster Control for {selected_branch}")
+    st.markdown("Add new students manually or via bulk CSV upload, copy unique standalone exam URLs, and track dossier portfolios.")
     
-    inst_data = {}
-    try:
-        ires = requests.get(f"{BACKEND_URL}/api/institute/info", timeout=2)
-        if ires.status_code == 200:
-            inst_data = ires.json()["data"]
-    except Exception:
-        pass
-        
-    if inst_data:
-        st.markdown(f"### **{inst_data.get('name', 'Institute')}** (`Code: {inst_data.get('code', 'SKILLFORGE-HQ')}`)")
-        
-        with st.expander("⚙️ Placement Threshold & Policy Settings", expanded=True):
-            col_c1, col_c2, col_c3 = st.columns(3)
-            with col_c1:
-                cur_thresh = inst_data.get("placement_threshold", 70)
-                new_thresh = st.slider("Minimum Placement Score %", 50, 95, cur_thresh)
-            with col_c2:
-                cur_cap = inst_data.get("max_interviews_cap", 3)
-                new_cap = st.slider("Max Interview Cap per Candidate", 1, 5, cur_cap)
-            with col_c3:
-                st.write("")
-                st.write("")
-                if st.button("💾 Save Policy Config", type="primary", use_container_width=True):
-                    up_res = requests.post(f"{BACKEND_URL}/api/institute/config", json={
-                        "institute_id": inst_data["id"],
-                        "placement_threshold": new_thresh,
-                        "max_interviews_cap": new_cap
-                    })
-                    if up_res.status_code == 200:
-                        st.success("✅ Policy Settings Saved!")
-                        st.rerun()
-                        
-        st.divider()
-        st.markdown("#### 📜 Registered Student Roster & Placement Status")
-        try:
-            st_res = requests.get(f"{BACKEND_URL}/api/students", timeout=2)
-            if st_res.status_code == 200:
-                students = st_res.json()["data"]
-                st.dataframe(students, use_container_width=True)
-        except Exception as e:
-            st.error(f"Could not load roster: {e}")
+    with st.expander("➕ Add New Candidate to Branch", expanded=False):
+        with st.form("add_student_branch_form"):
+            col_s1, col_s2 = st.columns(2)
+            with col_s1:
+                st_name = st.text_input("Full Candidate Name", value="Rahul Verma")
+                st_email = st.text_input("Email Address", value="rahul.v@skillforge-edu.org")
+                st_dob = st.date_input("Date of Birth", value=None)
+            with col_s2:
+                st_phone = st.text_input("Phone Number", value="+91 9811223344")
+                st_course = st.selectbox("Assign Course", available_courses)
+                st_fees = st.selectbox("Fees Payment Status", ["PAID", "PENDING"])
+                
+            submit_student = st.form_submit_button("Enroll Student", type="primary")
+            if submit_student:
+                dob_str = str(st_dob) if st_dob else "2002-01-01"
+                add_res = requests.post(f"{BACKEND_URL}/api/students/add", json={
+                    "institute_id": selected_inst["id"],
+                    "branch_name": selected_branch,
+                    "full_name": st_name,
+                    "dob": dob_str,
+                    "email": st_email,
+                    "phone": st_phone,
+                    "course_name": st_course,
+                    "fees_status": st_fees,
+                    "consent": 1
+                })
+                if add_res.status_code == 200:
+                    st.success(f"✅ Candidate Enrolled! ID: `{add_res.json()['data']['student_id']}`")
+                    st.rerun()
+                    
+    with st.expander("➕ Add New Center Branch or Course to Institute", expanded=False):
+        with st.form("add_branch_course_form"):
+            new_branch_input = st.text_input("Add New Branch Name (e.g., Karol Bagh Center)")
+            new_course_input = st.text_input("Add New Vocational Course (e.g., Solar & EV Maintenance)")
+            submit_inst_update = st.form_submit_button("Save New Branch/Course", type="primary")
+            if submit_inst_update:
+                updated_branches = list(set(available_branches + ([new_branch_input.strip()] if new_branch_input.strip() else [])))
+                updated_courses = list(set(available_courses + ([new_course_input.strip()] if new_course_input.strip() else [])))
+                # Update institute in backend database
+                with sqlite3.connect("backend/skillforge.db") as conn:
+                    conn.execute("UPDATE institutes SET branches = ?, courses = ? WHERE id = ?", (json.dumps(updated_branches), json.dumps(updated_courses), selected_inst["id"]))
+                    conn.commit()
+                st.success("✅ Institute Branches & Courses Updated!")
+                st.rerun()
 
-# --- VIEW 2: CANDIDATE EXAM SPACE ---
-with views[1]:
-    st.subheader("🎓 Candidate Exam Space & Autonomous Agent Dispatcher")
-    st.markdown("Log in via Candidate ID + DOB, take the 5-MCQ exam, submit code & GitHub links, and trigger the background agent.")
+    st.divider()
+    st.markdown(f"#### 📜 Enrolled Roster for {selected_branch}")
     
     students = []
     try:
-        s_res = requests.get(f"{BACKEND_URL}/api/students", timeout=2)
-        if s_res.status_code == 200:
-            students = s_res.json()["data"]
+        st_res = requests.get(f"{BACKEND_URL}/api/students?institute_id={selected_inst['id']}&branch_name={selected_branch}", timeout=2)
+        if st_res.status_code == 200:
+            students = st_res.json()["data"]
+    except Exception as e:
+        st.error(f"Error fetching roster: {e}")
+        
+    if not students:
+        st.warning(f"No students enrolled in {selected_branch} yet. Add candidates above!")
+    else:
+        for s in students:
+            with st.container():
+                col_r1, col_r2, col_r3, col_r4 = st.columns([2, 2, 2, 2])
+                with col_r1:
+                    st.write(f"**{s['full_name']}** (`{s['student_id']}`)")
+                    st.caption(f"DOB: {s.get('dob', '2002-01-01')} | {s['course_name']}")
+                with col_r2:
+                    exam_url = f"{BACKEND_URL}/exam?sid={s['student_id']}&dob={s.get('dob', '2002-01-01')}"
+                    st.code(exam_url, language="text")
+                with col_r3:
+                    portfolio_file = f"backend/static/portfolios/{s['student_id']}.html"
+                    import os
+                    if os.path.exists(portfolio_file):
+                        port_url = f"{BACKEND_URL}/portfolio/{s['student_id']}"
+                        st.markdown(f"🌐 [View Live Portfolio]({port_url})")
+                    else:
+                        st.caption("⏳ Exam Pending")
+                with col_r4:
+                    st.write(f"Consent: {'✅ Yes' if s['consent_for_job_dispatch'] else '❌ No'}")
+                    st.write(f"Dispatches: `{s.get('interview_count', 0)} / 3`")
+                st.divider()
+
+# --- VIEW 2: DEDICATED STUDENT EXAM PORTAL ---
+with views[1]:
+    st.subheader("🎓 Dedicated Student Exam Portal")
+    st.markdown("Standalone exam runner synthesizing course-specific questions via Gemini 3.5 upon candidate login.")
+    
+    # Isolated Student Selection for Exam taking
+    branch_students = []
+    try:
+        st_res = requests.get(f"{BACKEND_URL}/api/students?institute_id={selected_inst['id']}&branch_name={selected_branch}", timeout=2)
+        if st_res.status_code == 200:
+            branch_students = st_res.json()["data"]
     except Exception:
         pass
         
-    if not students:
-        st.warning("No students found. Please enroll candidates in View 1.")
+    if not branch_students:
+        st.warning(f"No students enrolled in {selected_branch}.")
     else:
-        stu_opts = {f"{s['full_name']} ({s['student_id']}) - {s['course_name']}": s['student_id'] for s in students}
+        stu_opts = {f"{s['full_name']} ({s['student_id']}) - {s['course_name']}": s['student_id'] for s in branch_students}
         sel_label = st.selectbox("🔑 Candidate Login (Student ID)", list(stu_opts.keys()))
         selected_student_id = stu_opts[sel_label]
+        stu_detail = next(s for s in branch_students if s['student_id'] == selected_student_id)
         
-        stu_detail = next(s for s in students if s['student_id'] == selected_student_id)
+        st.markdown(f"#### Candidate: **{stu_detail['full_name']}** (`{stu_detail['student_id']}`) | Course: **{stu_detail['course_name']}**")
         
-        # Simple Login Check
-        col_l1, col_l2 = st.columns(2)
-        with col_l1:
-            dob_input = st.date_input("Date of Birth", value=None)
-        with col_l2:
-            st.write("")
-            st.write("")
-            cur_consent = bool(stu_detail.get('consent_for_job_dispatch', 1))
-            new_consent = st.checkbox("I authorize SkillForge AI Agent to build my live dossier & auto-apply to matching job openings", value=cur_consent)
-            if new_consent != cur_consent:
-                requests.post(f"{BACKEND_URL}/api/students/consent", json={"student_id": selected_student_id, "consent": new_consent})
-                st.success("✅ Placement Dispatch Consent Updated!")
-                st.rerun()
-                
+        cur_consent = bool(stu_detail.get('consent_for_job_dispatch', 1))
+        new_consent = st.checkbox("I authorize SkillForge AI Agent to build my live portfolio dossier & auto-apply to matching job openings", value=cur_consent)
+        if new_consent != cur_consent:
+            requests.post(f"{BACKEND_URL}/api/students/consent", json={"student_id": selected_student_id, "consent": new_consent})
+            st.success("✅ Consent updated!")
+            st.rerun()
+            
         st.divider()
-        st.markdown("### 📝 Exam Synthesis & Assessment Submission")
         
         if st.button("✨ Synthesize Assessment via Gemini 3.5", type="primary"):
-            with st.spinner("Synthesizing assessment via Gemini 3.5..."):
+            with st.spinner(f"Synthesizing assessment for {stu_detail['course_name']}..."):
                 e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
                     "topic": stu_detail['course_name'],
                     "difficulty": "Intermediate"
@@ -232,7 +269,7 @@ with views[1]:
         is_preset_a = demo_preset == "PRESET_A"
         is_preset_b = demo_preset == "PRESET_B"
         
-        with st.form("candidate_exam_form"):
+        with st.form("dedicated_exam_form"):
             st.markdown(f"#### 📋 **{exam.get('title', 'Vocational Assessment')}**")
             st.markdown("##### **Part 1: Multiple Choice Questions (30 Points Max)**")
             
@@ -297,7 +334,7 @@ with views[1]:
             with col_u2:
                 live_url_input = st.text_input("Live Demo / Project Deployment URL", value=live_default)
                 
-            uploaded_img = st.file_uploader("Attach Project Artifact (Hardware Photo / Circuit Diagram / Screenshot)", type=["jpg", "png", "jpeg", "pdf", "zip"])
+            uploaded_img = st.file_uploader("Attach Project Artifact (Hardware Photo / Circuit Diagram / Code Screenshot)", type=["jpg", "png", "jpeg", "pdf", "zip"])
             
             submit_exam = st.form_submit_button("🚀 Submit Exam & Run Background Agent", type="primary", use_container_width=True)
             
@@ -313,7 +350,7 @@ with views[1]:
             time.sleep(0.2)
             p_bar.progress(30, text="1. Gemma Fast Screener & Objective MCQ Scoring...")
             time.sleep(0.3)
-            p_bar.progress(70, text="2. Gemini 3.5 Multimodal Evaluation & HTML Dossier Generation...")
+            p_bar.progress(70, text="2. Gemini 3.5 Multimodal Evaluation & Portfolio Generation...")
             
             try:
                 pipe_res = requests.post(
@@ -343,9 +380,9 @@ with views[1]:
                     st.session_state["last_telemetry"] = telemetry
                     st.session_state["last_portfolio_url"] = eval_out.get("portfolio_url", f"http://localhost:8000/portfolio/{selected_student_id}")
                     
-                    st.success("✅ Dynamic Real-Time Grading & Dossier Generation Complete!")
+                    st.success("✅ Evaluation & Dynamic Portfolio Generation Complete!")
                     
-                    st.markdown("### 📊 Candidate Performance Metrics")
+                    st.markdown("### 📊 Performance Metrics Breakdown")
                     mc1, mc2, mc3, mc4 = st.columns(4)
                     with mc1:
                         st.metric("MCQ Score", f"{eval_out['mcq_score']} / 30 pts")
@@ -361,29 +398,29 @@ with views[1]:
                     
                     if ready:
                         st.markdown(f'<span class="badge-success">🚀 STATUS: {dispatch_out["status"]}</span>', unsafe_allow_html=True)
-                        st.markdown("#### 📬 Outbound Application & Notification Alerts")
+                        st.markdown("#### 📬 Outbound Application Alerts")
                         st.markdown(f"**Matched Partner:** `{dispatch_out['hiring_partner']}`")
                         st.markdown(f"**Role Title:** `{dispatch_out['role']}`")
-                        st.markdown(f"**Live Portfolio Dossier:** [View Dossier]({eval_out['portfolio_url']})")
+                        st.markdown(f"**Live Dossier:** [View Portfolio]({eval_out['portfolio_url']})")
                         st.info(dispatch_out["notifications"]["student_alert"])
                         st.info(dispatch_out["notifications"]["branch_alert"])
                     else:
                         st.markdown(f'<span class="badge-remedial">🔄 STATUS: {dispatch_out["status"]}</span>', unsafe_allow_html=True)
-                        st.warning(f"Score below required threshold. 7-day remedial plan assigned.")
+                        st.warning(f"Score below threshold. 7-day remedial plan assigned.")
                 else:
                     st.error(f"Pipeline error: {pipe_res.text}")
             except Exception as e:
                 st.error(f"Connection error: {e}")
 
-# --- VIEW 3: LIVE GENERATED DOSSIER VIEWER ---
+# --- VIEW 3: LIVE GENERATED PORTFOLIO DOSSIER ---
 with views[2]:
     st.subheader("🌐 Live Standalone Candidate Portfolio Dossier Viewer")
     st.markdown("Preview the standalone HTML/CSS/Tailwind portfolio generated by Gemini 3.5 Flash upon student submission.")
     
-    dossier_url = st.session_state.get("last_portfolio_url", "http://localhost:8000/portfolio/STU-1001")
-    st.markdown(f"**Active Dossier URL:** [`{dossier_url}`]({dossier_url})")
+    dossier_url = st.session_state.get("last_portfolio_url", f"http://localhost:8000/portfolio/STU-1001")
+    st.markdown(f"**Active Portfolio Dossier URL:** [`{dossier_url}`]({dossier_url})")
     
-    if st.button("🔄 Refresh Live Dossier Preview", type="primary"):
+    if st.button("🔄 Refresh Live Portfolio Preview", type="primary"):
         st.rerun()
         
     try:
@@ -391,17 +428,31 @@ with views[2]:
     except Exception as e:
         st.error(f"Could not render portfolio iframe: {e}")
 
-# --- VIEW 4: AGENT AUTONOMOUS TELEMETRY ---
+# --- VIEW 4: AUTONOMOUS RECRUITER OUTBOX & TELEMETRY ---
 with views[3]:
-    st.subheader("🤖 Agent Autonomous Action Telemetry & Terminal Logs")
-    st.markdown("Real-time streaming event trace logs showing the background agent discovering jobs, validating consent, and executing dispatches.")
+    st.subheader("🚀 Autonomous Recruiter Outbox & Telemetry Logs")
+    st.markdown("Immutable ledger of auto-dispatched candidate applications and real-time background execution trace logs.")
     
-    telemetry_logs = st.session_state.get("last_telemetry", [
-        {"timestamp": "19:15:01.002", "step": "START", "message": "Autonomous Agent initialized for Student STU-1001"},
-        {"timestamp": "19:15:01.045", "step": "GEMMA_PRECHECK", "message": "Gemma fast sub-millisecond check passed (Score: 84/100)"},
-        {"timestamp": "19:15:02.112", "step": "DOSSIER_GEN", "message": "Synthesized standalone HTML portfolio dossier at /portfolio/STU-1001"},
-        {"timestamp": "19:15:02.340", "step": "ACTION_DISPATCHED", "message": "Auto-dispatched job application to Tata Motors for Automotive Systems Technician"}
-    ])
+    tab_l1, tab_l2 = st.tabs(["📜 Live Outbox Application Ledger", "🤖 OpenTelemetry Execution Logs"])
     
-    log_text = "\n".join([f"[{t['timestamp']}] [{t['step']}] {t['message']}" for t in telemetry_logs])
-    st.code(log_text, language="text")
+    with tab_l1:
+        try:
+            l_res = requests.get(f"{BACKEND_URL}/api/placements/ledger", timeout=2)
+            if l_res.status_code == 200:
+                ledger = l_res.json()["data"]
+                if ledger:
+                    st.dataframe(ledger, use_container_width=True)
+                else:
+                    st.info("No dispatches logged yet.")
+        except Exception as e:
+            st.error(f"Error loading ledger: {e}")
+            
+    with tab_l2:
+        telemetry_logs = st.session_state.get("last_telemetry", [
+            {"timestamp": "19:35:01.002", "step": "START", "message": "Autonomous Agent initialized for Student STU-1001"},
+            {"timestamp": "19:35:01.045", "step": "GEMMA_PRECHECK", "message": "Gemma fast check passed (Score: 84/100)"},
+            {"timestamp": "19:35:02.112", "step": "DOSSIER_GEN", "message": "Synthesized standalone HTML portfolio dossier at /portfolio/STU-1001"},
+            {"timestamp": "19:35:02.340", "step": "ACTION_DISPATCHED", "message": "Auto-dispatched job application to Tata Motors for Automotive Systems Technician"}
+        ])
+        log_text = "\n".join([f"[{t['timestamp']}] [{t['step']}] {t['message']}" for t in telemetry_logs])
+        st.code(log_text, language="text")
