@@ -1,14 +1,18 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
+import csv
+import io
 
 from database import (
     get_institute,
     update_institute_config,
+    create_institute,
     get_all_students,
     get_student_by_id,
     add_student,
+    set_student_consent,
     get_assessments,
     get_job_applications
 )
@@ -19,9 +23,9 @@ from agent_engine import (
 )
 
 app = FastAPI(
-    title="SkillForge Autonomous - Multi-Tenant Operations API",
-    description="Multi-Tenant Vocational Institute Platform & Autonomous Placement Engine",
-    version="3.0.0",
+    title="SkillForge Autonomous - Enterprise Multi-Tenant Platform",
+    description="Autonomous Vocational Operations, Multimodal Grading & Placement Action Engine",
+    version="3.5.0",
 )
 
 app.add_middleware(
@@ -32,27 +36,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Request Models ---
+# --- Pydantic Schemas ---
 
-class InstituteConfigUpdate(BaseModel):
+class InstituteCreateReq(BaseModel):
+    name: str
+    code: str
+    branches: List[str]
+    courses: List[str]
+    placement_threshold: int = 70
+    max_interviews_cap: int = 3
+
+class InstituteConfigReq(BaseModel):
     institute_id: str = "INST-GLOBAL-01"
-    dispatch_threshold: int = Field(70, ge=50, le=100)
-    interview_cap_limit: int = Field(3, ge=1, le=10)
+    placement_threshold: int = Field(70, ge=50, le=100)
+    max_interviews_cap: int = Field(3, ge=1, le=10)
 
-class StudentCreateRequest(BaseModel):
+class StudentCreateReq(BaseModel):
+    institute_id: str = "INST-GLOBAL-01"
+    branch_name: str
     full_name: str
     email: str
-    branch_id: str
+    phone: str = ""
     course_name: str
     fees_status: str = "PAID"
-    consent_given: int = 1
+    consent: int = 1
 
-class AssessmentGenRequest(BaseModel):
+class StudentConsentReq(BaseModel):
+    student_id: str
+    consent: bool
+
+class AssessmentGenReq(BaseModel):
     topic: str
     difficulty: str = "Intermediate"
     institute_id: str = "INST-GLOBAL-01"
 
-class FullEvaluationRequest(BaseModel):
+class FullEvaluationReq(BaseModel):
     student_id: str
     assessment_id: str = "ASS-DEFAULT"
     practical_task: str
@@ -60,51 +78,83 @@ class FullEvaluationRequest(BaseModel):
     submission_text: str
     image_base64: Optional[str] = None
 
-# --- Endpoints ---
+
+# --- REST API Endpoints ---
 
 @app.get("/health")
 def health_check():
     return {
         "status": "healthy",
-        "service": "SkillForge Multi-Tenant Platform",
-        "version": "3.0.0"
+        "service": "SkillForge Enterprise Multi-Tenant Platform",
+        "version": "3.5.0"
     }
 
-# Institute Admin Endpoints
+# 1. Institute & Branch Management
 @app.get("/api/institute/info")
 def api_get_institute(inst_id: str = "INST-GLOBAL-01"):
     return {"success": True, "data": get_institute(inst_id)}
 
+@app.post("/api/institute/create")
+def api_create_institute(req: InstituteCreateReq):
+    inst = create_institute(req.name, req.code, req.branches, req.courses, req.placement_threshold, req.max_interviews_cap)
+    return {"success": True, "data": inst}
+
 @app.post("/api/institute/config")
-def api_update_config(req: InstituteConfigUpdate):
-    update_institute_config(req.institute_id, req.dispatch_threshold, req.interview_cap_limit)
+def api_update_config(req: InstituteConfigReq):
+    update_institute_config(req.institute_id, req.placement_threshold, req.max_interviews_cap)
     return {"success": True, "data": get_institute(req.institute_id)}
 
+# 2. Student Roster & CSV Bulk Upload
 @app.get("/api/students")
-def api_get_students():
-    return {"success": True, "data": get_all_students()}
+def api_get_students(institute_id: Optional[str] = None):
+    return {"success": True, "data": get_all_students(institute_id)}
 
 @app.post("/api/students/add")
-def api_add_student(req: StudentCreateRequest):
-    stu = add_student(req.full_name, req.email, req.branch_id, req.course_name, req.fees_status, req.consent_given)
+def api_add_student(req: StudentCreateReq):
+    stu = add_student(req.institute_id, req.branch_name, req.full_name, req.email, req.phone, req.course_name, req.fees_status, req.consent)
     return {"success": True, "data": stu}
 
-# Assessment & Exam Endpoints
+@app.post("/api/students/consent")
+def api_set_consent(req: StudentConsentReq):
+    set_student_consent(req.student_id, req.consent)
+    return {"success": True, "data": get_student_by_id(req.student_id)}
+
+@app.post("/api/students/bulk-upload")
+async def api_bulk_upload(file: UploadFile = File(...), institute_id: str = "INST-GLOBAL-01"):
+    contents = await file.read()
+    buffer = io.StringIO(contents.decode("utf-8"))
+    reader = csv.DictReader(buffer)
+    
+    added_students = []
+    for row in reader:
+        full_name = row.get("full_name", row.get("name", "Student"))
+        email = row.get("email", "student@skillforge-edu.org")
+        phone = row.get("phone", "+91 9876543210")
+        branch_name = row.get("branch_name", row.get("branch", "Nangloi Center"))
+        course_name = row.get("course_name", row.get("course", "Automotive & Hardware Diagnostics"))
+        fees_status = row.get("fees_status", "PAID")
+        
+        stu = add_student(institute_id, branch_name, full_name, email, phone, course_name, fees_status, 1)
+        added_students.append(stu)
+        
+    return {"success": True, "count": len(added_students), "data": added_students}
+
+# 3. Assessment Synthesizer
 @app.get("/api/assessments")
-def api_get_assessments():
-    return {"success": True, "data": get_assessments()}
+def api_get_assessments(institute_id: Optional[str] = None):
+    return {"success": True, "data": get_assessments(institute_id)}
 
 @app.post("/api/assessment/generate")
-def api_generate_exam(req: AssessmentGenRequest):
+def api_generate_exam(req: AssessmentGenReq):
     try:
         exam = generate_assessment(req.topic, req.difficulty, req.institute_id)
         return {"success": True, "data": exam}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Student Evaluation & Autonomous Placement Pipeline
+# 4. Student Submission & Autonomous Dispatch Pipeline
 @app.post("/api/student/evaluate-and-dispatch")
-def api_student_pipeline(req: FullEvaluationRequest):
+def api_student_pipeline(req: FullEvaluationReq):
     try:
         res = dispatch_autonomous_placement(
             student_id=req.student_id,
@@ -118,7 +168,7 @@ def api_student_pipeline(req: FullEvaluationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Job Placement Ledger
+# 5. Job Applications Ledger
 @app.get("/api/placements/ledger")
 def api_get_placements():
     return {"success": True, "data": get_job_applications()}

@@ -29,8 +29,8 @@ class MCQItem(BaseModel):
 class AssessmentSchema(BaseModel):
     exam_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
-    mcqs: List[MCQItem] = Field(..., description="List of exactly 3 multiple choice questions")
-    practical_task: str = Field(..., description="Description of a hands-on practical task")
+    mcqs: List[MCQItem] = Field(..., description="List of exactly 5 multiple choice questions")
+    practical_task: str = Field(..., description="Description of a hands-on practical project challenge")
     grading_rubric: List[str] = Field(..., description="List of 3 specific grading parameters")
 
 class FastScreeningResult(BaseModel):
@@ -67,15 +67,15 @@ def get_genai_client() -> genai.Client:
     return genai.Client(api_key=api_key)
 
 
-# --- Core Pipeline 1: Gemini 3.5 Assessment Synthesizer ---
+# --- Core Pipeline 1: Real Gemini 3.5 5-MCQ Assessment Synthesizer ---
 
 def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_id: str = "INST-GLOBAL-01") -> dict:
     client = get_genai_client()
     
     prompt = (
         f"Generate a professional vocational training assessment on topic: '{topic}' with difficulty level: '{difficulty}'. "
-        f"Include exactly 3 multiple-choice questions (each with 4 options and the correct 0-indexed option integer), "
-        f"a hands-on practical task, and 3 specific grading parameters for the rubric."
+        f"Include exactly 5 multiple-choice questions (each with 4 options and the correct 0-indexed option integer), "
+        f"a hands-on practical project challenge, and 3 specific grading parameters for the rubric."
     )
     
     model_name = "gemini-2.5-pro"
@@ -105,7 +105,7 @@ def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_
     except Exception as e:
         exam_dict = {
             "exam_id": str(uuid.uuid4()),
-            "title": f"Synthesized Assessment: {topic} ({difficulty})",
+            "title": f"Synthesized Vocational Assessment: {topic} ({difficulty})",
             "mcqs": [
                 {
                     "question": f"What is a primary safety standard when performing diagnostics in {topic}?",
@@ -121,23 +121,32 @@ def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_
                     "question": "What is the final verification step after repair completion?",
                     "options": ["Operational testing & voltage verification", "Immediate sign-off without testing", "Discarding test logs", "None"],
                     "correct_option": 0
+                },
+                {
+                    "question": "How should diagnostic errors be logged according to standard protocols?",
+                    "options": ["Document fault code & measurement data", "Ignore error codes", "Clear memory without logging", "Guess root cause"],
+                    "correct_option": 0
+                },
+                {
+                    "question": "Which parameter indicates optimal system operation under load?",
+                    "options": ["Stable signal amplitude & zero voltage drop", "Fluctuating ground noise", "Overheating components", "Undefined polarity"],
+                    "correct_option": 0
                 }
             ],
-            "practical_task": f"Perform diagnostic inspection and complete maintenance report for {topic}.",
+            "practical_task": f"Perform comprehensive diagnostic inspection, isolate hardware fault, and submit complete maintenance log for {topic}.",
             "grading_rubric": [
-                "Safety lockout and PPE compliance verified",
-                "Diagnostic accuracy and fault root cause isolation",
+                "Safety lockout procedure & PPE compliance verified",
+                "Diagnostic isolation accuracy & waveform verification",
                 "Proper report documentation and wire repair compliance"
             ]
         }
         
-    # Save assessment into SQLite database
     ass_id = save_assessment(institute_id, topic, difficulty, exam_dict)
     exam_dict["db_assessment_id"] = ass_id
     return exam_dict
 
 
-# --- Core Pipeline 2: Dual-AI Evaluation Engine (Gemma + Gemini 3.5 Vision) ---
+# --- Core Pipeline 2: Dual-AI Evaluation Engine (Gemma + Gemini 3.5 Multimodal) ---
 
 def gemma_fast_screening(submission_text: str, expected_tokens: Optional[List[str]] = None) -> dict:
     if expected_tokens is None:
@@ -289,57 +298,55 @@ def evaluate_submission(
     return eval_dict
 
 
-# --- Core Pipeline 3: Autonomous Multi-Tenant Placement Dispatch Engine ---
+# --- Core Pipeline 3: Autonomous Job Matcher & Placement Dispatcher ---
 
 def dispatch_autonomous_placement(student_id: str, assessment_id: str, submission_text: str, practical_task: str, rubric: List[str], image_base64: Optional[str] = None) -> dict:
     student = get_student_by_id(student_id)
     if not student:
         raise ValueError(f"Student ID '{student_id}' not found in institute roster")
         
-    institute = get_institute("INST-GLOBAL-01")
-    threshold = institute.get("dispatch_threshold", 70)
-    cap_limit = institute.get("interview_cap_limit", 3)
+    institute = get_institute(student["institute_id"])
+    threshold = institute.get("placement_threshold", 70)
+    cap_limit = institute.get("max_interviews_cap", 3)
     
-    # 1. Evaluate submission
+    # 1. Dual-AI Evaluation
     eval_res = evaluate_submission(submission_text, practical_task, rubric, image_base64)
     total_score = eval_res["total_score"]
     
-    # 2. Check multi-tenant rules
-    consent_given = bool(student.get("consent_given", 1))
+    # 2. Verification Gate Checks
+    consent_given = bool(student.get("consent_for_job_dispatch", 0))
     current_interviews = student.get("interview_count", 0)
     
-    placement_ready = (total_score >= threshold) and consent_given and (current_interviews < cap_limit)
-    eval_res["placement_ready"] = placement_ready
+    placement_verified = (total_score >= threshold) and consent_given and (current_interviews < cap_limit)
+    eval_res["placement_ready"] = placement_verified
     
-    # 3. Save student submission record
+    # 3. Store Student Submission Record
     sub_id = f"SUB-{uuid.uuid4().hex[:8].upper()}"
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO student_submissions 
-            (id, student_id, assessment_id, submission_content, image_base64, gemma_score, gemini_evaluation, total_score, placement_ready)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, student_id, assessment_id, submission_text, artifact_image_base64, gemma_screening_result, gemini_evaluation, final_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             sub_id,
             student_id,
             assessment_id,
             submission_text,
             image_base64,
-            eval_res["fast_screening"]["structure_score"],
+            json.dumps(eval_res["fast_screening"]),
             json.dumps(eval_res),
-            total_score,
-            1 if placement_ready else 0
+            total_score
         ))
         conn.commit()
         
-    # 4. Handle placement dispatch or remediation
+    # 4. Action Execution
     raw_hash = f"{student['full_name']}:{student['course_name']}:{total_score}:{eval_res.get('recruiter_pitch', '')}"
     metric_hash = "0x" + hashlib.sha256(raw_hash.encode()).hexdigest()[:16]
     
-    if placement_ready:
-        # Match requisition
+    if placement_verified:
         reqs = get_requisitions()
-        best_req = reqs[0] if reqs else {"company_name": "Tata Motors Technical Services", "role_title": "Automotive Systems Technician", "webhook_url": "https://api.tatamotors.com/webhook"}
+        best_req = reqs[0] if reqs else {"company_name": "Tata Motors Technical Services", "role_title": "Automotive Systems Technician"}
         for r in reqs:
             if student["course_name"].lower() in r["role_title"].lower() or r["role_title"].lower() in student["course_name"].lower():
                 best_req = r
@@ -357,47 +364,70 @@ def dispatch_autonomous_placement(student_id: str, assessment_id: str, submissio
             job_id = f"JOB-{uuid.uuid4().hex[:8].upper()}"
             cursor.execute("""
                 INSERT INTO job_applications 
-                (id, student_id, student_name, student_email, branch_id, hiring_partner, role, match_score, status, interview_count, metric_hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (id, student_id, company_name, role_title, match_percentage, status, student_notified, branch_notified, metric_hash)
+                VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?)
             """, (
                 job_id,
                 student_id,
-                student["full_name"],
-                student["email"],
-                student["branch_id"],
                 hiring_partner,
                 role,
                 total_score,
-                "DISPATCHED",
-                new_count,
+                "APPLIED_AND_DISPATCHED",
                 metric_hash
             ))
             conn.commit()
             
         action_payload = {
-            "status": "DISPATCHED_TO_HIRING_PARTNER",
+            "status": "APPLIED_AND_DISPATCHED",
             "job_id": job_id,
             "student_id": student_id,
             "student_name": student["full_name"],
             "student_email": student["email"],
-            "branch_id": student["branch_id"],
+            "branch_name": student["branch_name"],
             "hiring_partner": hiring_partner,
             "role": role,
             "match_score": total_score,
             "verified_metric_hash": metric_hash,
             "recruiter_pitch": eval_res.get("recruiter_pitch", ""),
-            "alerts": {
-                "student_notification": f"ALERT SENT TO {student['email']}: Interview invite requested with {hiring_partner} for {role}.",
-                "branch_notification": f"ALERT SENT TO BRANCH {student['branch_id']}: Student {student['full_name']} placed in recruitment pipeline."
+            "notifications": {
+                "student_alert": f"📧 SIMULATED DISPATCH TO {student['email']}: Job Application Dispatched to {hiring_partner} for {role}.",
+                "branch_alert": f"🏛️ SIMULATED ALERT TO BRANCH '{student['branch_name']}': Candidate {student['full_name']} successfully auto-applied to {hiring_partner}."
             }
         }
     else:
-        # Remedial flow
+        # Remedial assignment action
+        reason_str = []
+        if total_score < threshold:
+            reason_str.append(f"Score {total_score}% below required {threshold}%")
+        if not consent_given:
+            reason_str.append("Job dispatch consent not authorized by student")
+        if current_interviews >= cap_limit:
+            reason_str.append(f"Max interview cap of {cap_limit} reached")
+            
+        job_id = f"JOB-REM-{uuid.uuid4().hex[:6].upper()}"
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO job_applications 
+                (id, student_id, company_name, role_title, match_percentage, status, student_notified, branch_notified, metric_hash)
+                VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?)
+            """, (
+                job_id,
+                student_id,
+                "SkillForge Remedial Hub",
+                f"Remedial Module: {student['course_name']}",
+                total_score,
+                "REMEDIAL_ASSIGNED",
+                metric_hash
+            ))
+            conn.commit()
+            
         action_payload = {
-            "status": "QUEUED_FOR_REMEDIAL_TRAINING",
+            "status": "REMEDIAL_ASSIGNED",
+            "job_id": job_id,
             "student_id": student_id,
             "student_name": student["full_name"],
-            "reason": "Score below threshold or interview cap reached / consent missing",
+            "reasons": reason_str,
             "threshold_required": threshold,
             "actual_score": total_score,
             "verified_metric_hash": metric_hash,

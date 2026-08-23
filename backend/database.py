@@ -21,10 +21,12 @@ def init_db():
         CREATE TABLE IF NOT EXISTS institutes (
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
-            branches TEXT NOT NULL,          -- JSON list of branches
-            courses_offered TEXT NOT NULL,   -- JSON list of courses
-            interview_cap_limit INTEGER DEFAULT 3,
-            dispatch_threshold INTEGER DEFAULT 70
+            code TEXT UNIQUE NOT NULL,
+            branches TEXT NOT NULL,          -- JSON list of branch names
+            courses TEXT NOT NULL,           -- JSON list of course names
+            placement_threshold INTEGER DEFAULT 70,
+            max_interviews_cap INTEGER DEFAULT 3,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
         """)
         
@@ -32,13 +34,17 @@ def init_db():
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS students (
             student_id TEXT PRIMARY KEY,
+            institute_id TEXT NOT NULL,
+            branch_name TEXT NOT NULL,
             full_name TEXT NOT NULL,
             email TEXT NOT NULL,
-            branch_id TEXT NOT NULL,
+            phone TEXT DEFAULT '',
             course_name TEXT NOT NULL,
             fees_status TEXT DEFAULT 'PAID',
-            consent_given INTEGER DEFAULT 1,
-            interview_count INTEGER DEFAULT 0
+            consent_for_job_dispatch INTEGER DEFAULT 0,
+            interview_count INTEGER DEFAULT 0,
+            registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(institute_id) REFERENCES institutes(id)
         )
         """)
         
@@ -49,8 +55,9 @@ def init_db():
             institute_id TEXT NOT NULL,
             course_name TEXT NOT NULL,
             difficulty TEXT NOT NULL,
-            generated_exam TEXT NOT NULL,   -- JSON Gemini 3.5 output
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            generated_exam TEXT NOT NULL,   -- JSON Gemini 3.5 output (5 MCQs, 1 practical, rubric)
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(institute_id) REFERENCES institutes(id)
         )
         """)
         
@@ -60,13 +67,12 @@ def init_db():
             id TEXT PRIMARY KEY,
             student_id TEXT NOT NULL,
             assessment_id TEXT NOT NULL,
-            submission_content TEXT NOT NULL,
-            image_base64 TEXT,
-            gemma_score INTEGER NOT NULL,
-            gemini_evaluation TEXT NOT NULL, -- JSON evaluation output
-            total_score INTEGER NOT NULL,
-            placement_ready INTEGER NOT NULL,
-            evaluated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            submission_text TEXT NOT NULL,
+            artifact_image_base64 TEXT,
+            gemma_screening_result TEXT NOT NULL, -- JSON
+            gemini_evaluation TEXT NOT NULL,       -- JSON
+            final_score INTEGER NOT NULL,
+            submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(student_id) REFERENCES students(student_id),
             FOREIGN KEY(assessment_id) REFERENCES assessments(id)
         )
@@ -77,16 +83,14 @@ def init_db():
         CREATE TABLE IF NOT EXISTS job_applications (
             id TEXT PRIMARY KEY,
             student_id TEXT NOT NULL,
-            student_name TEXT NOT NULL,
-            student_email TEXT NOT NULL,
-            branch_id TEXT NOT NULL,
-            hiring_partner TEXT NOT NULL,
-            role TEXT NOT NULL,
-            match_score INTEGER NOT NULL,
-            status TEXT NOT NULL,             -- 'DISPATCHED', 'INTERVIEW_SCHEDULED', 'OFFER_MADE'
-            interview_count INTEGER DEFAULT 1,
+            company_name TEXT NOT NULL,
+            role_title TEXT NOT NULL,
+            match_percentage INTEGER NOT NULL,
+            status TEXT NOT NULL,             -- 'APPLIED_AND_DISPATCHED', 'INTERVIEW_SCHEDULED', 'REMEDIAL_ASSIGNED'
+            student_notified INTEGER DEFAULT 1,
+            branch_notified INTEGER DEFAULT 1,
             metric_hash TEXT NOT NULL,
-            dispatched_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(student_id) REFERENCES students(student_id)
         )
         """)
@@ -101,13 +105,9 @@ def init_db():
 def seed_initial_data(conn: sqlite3.Connection):
     cursor = conn.cursor()
     
-    # Default Institute
     inst_id = "INST-GLOBAL-01"
-    branches = json.dumps([
-        {"branch_id": "BR-DEL-01", "name": "Nangloi Center", "city": "Delhi North-West"},
-        {"branch_id": "BR-DEL-02", "name": "Yamuna Vihar Center", "city": "Delhi East"},
-        {"branch_id": "BR-HAR-01", "name": "Jwalapur Center", "city": "Haridwar"}
-    ])
+    code = "SKILLFORGE-HQ"
+    branches = json.dumps(["Nangloi Center", "Yamuna Vihar Center", "Jwalapur Center"])
     courses = json.dumps([
         "Full Stack Web Development",
         "Accounting & Financial Tally",
@@ -115,25 +115,24 @@ def seed_initial_data(conn: sqlite3.Connection):
     ])
     
     cursor.execute("""
-        INSERT OR IGNORE INTO institutes (id, name, branches, courses_offered, interview_cap_limit, dispatch_threshold)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (inst_id, "SkillForge Vocational Foundation", branches, courses, 3, 70))
+        INSERT OR IGNORE INTO institutes (id, name, code, branches, courses, placement_threshold, max_interviews_cap)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (inst_id, "SkillForge Vocational Foundation", code, branches, courses, 70, 3))
     
-    # Default Students
     students = [
-        ("STU-1001", "Alex Mercer", "alex.mercer@skillforge-edu.org", "BR-DEL-01", "Automotive & Hardware Diagnostics", "PAID", 1, 0),
-        ("STU-1002", "Priya Sundaram", "priya.s@skillforge-edu.org", "BR-DEL-01", "Full Stack Web Development", "PAID", 1, 0),
-        ("STU-1003", "Jordan Smith", "jordan.s@skillforge-edu.org", "BR-DEL-02", "Accounting & Financial Tally", "PAID", 1, 0),
-        ("STU-1004", "Amitabh Choudhury", "amitabh.c@skillforge-edu.org", "BR-HAR-01", "Automotive & Hardware Diagnostics", "PAID", 1, 0)
+        ("STU-1001", inst_id, "Nangloi Center", "Alex Mercer", "alex.mercer@skillforge-edu.org", "+91 9876543210", "Automotive & Hardware Diagnostics", "PAID", 1, 0),
+        ("STU-1002", inst_id, "Nangloi Center", "Priya Sundaram", "priya.s@skillforge-edu.org", "+91 9876543211", "Full Stack Web Development", "PAID", 1, 0),
+        ("STU-1003", inst_id, "Yamuna Vihar Center", "Jordan Smith", "jordan.s@skillforge-edu.org", "+91 9876543212", "Accounting & Financial Tally", "PAID", 1, 0),
+        ("STU-1004", inst_id, "Jwalapur Center", "Amitabh Choudhury", "amitabh.c@skillforge-edu.org", "+91 9876543213", "Automotive & Hardware Diagnostics", "PAID", 1, 0)
     ]
     cursor.executemany("""
-        INSERT OR IGNORE INTO students (student_id, full_name, email, branch_id, course_name, fees_status, consent_given, interview_count)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT OR IGNORE INTO students (student_id, institute_id, branch_name, full_name, email, phone, course_name, fees_status, consent_for_job_dispatch, interview_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, students)
     
     conn.commit()
 
-# --- Helper Query Functions ---
+# --- Helper Functions ---
 
 def get_institute(inst_id: str = "INST-GLOBAL-01") -> Dict[str, Any]:
     with get_db_connection() as conn:
@@ -144,7 +143,7 @@ def get_institute(inst_id: str = "INST-GLOBAL-01") -> Dict[str, Any]:
         if row:
             res = dict(row)
             res["branches"] = json.loads(res["branches"])
-            res["courses_offered"] = json.loads(res["courses_offered"])
+            res["courses"] = json.loads(res["courses"])
             return res
         return {}
 
@@ -152,16 +151,30 @@ def update_institute_config(inst_id: str, threshold: int, cap_limit: int) -> boo
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            UPDATE institutes SET dispatch_threshold = ?, interview_cap_limit = ? WHERE id = ?
+            UPDATE institutes SET placement_threshold = ?, max_interviews_cap = ? WHERE id = ?
         """, (threshold, cap_limit, inst_id))
         conn.commit()
         return True
 
-def get_all_students() -> List[Dict[str, Any]]:
+def create_institute(name: str, code: str, branches: List[str], courses: List[str], threshold: int = 70, cap: int = 3) -> Dict[str, Any]:
+    inst_id = f"INST-{uuid.uuid4().hex[:6].upper()}"
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO institutes (id, name, code, branches, courses, placement_threshold, max_interviews_cap)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (inst_id, name, code, json.dumps(branches), json.dumps(courses), threshold, cap))
+        conn.commit()
+    return get_institute(inst_id)
+
+def get_all_students(institute_id: Optional[str] = None) -> List[Dict[str, Any]]:
     with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM students ORDER BY student_id ASC")
+        if institute_id:
+            cursor.execute("SELECT * FROM students WHERE institute_id = ? ORDER BY registered_at DESC", (institute_id,))
+        else:
+            cursor.execute("SELECT * FROM students ORDER BY registered_at DESC")
         return [dict(r) for r in cursor.fetchall()]
 
 def get_student_by_id(student_id: str) -> Optional[Dict[str, Any]]:
@@ -172,22 +185,32 @@ def get_student_by_id(student_id: str) -> Optional[Dict[str, Any]]:
         row = cursor.fetchone()
         return dict(row) if row else None
 
-def add_student(full_name: str, email: str, branch_id: str, course_name: str, fees_status: str = "PAID", consent_given: int = 1) -> Dict[str, Any]:
+def add_student(institute_id: str, branch_name: str, full_name: str, email: str, phone: str, course_name: str, fees_status: str = "PAID", consent: int = 1) -> Dict[str, Any]:
     student_id = f"STU-{uuid.uuid4().hex[:6].upper()}"
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO students (student_id, full_name, email, branch_id, course_name, fees_status, consent_given, interview_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0)
-        """, (student_id, full_name, email, branch_id, course_name, fees_status, consent_given))
+            INSERT INTO students (student_id, institute_id, branch_name, full_name, email, phone, course_name, fees_status, consent_for_job_dispatch, interview_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        """, (student_id, institute_id, branch_name, full_name, email, phone, course_name, fees_status, consent))
         conn.commit()
     return get_student_by_id(student_id)
 
-def get_assessments() -> List[Dict[str, Any]]:
+def set_student_consent(student_id: str, consent: bool) -> bool:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE students SET consent_for_job_dispatch = ? WHERE student_id = ?", (1 if consent else 0, student_id))
+        conn.commit()
+        return True
+
+def get_assessments(institute_id: Optional[str] = None) -> List[Dict[str, Any]]:
     with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM assessments ORDER BY created_at DESC")
+        if institute_id:
+            cursor.execute("SELECT * FROM assessments WHERE institute_id = ? ORDER BY created_at DESC", (institute_id,))
+        else:
+            cursor.execute("SELECT * FROM assessments ORDER BY created_at DESC")
         rows = [dict(r) for r in cursor.fetchall()]
         for r in rows:
             r["generated_exam"] = json.loads(r["generated_exam"])
@@ -208,8 +231,13 @@ def get_job_applications() -> List[Dict[str, Any]]:
     with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM job_applications ORDER BY dispatched_at DESC")
+        cursor.execute("""
+            SELECT j.*, s.full_name as student_name, s.email as student_email, s.branch_name
+            FROM job_applications j
+            JOIN students s ON j.student_id = s.student_id
+            ORDER BY j.timestamp DESC
+        """)
         return [dict(r) for r in cursor.fetchall()]
 
-# Initialize DB on load
+# Initialize DB on import
 init_db()
