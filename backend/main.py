@@ -25,7 +25,7 @@ from agent_engine import (
 app = FastAPI(
     title="SkillForge Autonomous - Enterprise Multi-Tenant Platform",
     description="Autonomous Vocational Operations, Multimodal Grading & Placement Action Engine",
-    version="3.5.0",
+    version="3.6.0",
 )
 
 app.add_middleware(
@@ -73,6 +73,8 @@ class AssessmentGenReq(BaseModel):
 class FullEvaluationReq(BaseModel):
     student_id: str
     assessment_id: str = "ASS-DEFAULT"
+    mcq_answers: Optional[List[int]] = None
+    mcq_key: Optional[List[int]] = None
     practical_task: str
     grading_rubric: List[str]
     submission_text: str
@@ -86,7 +88,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "SkillForge Enterprise Multi-Tenant Platform",
-        "version": "3.5.0"
+        "version": "3.6.0"
     }
 
 # 1. Institute & Branch Management
@@ -152,13 +154,15 @@ def api_generate_exam(req: AssessmentGenReq):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 4. Student Submission & Autonomous Dispatch Pipeline
+# 4. Student Submission & Dynamic Evaluation Pipeline
 @app.post("/api/student/evaluate-and-dispatch")
 def api_student_pipeline(req: FullEvaluationReq):
     try:
         res = dispatch_autonomous_placement(
             student_id=req.student_id,
             assessment_id=req.assessment_id,
+            mcq_answers=req.mcq_answers,
+            mcq_key=req.mcq_key,
             submission_text=req.submission_text,
             practical_task=req.practical_task,
             rubric=req.grading_rubric,

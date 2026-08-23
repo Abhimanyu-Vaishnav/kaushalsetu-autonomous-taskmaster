@@ -66,7 +66,7 @@ with st.sidebar:
     try:
         res = requests.get(f"{BACKEND_URL}/health", timeout=2)
         if res.status_code == 200:
-            st.success("🟢 Platform Engine Live (v3.5.0)")
+            st.success("🟢 Platform Engine Live (v3.6.0)")
         else:
             st.error("🔴 Backend Error")
     except Exception:
@@ -196,10 +196,10 @@ if role_view == "🏛️ Institute & Branch Admin Hub":
         except Exception as e:
             st.error(f"Could not load student roster: {e}")
 
-# --- TAB 2: STUDENT PORTAL & PRACTICAL ASSESSMENT ---
+# --- TAB 2: STUDENT PORTAL & INTERACTIVE PRACTICAL ASSESSMENT ---
 elif role_view == "🎓 Student Portal & Practical Assessment":
-    st.subheader("🎓 Student Exam & Dual-AI Evaluation Portal")
-    st.markdown("Select student login, verify job dispatch consent, and submit practical exams or project image artifacts.")
+    st.subheader("🎓 Interactive Student Exam & Real-Time Dynamic Grading Portal")
+    st.markdown("Take interactive 5-MCQ exams with unselected radios, submit your practical code/logs, and test dynamic scoring.")
     
     # Load Students
     students = []
@@ -238,98 +238,165 @@ elif role_view == "🎓 Student Portal & Practical Assessment":
                 st.rerun()
                 
         st.divider()
-        st.markdown("### 📝 Exam Synthesis & Practical Submission")
         
-        # Exam Generator trigger
-        if st.button("✨ Synthesize 5-MCQ Exam via Gemini 3.5", type="secondary"):
-            with st.spinner("Generating 5-MCQ Assessment via Gemini 3.5..."):
+        # Quick Presets for Demo Testing
+        st.markdown("#### ⚡ Quick Demo Test Presets")
+        preset_col1, preset_col2 = st.columns(2)
+        with preset_col1:
+            if st.button("🟢 Load High-Scoring Pass Preset (100% MCQs + Full Practical)", use_container_width=True):
+                st.session_state["preset_type"] = "HIGH"
+                st.rerun()
+        with preset_col2:
+            if st.button("🟠 Load Low-Scoring Remedial Preset (20% MCQs + Minimal Practical)", use_container_width=True):
+                st.session_state["preset_type"] = "LOW"
+                st.rerun()
+                
+        st.divider()
+        st.markdown("### 📝 Interactive Exam & Real-Time Grading Test")
+        
+        # Exam Generation Button
+        if st.button("✨ Synthesize Fresh 5-MCQ Exam via Gemini 3.5", type="primary"):
+            with st.spinner("Synthesizing 5-MCQ Assessment via Gemini 3.5..."):
                 e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
                     "topic": stu_detail['course_name'],
                     "difficulty": "Intermediate"
                 })
                 if e_res.status_code == 200:
                     st.session_state["current_exam"] = e_res.json()["data"]
-                    st.success("✅ 5-MCQ Assessment Generated!")
+                    st.success("✅ Fresh Assessment Synthesized!")
+                    st.rerun()
                     
-        if "current_exam" in st.session_state:
-            exam = st.session_state["current_exam"]
-            st.markdown(f"#### 📋 {exam.get('title')}")
-            for idx, mcq in enumerate(exam.get("mcqs", []), 1):
-                with st.expander(f"MCQ {idx}: {mcq['question']}", expanded=True):
-                    for o_idx, opt in enumerate(mcq['options']):
-                        prefix = "✅ " if o_idx == mcq['correct_option'] else "⚪ "
-                        st.write(f"{prefix} **Option {o_idx+1}:** {opt}")
-                        
-        st.divider()
+        # Load or Fallback Exam
+        if "current_exam" not in st.session_state:
+            # Generate initial default assessment
+            with st.spinner("Initializing Assessment..."):
+                e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
+                    "topic": stu_detail['course_name'],
+                    "difficulty": "Intermediate"
+                })
+                if e_res.status_code == 200:
+                    st.session_state["current_exam"] = e_res.json()["data"]
+                    
+        exam = st.session_state.get("current_exam", {})
+        mcqs = exam.get("mcqs", [])
+        mcq_key = [m.get("correct_option", 0) for m in mcqs]
         
-        # Submission Form
-        default_task = f"Complete practical diagnostic inspection & repair log for {stu_detail['course_name']}."
-        default_rubric = ["Safety lockout procedure followed", "Diagnostic isolation accuracy verified", "Proper documentation submitted"]
-        default_sub = (
-            "First, I performed a full safety lockout procedure and verified system power status using a multimeter. "
-            "Next, connected an oscilloscope to signal lines to measure voltage waveforms. "
-            "Found signal degradation due to terminal connector corrosion. "
-            "Cleaned terminal connector, replaced wiring splice adhering to standard procedure, and re-tested signal verification with clean differential."
-        )
-        
-        with st.form("exam_submission_form"):
-            p_task = st.text_area("Practical Project Challenge", value=default_task, height=70)
-            g_rubric_raw = st.text_area("Grading Rubric (1 per line)", value="\n".join(default_rubric), height=70)
-            s_text = st.text_area("Your Solution Code / Diagnostic Log", value=default_sub, height=120)
-            uploaded_img = st.file_uploader("Upload Artifact Image (Hardware Photo / Circuit Diagram / Code Screenshot)", type=["jpg", "png", "jpeg"])
+        # Interactive Student Test Form
+        with st.form("interactive_exam_form"):
+            st.markdown(f"#### 📋 **{exam.get('title', 'Vocational Exam')}**")
+            st.markdown("##### **Part 1: Multiple Choice Questions (30 Points Max)**")
             
-            sub_btn = st.form_submit_button("🚀 Submit Exam & Run Placement Agent", type="primary", use_container_width=True)
+            user_mcq_answers = []
+            is_high_preset = st.session_state.get("preset_type") == "HIGH"
+            is_low_preset = st.session_state.get("preset_type") == "LOW"
             
-        if sub_btn:
+            for idx, mcq in enumerate(mcqs, 1):
+                st.markdown(f"**Question {idx}: {mcq['question']}**")
+                opts = mcq['options']
+                
+                # Determine default index
+                default_idx = None
+                if is_high_preset:
+                    default_idx = mcq['correct_option']
+                elif is_low_preset:
+                    default_idx = (mcq['correct_option'] + 1) % len(opts)
+                    
+                selected_opt = st.radio(
+                    f"Select answer for Q{idx}:",
+                    opts,
+                    index=default_idx,
+                    key=f"mcq_radio_{idx}_{selected_student_id}"
+                )
+                
+                if selected_opt in opts:
+                    user_mcq_answers.append(opts.index(selected_opt))
+                else:
+                    user_mcq_answers.append(-1)
+                    
+            st.divider()
+            st.markdown("##### **Part 2: Practical Project Challenge (70 Points Max)**")
+            
+            p_task_default = exam.get("practical_task", f"Complete diagnostic inspection and log for {stu_detail['course_name']}.")
+            st.info(f"**Task Description:** {p_task_default}")
+            
+            rubric_default = exam.get("grading_rubric", ["Safety lockout procedure followed", "Diagnostic accuracy verified", "Documentation complete"])
+            st.caption("Grading Rubric Parameters: " + " | ".join(rubric_default))
+            
+            if is_high_preset:
+                sub_text_default = (
+                    "First, performed a full safety lockout procedure and verified system power status using a multimeter. "
+                    "Next, connected an oscilloscope to signal lines to measure voltage waveforms. "
+                    "Found ground signal degradation due to terminal connector corrosion. "
+                    "Cleaned terminal connector, replaced wiring splice adhering to standard procedure, and re-tested signal verification with clean differential voltage."
+                )
+            elif is_low_preset:
+                sub_text_default = "Looked at the wires. Turned on the switch. It worked eventually."
+            else:
+                sub_text_default = (
+                    "Performed safety lockout procedure. Verified circuit connections using calibrated multimeter. "
+                    "Recorded voltage measurements across load terminals. Documented fault codes and completed repair."
+                )
+                
+            s_text = st.text_area("Your Practical Solution Code / Diagnostic Log", value=sub_text_default, height=130)
+            uploaded_img = st.file_uploader("Attach Practical Artifact Image (Hardware Photo / Circuit Diagram / Code Screenshot)", type=["jpg", "png", "jpeg"])
+            
+            submit_exam = st.form_submit_button("🚀 Submit My Exam for Dynamic Real-Time Grading", type="primary", use_container_width=True)
+            
+        if submit_exam:
+            # Clear preset flag after submission
+            if "preset_type" in st.session_state:
+                del st.session_state["preset_type"]
+                
             img_b64 = None
             if uploaded_img is not None:
                 img_b64 = base64.b64encode(uploaded_img.getvalue()).decode("utf-8")
                 
-            rubric_list = [r.strip() for r in g_rubric_raw.split("\n") if r.strip()]
-            
             p_bar = st.progress(0, text="Submitting Exam...")
+            time.sleep(0.2)
+            p_bar.progress(30, text="1. Calculating MCQ Objective Score & Gemma Fast Screening...")
             time.sleep(0.3)
-            p_bar.progress(35, text="1. Gemma Fast Syntax/Keyword Screening...")
-            time.sleep(0.4)
-            p_bar.progress(70, text="2. Gemini 3.5 Multimodal Vision Cognitive Grading...")
+            p_bar.progress(70, text="2. Gemini 3.5 Subjective Practical Grading...")
             
             try:
-                ass_id = st.session_state.get("current_exam", {}).get("db_assessment_id", "ASS-DEFAULT")
                 pipe_res = requests.post(
                     f"{BACKEND_URL}/api/student/evaluate-and-dispatch",
                     json={
                         "student_id": selected_student_id,
-                        "assessment_id": ass_id,
-                        "practical_task": p_task,
-                        "grading_rubric": rubric_list,
+                        "assessment_id": exam.get("db_assessment_id", "ASS-DEFAULT"),
+                        "mcq_answers": user_mcq_answers,
+                        "mcq_key": mcq_key,
+                        "practical_task": p_task_default,
+                        "grading_rubric": rubric_default,
                         "submission_text": s_text,
                         "image_base64": img_b64
                     },
                     timeout=30
                 )
-                p_bar.progress(100, text="Pipeline Execution Complete!")
+                p_bar.progress(100, text="Dynamic Evaluation Complete!")
                 
                 if pipe_res.status_code == 200:
                     res_data = pipe_res.json()["data"]
                     eval_out = res_data["evaluation"]
                     dispatch_out = res_data["dispatch"]
                     
-                    st.success("✅ Evaluation & Placement Pipeline Complete!")
+                    st.success("✅ Dynamic Real-Time Grading Complete!")
                     
-                    st.markdown("### 📊 Dual-AI Scorecard Report")
-                    mc1, mc2, mc3 = st.columns(3)
+                    st.markdown("### 📊 Real-Time Scorecard Breakdown")
+                    mc1, mc2, mc3, mc4 = st.columns(4)
                     with mc1:
-                        st.metric("Gemma Fast Score", f"{eval_out['fast_screening']['structure_score']}/100")
+                        st.metric("MCQ Score", f"{eval_out['mcq_score']} / 30 pts", f"{eval_out['mcq_correct_count']}/{eval_out['mcq_total_questions']} Correct")
                     with mc2:
-                        st.metric("Gemini Final Score", f"{eval_out['total_score']}/100")
+                        st.metric("Practical Score", f"{eval_out['practical_score']} / 70 pts")
                     with mc3:
+                        st.metric("Final Combined Score", f"{eval_out['total_score']} / 100 pts")
+                    with mc4:
                         ready = eval_out['placement_ready']
-                        st.metric("Verified Gate Status", "DISPATCHED 🚀" if ready else "REMEDIAL 🟠")
+                        st.metric("Verification Gate", "PASSED 🚀" if ready else "REMEDIAL 🟠")
                         
                     st.divider()
                     
                     if ready:
-                        st.markdown(f'<span class="badge-success">🚀 STATUS: {dispatch_out["status"]}</span>', unsafe_allow_html=True)
+                        st.markdown(f'<span class="badge-success">🚀 ACTION: {dispatch_out["status"]}</span>', unsafe_allow_html=True)
                         st.markdown("#### 📬 Outbound Application & Notification Alerts")
                         st.markdown(f"**Matched Employer:** `{dispatch_out['hiring_partner']}`")
                         st.markdown(f"**Role Title:** `{dispatch_out['role']}`")
@@ -337,8 +404,8 @@ elif role_view == "🎓 Student Portal & Practical Assessment":
                         st.info(dispatch_out["notifications"]["student_alert"])
                         st.info(dispatch_out["notifications"]["branch_alert"])
                     else:
-                        st.markdown(f'<span class="badge-remedial">🔄 STATUS: {dispatch_out["status"]}</span>', unsafe_allow_html=True)
-                        st.markdown("#### 📚 Personalized 7-Day Remedial Learning Schedule")
+                        st.markdown(f'<span class="badge-remedial">🔄 ACTION: {dispatch_out["status"]}</span>', unsafe_allow_html=True)
+                        st.markdown("#### 📚 Personalized 7-Day Remedial Micro-Study Schedule")
                         st.warning(f"Reasons: {', '.join(dispatch_out.get('reasons', []))}")
                         
                         rem_sched = eval_out.get("remedial_schedule", {})

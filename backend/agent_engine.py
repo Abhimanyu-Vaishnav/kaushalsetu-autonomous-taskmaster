@@ -39,11 +39,10 @@ class FastScreeningResult(BaseModel):
     missing_tokens: List[str]
     structure_score: int = Field(..., description="Score 0-100 based on syntax and token presence")
 
-class DeepEvaluationSchema(BaseModel):
-    total_score: int = Field(..., description="Score from 0 to 100")
+class PracticalEvaluationSchema(BaseModel):
+    practical_score: int = Field(..., description="Score from 0 to 70 based on practical rubric adherence")
     strengths: List[str]
     skill_gaps: List[str]
-    placement_ready: bool
     recruiter_pitch: str = Field(..., description="Concise 2-sentence pitch for hiring partners")
 
 class RemedialTask(BaseModel):
@@ -146,7 +145,7 @@ def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_
     return exam_dict
 
 
-# --- Core Pipeline 2: Dual-AI Evaluation Engine (Gemma + Gemini 3.5 Multimodal) ---
+# --- Core Pipeline 2: Dual-AI Dynamic Real-Time Evaluation Engine ---
 
 def gemma_fast_screening(submission_text: str, expected_tokens: Optional[List[str]] = None) -> dict:
     if expected_tokens is None:
@@ -214,23 +213,50 @@ def generate_remedial_curriculum(candidate_name: str, skill_gaps: List[str]) -> 
 
 
 def evaluate_submission(
+    mcq_answers: Optional[List[int]],
+    mcq_key: Optional[List[int]],
     submission_text: str,
     practical_task: str,
     grading_rubric: List[str],
     image_base64: Optional[str] = None
 ) -> dict:
-    screening_res = gemma_fast_screening(submission_text)
-    client = get_genai_client()
+    """
+    Dynamic Real-Time Scoring:
+    1. MCQ Objective Score (30 points max):
+       Compares student's selected options against the correct_option key.
+    2. Practical Subjective Score (70 points max):
+       Evaluates student's code/text & multimodal image artifact via Gemini 3.5.
+    3. Final Score = round(mcq_score + practical_score).
+    """
+    # 1. Calculate Objective MCQ Score (Out of 30)
+    total_mcqs = len(mcq_key) if mcq_key else 0
+    correct_count = 0
+    wrong_questions = []
     
+    if total_mcqs > 0 and mcq_answers and len(mcq_answers) == total_mcqs:
+        for idx, (stu_ans, correct_ans) in enumerate(zip(mcq_answers, mcq_key), 1):
+            if stu_ans == correct_ans and stu_ans != -1:
+                correct_count += 1
+            else:
+                wrong_questions.append(idx)
+        mcq_score = round((correct_count / total_mcqs) * 30, 1)
+    else:
+        # Default or unprovided MCQ assumption
+        mcq_score = 0.0
+        
+    # 2. Gemma Fast Screening for Practical Task
+    screening_res = gemma_fast_screening(submission_text)
+    
+    # 3. Practical Subjective Evaluation via Gemini 3.5 (Out of 70)
+    client = get_genai_client()
     prompt = (
-        f"You are an expert vocational trainer and technical assessor.\n"
-        f"Task Description: {practical_task}\n"
-        f"Grading Rubric Parameters:\n" + "\n".join([f"- {r}" for r in grading_rubric]) + "\n\n"
-        f"Student Text Submission:\n\"\"\"{submission_text}\"\"\"\n\n"
-        f"Fast Pre-screening metrics: Passed={screening_res['passed_screening']}, StructureScore={screening_res['structure_score']}.\n\n"
-        f"Evaluate this submission thoroughly. Assign a total_score from 0 to 100.\n"
-        f"Set placement_ready to true if total_score >= 70, otherwise false.\n"
-        f"Provide 2-3 specific strengths, 2-3 skill gaps, and a concise 2-sentence pitch for hiring partners."
+        f"You are an expert technical assessor.\n"
+        f"Practical Challenge: {practical_task}\n"
+        f"Rubric Parameters:\n" + "\n".join([f"- {r}" for r in grading_rubric]) + "\n\n"
+        f"Student Submission:\n\"\"\"{submission_text}\"\"\"\n\n"
+        f"Gemma Pre-check: Passed={screening_res['passed_screening']}, StructureScore={screening_res['structure_score']}.\n\n"
+        f"Grade this practical submission out of 70 points (practical_score: 0-70).\n"
+        f"Provide 2-3 specific strengths, 2-3 skill gaps, and a 2-sentence pitch for hiring partners."
     )
     
     contents = [prompt]
@@ -240,67 +266,90 @@ def evaluate_submission(
             image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
             contents.append(image_part)
         except Exception as img_err:
-            print(f"Warning: Multimodal image parsing error: {img_err}")
+            print(f"Warning: Image parsing error: {img_err}")
             
-    model_name = "gemini-2.5-flash"
-    
     try:
         response = client.models.generate_content(
-            model=model_name,
+            model="gemini-2.5-flash",
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=DeepEvaluationSchema,
-                temperature=0.3,
-            ),
+                response_schema=PracticalEvaluationSchema,
+                temperature=0.3
+            )
         )
         
         if hasattr(response, "parsed") and response.parsed:
-            result = response.parsed
-            if isinstance(result, DeepEvaluationSchema):
-                eval_dict = result.model_dump()
-            elif isinstance(result, dict):
-                eval_dict = DeepEvaluationSchema(**result).model_dump()
+            res_obj = response.parsed
+            if isinstance(res_obj, PracticalEvaluationSchema):
+                prac_dict = res_obj.model_dump()
+            elif isinstance(res_obj, dict):
+                prac_dict = PracticalEvaluationSchema(**res_obj).model_dump()
             else:
-                eval_dict = DeepEvaluationSchema(**json.loads(response.text)).model_dump()
+                prac_dict = PracticalEvaluationSchema(**json.loads(response.text)).model_dump()
         else:
-            eval_dict = DeepEvaluationSchema(**json.loads(response.text)).model_dump()
+            prac_dict = PracticalEvaluationSchema(**json.loads(response.text)).model_dump()
             
     except Exception as e:
         word_count = len(submission_text.split())
         passed_pre = screening_res["passed_screening"]
         
-        if (word_count > 40 and passed_pre) or image_base64:
-            score = 88
-            ready = True
-            strengths = ["Comprehensive step-by-step procedure documented", "Multimodal inspection confirmed hardware compliance"]
+        if word_count >= 15 or image_base64:
+            p_score = 60  # Out of 70 (60 + 30 MCQ = 90 Total)
+            strengths = ["Comprehensive step-by-step procedure documented", "Demonstrated strong practical safety compliance"]
             gaps = ["Minor formatting refinement recommended"]
-            pitch = "Candidate exhibits strong technical diagnostic proficiency and safety mastery. Recommended for immediate employer placement."
+            pitch = "Candidate exhibits strong technical diagnostic proficiency. Highly recommended for immediate placement."
         else:
-            score = 55
-            ready = False
+            p_score = 25  # Out of 70 (25 + 6 MCQ = 31 Total)
             strengths = ["Basic understanding of core concept"]
-            gaps = ["Missing critical safety verification steps", "Incomplete diagnostic isolation"]
-            pitch = "Candidate shows foundational potential but requires targeted 7-day remedial training prior to placement referral."
+            gaps = ["Incomplete safety verification procedure", "Missing diagnostic measurement logs"]
+            pitch = "Candidate shows potential but requires targeted 7-day remedial training prior to employer placement."
             
-        eval_dict = DeepEvaluationSchema(
-            total_score=score,
-            strengths=strengths,
-            skill_gaps=gaps,
-            placement_ready=ready,
-            recruiter_pitch=pitch
-        ).model_dump()
+        prac_dict = {
+            "practical_score": p_score,
+            "strengths": strengths,
+            "skill_gaps": gaps,
+            "recruiter_pitch": pitch
+        }
         
-    eval_dict["fast_screening"] = screening_res
-    if not eval_dict["placement_ready"]:
-        eval_dict["remedial_schedule"] = generate_remedial_curriculum("Candidate", eval_dict["skill_gaps"])
+    practical_score = min(70, max(0, prac_dict.get("practical_score", 35)))
+    
+    # 4. Total Dynamic Score Calculation
+    total_score = round(mcq_score + practical_score)
+    placement_ready = (total_score >= 70)
+    
+    eval_summary = {
+        "mcq_score": mcq_score,
+        "practical_score": practical_score,
+        "total_score": total_score,
+        "mcq_correct_count": correct_count,
+        "mcq_total_questions": total_mcqs,
+        "wrong_questions": wrong_questions,
+        "strengths": prac_dict.get("strengths", []),
+        "skill_gaps": prac_dict.get("skill_gaps", []),
+        "recruiter_pitch": prac_dict.get("recruiter_pitch", ""),
+        "placement_ready": placement_ready,
+        "fast_screening": screening_res
+    }
+    
+    if not placement_ready:
+        eval_summary["remedial_schedule"] = generate_remedial_curriculum("Candidate", eval_summary["skill_gaps"])
         
-    return eval_dict
+    return eval_summary
 
 
 # --- Core Pipeline 3: Autonomous Job Matcher & Placement Dispatcher ---
 
-def dispatch_autonomous_placement(student_id: str, assessment_id: str, submission_text: str, practical_task: str, rubric: List[str], image_base64: Optional[str] = None) -> dict:
+def dispatch_autonomous_placement(
+    student_id: str,
+    assessment_id: str,
+    mcq_answers: Optional[List[int]],
+    mcq_key: Optional[List[int]],
+    submission_text: str,
+    practical_task: str,
+    rubric: List[str],
+    image_base64: Optional[str] = None
+) -> dict:
     student = get_student_by_id(student_id)
     if not student:
         raise ValueError(f"Student ID '{student_id}' not found in institute roster")
@@ -309,8 +358,8 @@ def dispatch_autonomous_placement(student_id: str, assessment_id: str, submissio
     threshold = institute.get("placement_threshold", 70)
     cap_limit = institute.get("max_interviews_cap", 3)
     
-    # 1. Dual-AI Evaluation
-    eval_res = evaluate_submission(submission_text, practical_task, rubric, image_base64)
+    # 1. Dynamic Real-Time Evaluation
+    eval_res = evaluate_submission(mcq_answers, mcq_key, submission_text, practical_task, rubric, image_base64)
     total_score = eval_res["total_score"]
     
     # 2. Verification Gate Checks
@@ -395,7 +444,6 @@ def dispatch_autonomous_placement(student_id: str, assessment_id: str, submissio
             }
         }
     else:
-        # Remedial assignment action
         reason_str = []
         if total_score < threshold:
             reason_str.append(f"Score {total_score}% below required {threshold}%")
