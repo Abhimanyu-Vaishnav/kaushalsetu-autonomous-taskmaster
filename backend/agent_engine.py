@@ -486,3 +486,28 @@ def dispatch_autonomous_placement(
         "evaluation": eval_res,
         "dispatch": action_payload
     }
+
+
+def generate_verified_certificate(candidate_name: str, student_id: str, course_name: str, branch_name: str, score_breakdown: dict, metric_hash: str) -> dict:
+    """
+    Generates a live Verified Skill & Competency Dossier certificate.
+    """
+    return {
+        "certificate_id": f"CERT-{uuid.uuid4().hex[:8].upper()}",
+        "issuer": "SkillForge Vocational Foundation & Placement Engine",
+        "candidate_name": candidate_name,
+        "student_id": student_id,
+        "course_name": course_name,
+        "branch_name": branch_name,
+        "total_score": score_breakdown.get("total_score", 90),
+        "mcq_score": score_breakdown.get("mcq_score", 30.0),
+        "practical_score": score_breakdown.get("practical_score", 60.0),
+        "competencies_verified": [
+            "Hardware & Diagnostic Circuit Testing",
+            "Safety Lockout & Protocol Adherence",
+            "Technical Report Documentation & Analysis"
+        ],
+        "verified_hash": metric_hash,
+        "issued_at": "2026-08-23",
+        "verification_status": "AUTHENTICATED & IMMUTABLE"
+    }

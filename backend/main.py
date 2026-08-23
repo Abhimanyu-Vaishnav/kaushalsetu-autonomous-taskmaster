@@ -176,3 +176,27 @@ def api_student_pipeline(req: FullEvaluationReq):
 @app.get("/api/placements/ledger")
 def api_get_placements():
     return {"success": True, "data": get_job_applications()}
+
+# 6. Verified Certificate Generator Endpoint
+class CertificateReq(BaseModel):
+    candidate_name: str
+    student_id: str
+    course_name: str
+    branch_name: str
+    total_score: int
+    mcq_score: float
+    practical_score: float
+    metric_hash: str
+
+@app.post("/api/certificate/generate")
+def api_generate_certificate(req: CertificateReq):
+    from agent_engine import generate_verified_certificate
+    cert = generate_verified_certificate(
+        req.candidate_name,
+        req.student_id,
+        req.course_name,
+        req.branch_name,
+        {"total_score": req.total_score, "mcq_score": req.mcq_score, "practical_score": req.practical_score},
+        req.metric_hash
+    )
+    return {"success": True, "data": cert}
