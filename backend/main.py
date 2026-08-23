@@ -9,9 +9,14 @@ import io
 import os
 
 from database import (
-    get_institute,
-    update_institute_config,
+    get_all_institutes,
+    get_institute_by_id,
+    get_institute_by_code,
     create_institute,
+    get_branches_by_institute,
+    create_branch,
+    get_courses_by_branch,
+    create_course,
     get_all_students,
     get_student_by_id,
     add_student,
@@ -28,7 +33,7 @@ from recruiter_agent import AutonomousRecruiterAgent
 app = FastAPI(
     title="SkillForge Autonomous - Enterprise Multi-Tenant Platform",
     description="Autonomous Vocational Operations, Multimodal Grading & Placement Action Engine",
-    version="3.7.0",
+    version="4.0.0",
 )
 
 app.add_middleware(
@@ -39,7 +44,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount Static Portfolios Directory if exists
 PORTFOLIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "portfolios")
 os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 
@@ -48,24 +52,31 @@ os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 class InstituteCreateReq(BaseModel):
     name: str
     code: str
-    branches: List[str]
-    courses: List[str]
     placement_threshold: int = 70
     max_interviews_cap: int = 3
 
-class InstituteConfigReq(BaseModel):
-    institute_id: str = "INST-GLOBAL-01"
-    placement_threshold: int = Field(70, ge=50, le=100)
-    max_interviews_cap: int = Field(3, ge=1, le=10)
+class BranchCreateReq(BaseModel):
+    institute_id: str
+    branch_name: str
+    city: str
+
+class CourseCreateReq(BaseModel):
+    institute_id: str
+    branch_id: str
+    course_name: str
+    curriculum_summary: str = ""
 
 class StudentCreateReq(BaseModel):
-    institute_id: str = "INST-GLOBAL-01"
+    institute_id: str
+    branch_id: str
+    course_id: str
     branch_name: str
+    course_name: str
     full_name: str
     dob: str = "2002-01-01"
     email: str
     phone: str = ""
-    course_name: str
+    bio: str = ""
     fees_status: str = "PAID"
     consent: int = 1
 
@@ -107,11 +118,11 @@ class CertificateReq(BaseModel):
 def health_check():
     return {
         "status": "healthy",
-        "service": "SkillForge Autonomous Background Action Platform",
-        "version": "3.8.0"
+        "service": "SkillForge Autonomous Multi-Tenant Architecture Engine",
+        "version": "4.0.0"
     }
 
-# Portfolio HTML Route
+# Standalone Portfolio HTML Route
 @app.get("/portfolio/{student_id}", response_class=HTMLResponse)
 def get_student_portfolio(student_id: str):
     file_path = os.path.join(PORTFOLIO_DIR, f"{student_id}.html")
@@ -119,36 +130,54 @@ def get_student_portfolio(student_id: str):
         with open(file_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     else:
-        raise HTTPException(status_code=404, detail=f"Dossier portfolio for student '{student_id}' not found")
+        raise HTTPException(status_code=404, detail=f"Portfolio dossier for student '{student_id}' not found.")
 
-# 1. Institute & Branch Management
+# 1. Relational Governance Endpoints (Institutes -> Branches -> Courses)
 @app.get("/api/institutes")
 def api_get_all_institutes():
-    from database import get_all_institutes
     return {"success": True, "data": get_all_institutes()}
 
-@app.get("/api/institute/info")
-def api_get_institute(inst_id: str = "INST-GLOBAL-01"):
-    return {"success": True, "data": get_institute(inst_id)}
-
-@app.post("/api/institute/create")
+@app.post("/api/institutes/create")
 def api_create_institute(req: InstituteCreateReq):
-    inst = create_institute(req.name, req.code, req.branches, req.courses, req.placement_threshold, req.max_interviews_cap)
+    inst = create_institute(req.name, req.code, req.placement_threshold, req.max_interviews_cap)
     return {"success": True, "data": inst}
 
-@app.post("/api/institute/config")
-def api_update_config(req: InstituteConfigReq):
-    update_institute_config(req.institute_id, req.placement_threshold, req.max_interviews_cap)
-    return {"success": True, "data": get_institute(req.institute_id)}
+@app.get("/api/branches")
+def api_get_branches(institute_id: str):
+    return {"success": True, "data": get_branches_by_institute(institute_id)}
 
-# 2. Student Roster & CSV Bulk Upload
+@app.post("/api/branches/create")
+def api_create_branch(req: BranchCreateReq):
+    branch = create_branch(req.institute_id, req.branch_name, req.city)
+    return {"success": True, "data": branch}
+
+@app.get("/api/courses")
+def api_get_courses(branch_id: str):
+    return {"success": True, "data": get_courses_by_branch(branch_id)}
+
+@app.post("/api/courses/create")
+def api_create_course(req: CourseCreateReq):
+    course = create_course(req.institute_id, req.branch_id, req.course_name, req.curriculum_summary)
+    return {"success": True, "data": course}
+
+# 2. Student Enrollment & CSV Bulk Upload
 @app.get("/api/students")
-def api_get_students(institute_id: Optional[str] = None, branch_name: Optional[str] = None):
-    return {"success": True, "data": get_all_students(institute_id, branch_name)}
+def api_get_students(institute_id: Optional[str] = None, branch_id: Optional[str] = None):
+    return {"success": True, "data": get_all_students(institute_id, branch_id)}
+
+@app.get("/api/student/{student_id}")
+def api_get_student_detail(student_id: str):
+    stu = get_student_by_id(student_id)
+    if stu:
+        return {"success": True, "data": stu}
+    raise HTTPException(status_code=404, detail="Student not found")
 
 @app.post("/api/students/add")
 def api_add_student(req: StudentCreateReq):
-    stu = add_student(req.institute_id, req.branch_name, req.full_name, req.email, req.phone, req.course_name, req.dob, req.fees_status, req.consent)
+    stu = add_student(
+        req.institute_id, req.branch_id, req.course_id, req.branch_name, req.course_name,
+        req.full_name, req.dob, req.email, req.phone, req.bio, req.fees_status, req.consent
+    )
     return {"success": True, "data": stu}
 
 @app.post("/api/students/consent")
@@ -157,7 +186,14 @@ def api_set_consent(req: StudentConsentReq):
     return {"success": True, "data": get_student_by_id(req.student_id)}
 
 @app.post("/api/students/bulk-upload")
-async def api_bulk_upload(file: UploadFile = File(...), institute_id: str = "INST-GLOBAL-01"):
+async def api_bulk_upload(
+    file: UploadFile = File(...),
+    institute_id: str = "INST-GLOBAL-01",
+    branch_id: str = "BR-NANGLOI",
+    course_id: str = "CRS-AUTO-01",
+    branch_name: str = "Nangloi Center",
+    course_name: str = "Automotive & Hardware Diagnostics"
+):
     contents = await file.read()
     buffer = io.StringIO(contents.decode("utf-8"))
     reader = csv.DictReader(buffer)
@@ -165,13 +201,14 @@ async def api_bulk_upload(file: UploadFile = File(...), institute_id: str = "INS
     added_students = []
     for row in reader:
         full_name = row.get("full_name", row.get("name", "Student"))
+        dob = row.get("dob", "2002-01-01")
         email = row.get("email", "student@skillforge-edu.org")
         phone = row.get("phone", "+91 9876543210")
-        branch_name = row.get("branch_name", row.get("branch", "Nangloi Center"))
-        course_name = row.get("course_name", row.get("course", "Automotive & Hardware Diagnostics"))
-        fees_status = row.get("fees_status", "PAID")
         
-        stu = add_student(institute_id, branch_name, full_name, email, phone, course_name, fees_status, 1)
+        stu = add_student(
+            institute_id, branch_id, course_id, branch_name, course_name,
+            full_name, dob, email, phone, "Bulk enrolled candidate", "PAID", 1
+        )
         added_students.append(stu)
         
     return {"success": True, "count": len(added_students), "data": added_students}
@@ -189,7 +226,7 @@ def api_generate_exam(req: AssessmentGenReq):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# 4. Autonomous Agent Pipeline Execution
+# 4. Student Submission & Autonomous Background Dispatcher
 @app.post("/api/student/evaluate-and-dispatch")
 def api_student_pipeline(req: FullEvaluationReq):
     try:
@@ -212,8 +249,8 @@ def api_student_pipeline(req: FullEvaluationReq):
 
 # 5. Job Applications Ledger
 @app.get("/api/placements/ledger")
-def api_get_placements():
-    return {"success": True, "data": get_job_applications()}
+def api_get_placements(branch_id: Optional[str] = None):
+    return {"success": True, "data": get_job_applications(branch_id)}
 
 # 6. Verified Certificate Generator Endpoint
 @app.post("/api/certificate/generate")
