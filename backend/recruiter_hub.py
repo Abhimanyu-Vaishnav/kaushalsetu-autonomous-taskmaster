@@ -98,16 +98,22 @@ def get_requisitions() -> List[Dict[str, Any]]:
     conn.close()
     return rows
 
+import uuid
+
 def log_dispatch_ledger(candidate_name: str, role_title: str, company_name: str, match_pct: int, metric_hash: str, status: str):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    dispatch_id = f"DISPATCH-{hashlib.md5(f'{candidate_name}{role_title}'.encode()).hexdigest()[:8].upper()}"
-    cursor.execute("""
-        INSERT INTO dispatch_ledger (dispatch_id, candidate_name, role_title, company_name, match_percentage, metric_hash, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (dispatch_id, candidate_name, role_title, company_name, match_pct, metric_hash, status))
-    conn.commit()
-    conn.close()
+    dispatch_id = f"DISPATCH-{uuid.uuid4().hex[:8].upper()}"
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO dispatch_ledger (dispatch_id, candidate_name, role_title, company_name, match_percentage, metric_hash, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (dispatch_id, candidate_name, role_title, company_name, match_pct, metric_hash, status))
+        conn.commit()
+    except Exception as e:
+        print(f"Warning: dispatch_ledger log error: {e}")
+    finally:
+        conn.close()
 
 def get_dispatch_ledger() -> List[Dict[str, Any]]:
     conn = sqlite3.connect(DB_PATH)
