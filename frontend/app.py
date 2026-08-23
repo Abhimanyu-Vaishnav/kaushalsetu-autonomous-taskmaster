@@ -59,7 +59,7 @@ st.markdown("""
         border-radius: 4px;
     }
 </style>
-""", unsafe_allow_cookies=True, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 st.markdown('<div class="main-header">⚡ SkillForge Autonomous</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Continuous Action Engine for Vocational Training Institutes | Powered by Gemini 3.5 & Gemma</div>', unsafe_allow_html=True)
