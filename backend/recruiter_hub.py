@@ -101,7 +101,7 @@ def get_requisitions() -> List[Dict[str, Any]]:
 import uuid
 
 def log_dispatch_ledger(candidate_name: str, role_title: str, company_name: str, match_pct: int, metric_hash: str, status: str):
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     cursor = conn.cursor()
     dispatch_id = f"DISPATCH-{uuid.uuid4().hex[:8].upper()}"
     try:
@@ -116,7 +116,7 @@ def log_dispatch_ledger(candidate_name: str, role_title: str, company_name: str,
         conn.close()
 
 def get_dispatch_ledger() -> List[Dict[str, Any]]:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=15)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM dispatch_ledger ORDER BY timestamp DESC")
