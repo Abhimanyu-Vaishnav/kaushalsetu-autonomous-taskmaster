@@ -427,27 +427,36 @@ elif current_page == "student_dashboard":
         ])
         
         with s_tab1:
+            st.markdown("""
+            <div style="background:#0F172A; border:1px solid #1E293B; padding:12px 18px; border-radius:8px; margin-bottom:16px; font-size:0.85rem; color:#94A3B8;">
+                🔒 <b>Institutional Governance Active:</b> Core identity fields are locked by Base Branch Admin. Candidate can edit career bio, skills, role preferences, and resume.
+            </div>
+            """, unsafe_allow_html=True)
+            
             with st.form("student_profile_edit_dossier_form"):
                 col_p1, col_p2 = st.columns(2)
                 with col_p1:
-                    prof_name = st.text_input("Full Name", value=student_data.get('full_name', ''))
-                    prof_email = st.text_input("Email", value=student_data.get('email', ''))
-                    prof_phone = st.text_input("Phone", value=student_data.get('phone', ''))
-                    prof_github = st.text_input("GitHub Profile URL", value=student_data.get('github_url', ''))
-                    prof_exp = st.number_input("Years of Experience", min_value=0, max_value=30, value=int(student_data.get('work_experience_years', 0)))
+                    st.text_input("Full Name (Locked)", value=student_data.get('full_name', ''), disabled=True, help="🔒 Institutional Verified Data")
+                    st.text_input("Student Candidate ID (Locked)", value=student_data.get('student_id', ''), disabled=True, help="🔒 Institutional Verified Data")
+                    st.text_input("Enrolled Course Name (Locked)", value=student_data.get('course_name', ''), disabled=True, help="🔒 Institutional Verified Data")
+                    st.text_input("Registered Branch Node (Locked)", value=student_data.get('branch_name', ''), disabled=True, help="🔒 Institutional Verified Data")
+                    prof_email = st.text_input("Email Address", value=student_data.get('email', ''))
+                    prof_phone = st.text_input("Phone Number", value=student_data.get('phone', ''))
                 with col_p2:
-                    prof_roles = st.text_input("Target Role Preference", value=student_data.get('target_role_preference', 'Software Engineer / Diagnostic Tech'))
-                    prof_skills = st.text_input("Skills (comma-separated)", value=student_data.get('skills_list', 'Python, Electronics, Diagnostic Testing'))
-                    prof_past = st.text_area("Past Work Experience / Companies", value=student_data.get('past_companies_text', 'Assistant Diagnostic Tech at AutoHub NCR'))
-                    prof_bio = st.text_area("Professional Summary / Bio", value=student_data.get('bio', ''))
+                    prof_github = st.text_input("GitHub Profile URL", value=student_data.get('github_url', ''))
+                    prof_roles = st.text_input("Target Role & Salary CTC Preference", value=student_data.get('target_role_preference', 'Specialist Technical Engineer (₹6.5L - ₹9.0L PA)'))
+                    prof_skills = st.text_input("Technical & Practical Skills Tags", value=student_data.get('skills_list', 'Python, Circuit Diagnostics, CAN-bus, Oscilloscope Waveforms'))
+                    prof_exp = st.number_input("Years of Field Experience", min_value=0, max_value=30, value=int(student_data.get('work_experience_years', 0)))
+                    prof_past = st.text_area("Past Experience & Companies", value=student_data.get('past_companies_text', 'Trained & certified through institutional vocational curriculum.'))
+                    prof_bio = st.text_area("AI-Generated Professional Summary / Bio", value=student_data.get('bio', 'Vocational graduate specializing in practical diagnostics & full-stack execution.'))
                     
-                resume_file = st.file_uploader("📄 Upload PDF Resume", type=["pdf"])
+                resume_file = st.file_uploader("📄 Upload PDF Resume (Instant Extraction Preview)", type=["pdf"])
                 
-                sub_prof = st.form_submit_button("💾 Save Profile & Resume", type="primary", use_container_width=True)
+                sub_prof = st.form_submit_button("⚡ Sync Profile & Regenerate AI Portfolio", type="primary", use_container_width=True)
                 if sub_prof:
                     requests.post(f"{BACKEND_URL}/api/student/update-profile", json={
                         "student_id": student_data['student_id'],
-                        "full_name": prof_name,
+                        "full_name": student_data['full_name'],
                         "email": prof_email,
                         "phone": prof_phone,
                         "bio": prof_bio,
@@ -457,8 +466,8 @@ elif current_page == "student_dashboard":
                         "past_companies_text": prof_past,
                         "work_experience_years": prof_exp
                     })
-                    st.success("✅ Personal & Career Dossier Updated!")
-                    st.rerun()
+                    st.success("✅ Profile Synced & AI Portfolio Regenerated Successfully!")
+                    st.balloons()
                     st.rerun()
 
         st.divider()
