@@ -335,6 +335,43 @@ elif current_page == "student_dashboard":
     if not student_data:
         st.warning("Candidate not found.")
     else:
+        # --- CARD 1: 👤 PERSONAL & CAREER DOSSIER CARD ---
+        with st.expander("👤 Personal & Career Dossier (Edit Experience, Skills & Resume)", expanded=True):
+            with st.form("student_profile_edit_dossier_form"):
+                col_p1, col_p2 = st.columns(2)
+                with col_p1:
+                    prof_name = st.text_input("Full Name", value=student_data.get('full_name', ''))
+                    prof_email = st.text_input("Email", value=student_data.get('email', ''))
+                    prof_phone = st.text_input("Phone", value=student_data.get('phone', ''))
+                    prof_github = st.text_input("GitHub Profile URL", value=student_data.get('github_url', ''))
+                    prof_exp = st.number_input("Years of Experience", min_value=0, max_value=30, value=int(student_data.get('work_experience_years', 0)))
+                with col_p2:
+                    prof_roles = st.text_input("Target Role Preference", value=student_data.get('target_role_preference', 'Software Engineer / Diagnostic Tech'))
+                    prof_skills = st.text_input("Skills (comma-separated)", value=student_data.get('skills_list', 'Python, Electronics, Diagnostic Testing'))
+                    prof_past = st.text_area("Past Work Experience / Companies", value=student_data.get('past_companies_text', 'Assistant Diagnostic Tech at AutoHub NCR'))
+                    prof_bio = st.text_area("Professional Summary / Bio", value=student_data.get('bio', ''))
+                    
+                resume_file = st.file_uploader("📄 Upload PDF Resume", type=["pdf"])
+                
+                sub_prof = st.form_submit_button("💾 Save Profile & Resume", type="primary", use_container_width=True)
+                if sub_prof:
+                    requests.post(f"{BACKEND_URL}/api/student/update-profile", json={
+                        "student_id": student_data['student_id'],
+                        "full_name": prof_name,
+                        "email": prof_email,
+                        "phone": prof_phone,
+                        "bio": prof_bio,
+                        "github_url": prof_github,
+                        "skills_list": prof_skills,
+                        "target_role_preference": prof_roles,
+                        "past_companies_text": prof_past,
+                        "work_experience_years": prof_exp
+                    })
+                    st.success("✅ Personal & Career Dossier Updated!")
+                    st.rerun()
+
+        st.divider()
+
         # --- OFFICIAL MARKSHEET DOSSIER CARD ---
         with st.container():
             st.markdown(f"""
@@ -491,12 +528,13 @@ else:
 
     st.divider()
 
-    # 4 Main Administrative Pages / Tabs
+    # 5 Main Administrative Pages / Tabs
     pages = st.tabs([
         "🏛️ Institute & Branch Governance",
         "👥 Branch Student Roster & Exam Dispatch",
         "🚀 Recruiter Outbox & Interview Ledger",
-        "🤖 Live Autonomous Agent Terminal"
+        "🤖 Operational Audit Log & Activity Ledger",
+        "⚡ Live Autonomous Telemetry"
     ])
 
     # --- PAGE 1: INSTITUTE & BRANCH GOVERNANCE ---
@@ -686,6 +724,41 @@ else:
                             else:
                                 st.markdown('<span class="badge-pending">⏳ PENDING_EXAM</span>', unsafe_allow_html=True)
                         with col_r4:
+                            col_act1, col_act2 = st.columns(2)
+                            with col_act1:
+                                with st.popover("✏️ Edit"):
+                                    with st.form(key=f"edit_student_form_{s['student_id']}"):
+                                        st.subheader(f"Edit Profile: {s['full_name']}")
+                                        ed_name = st.text_input("Full Name", value=s['full_name'])
+                                        ed_email = st.text_input("Email", value=s['email'])
+                                        ed_phone = st.text_input("Phone", value=s.get('phone', ''))
+                                        ed_bio = st.text_area("Bio", value=s.get('bio', ''))
+                                        ed_exp = st.number_input("Work Experience (Years)", min_value=0, max_value=30, value=int(s.get('work_experience_years', 0)))
+                                        ed_roles = st.text_input("Target Role Preference", value=s.get('target_role_preference', ''))
+                                        ed_skills = st.text_input("Skills (comma-separated)", value=s.get('skills_list', ''))
+                                        
+                                        sub_ed = st.form_submit_button("Save Changes", type="primary")
+                                        if sub_ed:
+                                            requests.post(f"{BACKEND_URL}/api/student/update-profile", json={
+                                                "student_id": s['student_id'],
+                                                "full_name": ed_name,
+                                                "email": ed_email,
+                                                "phone": ed_phone,
+                                                "bio": ed_bio,
+                                                "github_url": s.get('github_url', ''),
+                                                "skills_list": ed_skills,
+                                                "target_role_preference": ed_roles,
+                                                "past_companies_text": s.get('past_companies_text', ''),
+                                                "work_experience_years": ed_exp
+                                            })
+                                            st.success("✅ Profile Updated!")
+                                            st.rerun()
+                            with col_act2:
+                                if st.button("🗑️", key=f"btn_del_{s['student_id']}", help="Delete Student"):
+                                    requests.delete(f"{BACKEND_URL}/api/student/{s['student_id']}")
+                                    st.success(f"Deleted {s['full_name']}")
+                                    st.rerun()
+                                    
                             if s.get("retest_requested") and not s.get("retest_approved"):
                                 if st.button(f"✅ Approve Re-test for {s['full_name'].split()[0]}", key=f"btn_app_retest_{s['student_id']}", type="primary"):
                                     requests.post(f"{BACKEND_URL}/api/students/approve-retest", json={"student_id": s['student_id']})
@@ -739,9 +812,37 @@ else:
             except Exception as e:
                 st.error(f"Error loading ledger: {e}")
 
-    # --- PAGE 4: LIVE AUTONOMOUS AGENT TERMINAL ---
+    # --- PAGE 4: OPERATIONAL AUDIT LOG & ACTIVITY LEDGER ---
     with pages[3]:
-        st.subheader("🤖 Live Autonomous Agent Terminal & Streaming Telemetry")
+        st.subheader("🤖 AI Agent Operational Log & Activity Ledger")
+        st.markdown("Immutable, chronological audit ledger tracking all autonomous background executions across assessments, evaluations, and job dispatches.")
+        
+        agent_logs = []
+        try:
+            al_res = requests.get(f"{BACKEND_URL}/api/agent/logs", timeout=2)
+            if al_res.status_code == 200:
+                agent_logs = al_res.json()["data"]
+        except Exception:
+            pass
+            
+        if not agent_logs:
+            st.info("No background activity logged yet.")
+        else:
+            for alog in agent_logs:
+                with st.container():
+                    c_l1, c_l2, c_l3 = st.columns([1.5, 3.5, 2])
+                    with c_l1:
+                        st.caption(f"⏱️ `{alog.get('timestamp', 'Recent')}`")
+                    with c_l2:
+                        st.markdown(f"**[{alog.get('action_type', 'ACTION')}]** {alog.get('description', '')}")
+                    with c_l3:
+                        if alog.get('student_id'):
+                            st.caption(f"Student: `{alog['student_id']}`")
+                st.divider()
+
+    # --- PAGE 5: LIVE AUTONOMOUS TELEMETRY ---
+    with pages[4]:
+        st.subheader("⚡ Live Autonomous Agent Terminal & Streaming Telemetry")
         st.markdown("Real-time execution logs showing the continuous background action engine discovering jobs, generating portfolios, and scheduling interviews.")
         
         telemetry_logs = st.session_state.get("last_telemetry", [

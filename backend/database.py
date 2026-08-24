@@ -72,6 +72,11 @@ def init_db():
             github_url TEXT DEFAULT '',
             portfolio_url TEXT DEFAULT '',
             project_zip_path TEXT DEFAULT '',
+            resume_pdf_path TEXT DEFAULT '',
+            work_experience_years INTEGER DEFAULT 0,
+            past_companies_text TEXT DEFAULT '',
+            skills_list TEXT DEFAULT '',
+            target_role_preference TEXT DEFAULT '',
             fees_status TEXT DEFAULT 'PAID',
             consent_given INTEGER DEFAULT 0,
             consent_for_job_dispatch INTEGER DEFAULT 0,
@@ -85,6 +90,20 @@ def init_db():
             FOREIGN KEY(institute_id) REFERENCES institutes(id),
             FOREIGN KEY(branch_id) REFERENCES branches(id),
             FOREIGN KEY(course_id) REFERENCES courses(id)
+        )
+        """)
+        
+        # 5. Agent Activity Logs Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS agent_activity_logs (
+            id TEXT PRIMARY KEY,
+            institute_id TEXT,
+            branch_id TEXT,
+            student_id TEXT,
+            action_type TEXT NOT NULL,
+            description TEXT NOT NULL,
+            metadata_json TEXT DEFAULT '{}',
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
         """)
         
@@ -375,6 +394,60 @@ def approve_retest(student_id: str) -> bool:
         cursor.execute("UPDATE students SET retest_approved = 1, exam_completed = 0 WHERE student_id = ?", (student_id,))
         conn.commit()
         return True
+
+def update_student_profile(
+    student_id: str,
+    full_name: str,
+    email: str,
+    phone: str,
+    bio: str,
+    github_url: str,
+    skills_list: str,
+    target_role_preference: str,
+    past_companies_text: str,
+    work_experience_years: int
+) -> Dict[str, Any]:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE students 
+            SET full_name = ?, email = ?, phone = ?, bio = ?, github_url = ?, skills_list = ?, target_role_preference = ?, past_companies_text = ?, work_experience_years = ?
+            WHERE student_id = ?
+        """, (full_name, email, phone, bio, github_url, skills_list, target_role_preference, past_companies_text, work_experience_years, student_id))
+        conn.commit()
+    return get_student_by_id(student_id)
+
+def delete_student(student_id: str) -> bool:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM students WHERE student_id = ?", (student_id,))
+        cursor.execute("DELETE FROM student_submissions WHERE student_id = ?", (student_id,))
+        cursor.execute("DELETE FROM job_applications WHERE student_id = ?", (student_id,))
+        conn.commit()
+        return True
+
+def log_agent_activity(action_type: str, description: str, institute_id: str = None, branch_id: str = None, student_id: str = None, metadata: dict = None) -> str:
+    log_id = f"LOG-{uuid.uuid4().hex[:8].upper()}"
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO agent_activity_logs (id, institute_id, branch_id, student_id, action_type, description, metadata_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (log_id, institute_id, branch_id, student_id, action_type, description, json.dumps(metadata or {})))
+        conn.commit()
+    return log_id
+
+def get_agent_activity_logs(branch_id: Optional[str] = None, institute_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    with get_db_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        if branch_id:
+            cursor.execute("SELECT * FROM agent_activity_logs WHERE branch_id = ? ORDER BY timestamp DESC", (branch_id,))
+        elif institute_id:
+            cursor.execute("SELECT * FROM agent_activity_logs WHERE institute_id = ? ORDER BY timestamp DESC", (institute_id,))
+        else:
+            cursor.execute("SELECT * FROM agent_activity_logs ORDER BY timestamp DESC LIMIT 100")
+        return [dict(r) for r in cursor.fetchall()]
 
 def get_assessments(institute_id: Optional[str] = None) -> List[Dict[str, Any]]:
     with get_db_connection() as conn:

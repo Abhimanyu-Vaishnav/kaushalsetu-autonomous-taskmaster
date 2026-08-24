@@ -89,6 +89,18 @@ class StudentCreateReq(BaseModel):
     fees_status: str = "PAID"
     consent: int = 1
 
+class StudentUpdateProfileReq(BaseModel):
+    student_id: str
+    full_name: str
+    email: str
+    phone: str = ""
+    bio: str = ""
+    github_url: str = ""
+    skills_list: str = ""
+    target_role_preference: str = ""
+    past_companies_text: str = ""
+    work_experience_years: int = 0
+
 class StudentConsentReq(BaseModel):
     student_id: str
     consent: bool
@@ -193,7 +205,31 @@ def api_add_student(req: StudentCreateReq):
         req.institute_id, req.branch_id, req.course_id, req.branch_name, req.course_name,
         req.full_name, req.dob, req.email, req.phone, req.bio, req.fees_status, req.consent
     )
+    from database import log_agent_activity
+    log_agent_activity("STUDENT_ENROLLED", f"Enrolled candidate {stu['full_name']} ({stu['student_id']}) to {stu['branch_name']}", institute_id=stu['institute_id'], branch_id=stu['branch_id'], student_id=stu['student_id'])
     return {"success": True, "data": stu}
+
+@app.post("/api/student/update-profile")
+def api_update_student_profile(req: StudentUpdateProfileReq):
+    from database import update_student_profile, log_agent_activity
+    stu = update_student_profile(
+        req.student_id, req.full_name, req.email, req.phone, req.bio,
+        req.github_url, req.skills_list, req.target_role_preference, req.past_companies_text, req.work_experience_years
+    )
+    log_agent_activity("PROFILE_UPDATED", f"Student profile updated for {stu['full_name']} ({stu['student_id']})", student_id=stu['student_id'])
+    return {"success": True, "data": stu}
+
+@app.delete("/api/student/{student_id}")
+def api_delete_student(student_id: str):
+    from database import delete_student, log_agent_activity
+    delete_student(student_id)
+    log_agent_activity("STUDENT_DELETED", f"Candidate {student_id} removed from roster", student_id=student_id)
+    return {"success": True, "message": f"Student {student_id} deleted."}
+
+@app.get("/api/agent/logs")
+def api_get_agent_logs(branch_id: Optional[str] = None, institute_id: Optional[str] = None):
+    from database import get_agent_activity_logs
+    return {"success": True, "data": get_agent_activity_logs(branch_id, institute_id)}
 
 @app.post("/api/students/consent")
 def api_set_consent(req: StudentConsentReq):

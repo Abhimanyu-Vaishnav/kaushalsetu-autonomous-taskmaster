@@ -127,9 +127,11 @@ class AutonomousRecruiterAgent:
         portfolio_url = f"http://localhost:8000/portfolio/{student_id}"
         
         # Mark student record exam & portfolio completed
-        from database import mark_student_exam_complete
+        from database import mark_student_exam_complete, log_agent_activity
         mark_student_exam_complete(student_id, github_url or "", portfolio_url)
         self.log_telemetry("DOSSIER_SAVED", f"Portfolio dossier generated and live at: {portfolio_url}")
+        log_agent_activity("EXAM_EVALUATED", f"Exam Evaluated for Candidate: {student['full_name']} | Gemma Pre-check: PASS | Gemini Score: {total_score}/100", institute_id=student.get('institute_id'), branch_id=student.get('branch_id'), student_id=student_id)
+        log_agent_activity("PORTFOLIO_GENERATED", f"Animated Portfolio Generated at /portfolio/{student_id} (Hash: {metric_hash})", institute_id=student.get('institute_id'), branch_id=student.get('branch_id'), student_id=student_id)
 
         # 6. Task B & C: Autonomous Recruiter Matching & Live Web Job Search
         consent_given = bool(student.get("consent_given", 1) or student.get("consent_for_job_dispatch", 1))
