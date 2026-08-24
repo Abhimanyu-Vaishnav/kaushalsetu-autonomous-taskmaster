@@ -817,58 +817,150 @@ else:
                     st.session_state["is_autoplay_running"] = False
                     st.rerun()
 
-            # Dynamic Telemetry Log Container
-            log_container = st.empty()
+            # Interactive Visual Execution Stage Content
+            cur_stage = st.session_state["tour_stage"]
 
-            if st.session_state.get("is_autoplay_running"):
-                stages_data = [
-                    (1, "#0284C7", "#38BDF8", "STAGE 1: ZERO-FRICTION CANDIDATE & COURSE AI INGESTION",
-                     "[12:00:01.002] ⚡ Gemma Fast Token Screener: Ingested 'Alex Mercer - ECU Diagnostics Specialist'\n[12:00:01.040] 🧠 Gemini 3.5 Pro: Extracted 5 Core Skill Tags: [ECU Flashing, Oscilloscope Waveforms, CAN-bus, Safety Lockout, Wire Repair]\n[12:00:01.085] 📁 SQLite Multi-Tenant Ledger: Assigned Candidate ID STU-NAN-7C21 under Branch Nangloi Center Node\n[12:00:01.120] ✅ Zero Manual Form Entry Required (Saved ~45 minutes of manual registrar data entry)"),
-                    (2, "#A855F7", "#C084FC", "STAGE 2: SYLLABUS-GROUNDED DYNAMIC EXAM SYNTHESIS",
-                     "[12:00:02.010] 🧠 Gemini 3.5 Pro Assessment Synthesizer: Loaded Course 'Automotive & Hardware Diagnostics'\n[12:00:02.150] 📖 Curriculum Grounding: Generated 10 MCQs evenly distributed across Module 1 (ECU Testing) & Module 2 (Safety Lockout)\n[12:00:02.280] 🔬 Practical Capstone Synthesis: Generated Multimodal Oscilloscope Signal Isolation Challenge\n[12:00:02.350] 🎓 Standalone Candidate Exam URL Dispatched: http://localhost:8501/?page=exam&sid=STU-NAN-7C21"),
-                    (3, "#22C55E", "#4ADE80", "STAGE 3: DUAL-AI MULTIMODAL RUBRIC GRADED EVALUATION",
-                     "[12:00:03.005] ⚡ Gemma 2B/7B Fast Pre-Screen: Code Structure & Token Check PASS (42ms)\n[12:00:03.112] 🧠 Gemini 3.5 Multimodal Evaluation: Evaluated diagnostic code submission & image circuit schematic\n[12:00:03.450] 📊 Dynamic Score Calculation: Objective MCQ (45.0/50) + Practical Rubric (42.0/50) = 87.0% Aggregate\n[12:00:03.520] 🏆 Result: PASS (PLACED) | Verified SHA-256 Hasher Seal: 0x8F92A1B7E34F0C9A"),
-                    (4, "#EAB308", "#FACC15", "STAGE 4: WHOLE-WEB REAL VACANCY DISCOVERY & MATCHING",
-                     "[12:00:04.020] 🌐 Google Search Grounding: Crawled 20 live open requisitions across Google Jobs, Indeed India, Naukri & Corporate Hubs\n[12:00:04.380] 🎯 Smart Match Engine: Calculated candidate acceptance probability score based on candidate skills vs employer specs\n[12:00:04.490] 🔥 High-Yield Match Flagged: Tata Motors Electric & Auto Tech (94% Match Score | ₹6.5L - ₹9.0L PA)\n[12:00:04.550] 🔗 Verified Live Deep-Link Attached: https://www.google.com/search?q=Automotive+Specialist+jobs+in+Delhi"),
-                    (5, "#EC4899", "#F472B6", "STAGE 5: AUTONOMOUS RECRUITER OUTBOX DISPATCH & MULTI-CHANNEL ALERTS",
-                     "[12:00:05.010] 🎨 Domain-Adaptive Animated Portfolio Dossier Compiled: http://localhost:8000/portfolio/STU-NAN-7C21\n[12:00:05.200] 🚀 Recruiter Outbox Dispatch: Auto-dispatched candidate application payload to Tata Motors & Hero Tech\n[12:00:05.340] 🔔 Instant Multi-Channel Alerts: Sent interview slot notification to candidate workspace & institute ledger\n[12:00:05.410] ⏱️ 4.5 Hours of Manual Grading & Placement Outreach reduced to 3.2 Seconds by Autonomous Agent")
-                ]
-                for stg, b_color, txt_color, stage_title, stage_log in stages_data:
-                    st.session_state["tour_stage"] = stg
-                    formatted_log = stage_log.replace('\n', '<br/>')
-                    log_container.markdown(f"""
-                    <div style="background:#090D16; border:2px solid {b_color}; padding:18px; border-radius:10px; font-family:monospace; color:{txt_color}; font-size:0.88rem; line-height:1.6;">
-                        <b style="color:{b_color};">{stage_title}</b><br/>
-                        {formatted_log}
+            if cur_stage == 1:
+                st.markdown("""
+                <div style="background:#090D16; border:2px solid #0284C7; padding:20px; border-radius:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h4 style="color:#38BDF8; margin:0;">📄 STAGE 1: ZERO-FRICTION RESUME & SYLLABUS AI INGESTION</h4>
+                        <span class="badge-live" style="background:#0284C7; color:white;">GEMMA TOKEN SCREENER</span>
                     </div>
-                    """, unsafe_allow_html=True)
-                    time.sleep(1.2)
-                st.session_state["is_autoplay_running"] = False
-                st.balloons()
-            else:
-                cur_stage = st.session_state["tour_stage"]
-                stage_colors = {1: ("#0284C7", "#38BDF8"), 2: ("#A855F7", "#C084FC"), 3: ("#22C55E", "#4ADE80"), 4: ("#EAB308", "#FACC15"), 5: ("#EC4899", "#F472B6")}
-                b_color, txt_color = stage_colors.get(cur_stage, ("#0284C7", "#38BDF8"))
-                
-                logs_map = {
-                    1: ("STAGE 1: ZERO-FRICTION CANDIDATE & COURSE AI INGESTION",
-                        "[12:00:01.002] ⚡ Gemma Fast Token Screener: Ingested 'Alex Mercer - ECU Diagnostics Specialist'<br/>[12:00:01.040] 🧠 Gemini 3.5 Pro: Extracted 5 Core Skill Tags: [ECU Flashing, Oscilloscope Waveforms, CAN-bus, Safety Lockout, Wire Repair]<br/>[12:00:01.085] 📁 SQLite Multi-Tenant Ledger: Assigned Candidate ID STU-NAN-7C21 under Branch Nangloi Center Node<br/>[12:00:01.120] ✅ Zero Manual Form Entry Required (Saved ~45 minutes of manual registrar data entry)"),
-                    2: ("STAGE 2: SYLLABUS-GROUNDED DYNAMIC EXAM SYNTHESIS",
-                        "[12:00:02.010] 🧠 Gemini 3.5 Pro Assessment Synthesizer: Loaded Course 'Automotive & Hardware Diagnostics'<br/>[12:00:02.150] 📖 Curriculum Grounding: Generated 10 MCQs evenly distributed across Module 1 (ECU Testing) & Module 2 (Safety Lockout)<br/>[12:00:02.280] 🔬 Practical Capstone Synthesis: Generated Multimodal Oscilloscope Signal Isolation Challenge<br/>[12:00:02.350] 🎓 Standalone Candidate Exam URL Dispatched: http://localhost:8501/?page=exam&sid=STU-NAN-7C21"),
-                    3: ("STAGE 3: DUAL-AI MULTIMODAL RUBRIC GRADED EVALUATION",
-                        "[12:00:03.005] ⚡ Gemma 2B/7B Fast Pre-Screen: Code Structure & Token Check PASS (42ms)<br/>[12:00:03.112] 🧠 Gemini 3.5 Multimodal Evaluation: Evaluated diagnostic code submission & image circuit schematic<br/>[12:00:03.450] 📊 Dynamic Score Calculation: Objective MCQ (45.0/50) + Practical Rubric (42.0/50) = 87.0% Aggregate<br/>[12:00:03.520] 🏆 Result: PASS (PLACED) | Verified SHA-256 Hasher Seal: 0x8F92A1B7E34F0C9A"),
-                    4: ("STAGE 4: WHOLE-WEB REAL VACANCY DISCOVERY & MATCHING",
-                        "[12:00:04.020] 🌐 Google Search Grounding: Crawled 20 live open requisitions across Google Jobs, Indeed India, Naukri & Corporate Hubs<br/>[12:00:04.380] 🎯 Smart Match Engine: Calculated candidate acceptance probability score based on candidate skills vs employer specs<br/>[12:00:04.490] 🔥 High-Yield Match Flagged: Tata Motors Electric & Auto Tech (94% Match Score | ₹6.5L - ₹9.0L PA)<br/>[12:00:04.550] 🔗 Verified Live Deep-Link Attached: https://www.google.com/search?q=Automotive+Specialist+jobs+in+Delhi"),
-                    5: ("STAGE 5: AUTONOMOUS RECRUITER OUTBOX DISPATCH & MULTI-CHANNEL ALERTS",
-                        "[12:00:05.010] 🎨 Domain-Adaptive Animated Portfolio Dossier Compiled: http://localhost:8000/portfolio/STU-NAN-7C21<br/>[12:00:05.200] 🚀 Recruiter Outbox Dispatch: Auto-dispatched candidate application payload to Tata Motors & Hero Tech<br/>[12:00:05.340] 🔔 Instant Multi-Channel Alerts: Sent interview slot notification to candidate workspace & institute ledger<br/>[12:00:05.410] ⏱️ 4.5 Hours of Manual Grading & Placement Outreach reduced to 3.2 Seconds by Autonomous Agent")
-                }
-                title, body = logs_map.get(cur_stage, logs_map[1])
-                log_container.markdown(f"""
-                <div style="background:#090D16; border:2px solid {b_color}; padding:18px; border-radius:10px; font-family:monospace; color:{txt_color}; font-size:0.88rem; line-height:1.6;">
-                    <b style="color:{b_color};">{title}</b><br/>
-                    {body}
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                        <div style="background:#1E293B; p-3; padding:12px; border-radius:8px; font-size:0.8rem; color:#CBD5E1; font-family:monospace;">
+                            <b style="color:#38BDF8;">Raw Candidate Resume Text:</b><br/>
+                            Alex Mercer, Senior ECU Specialist with 3+ years experience in OBD-II diagnostics, CAN-bus protocol inspection, and high-voltage safety lockout...
+                        </div>
+                        <div style="background:#1E293B; p-3; padding:12px; border-radius:8px; font-size:0.8rem; color:#CBD5E1;">
+                            <b style="color:#22C55E;">Extracted Structured JSON Chips:</b><br/>
+                            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px;">
+                                <span style="background:#0284C7; color:white; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">Full Name: Alex Mercer</span>
+                                <span style="background:#0369A1; color:white; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">Domain: ECU & Circuit Diagnostics</span>
+                                <span style="background:#15803D; color:white; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">Exp: 3 Years Verified</span>
+                                <span style="background:#7E22CE; color:white; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">Skills: CAN-bus, Oscilloscope, Wire Splice</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
+            elif cur_stage == 2:
+                st.markdown("""
+                <div style="background:#090D16; border:2px solid #A855F7; padding:20px; border-radius:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h4 style="color:#C084FC; margin:0;">📝 STAGE 2: SYLLABUS-GROUNDED DYNAMIC QUESTION SYNTHESIS</h4>
+                        <span class="badge-live" style="background:#7E22CE; color:white;">GEMINI 3.5 PRO SYNTHESIZER</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
+                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
+                            <b style="color:#C084FC;">Question 1 (MCQ)</b><br/>
+                            <span style="color:#CBD5E1;">What is the primary baud rate for high-speed ISO 15765-4 CAN-bus diagnostics?</span><br/>
+                            <span style="color:#22C55E; font-weight:700; font-size:0.75rem;">Option A: 500 Kbps (Correct ✅)</span>
+                        </div>
+                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
+                            <b style="color:#C084FC;">Question 2 (MCQ)</b><br/>
+                            <span style="color:#CBD5E1;">Which step is mandatory before inspecting high-voltage battery terminals?</span><br/>
+                            <span style="color:#22C55E; font-weight:700; font-size:0.75rem;">Option B: High-Voltage Lockout (Correct ✅)</span>
+                        </div>
+                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
+                            <b style="color:#C084FC;">Practical Capstone Task</b><br/>
+                            <span style="color:#CBD5E1;">Isolate oscilloscope differential signal noise & repair Ground Terminal G201 splice.</span><br/>
+                            <span style="color:#38BDF8; font-weight:700; font-size:0.75rem;">Capstone Module Grounded</span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            elif cur_stage == 3:
+                st.markdown("""
+                <div style="background:#090D16; border:2px solid #22C55E; padding:20px; border-radius:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h4 style="color:#4ADE80; margin:0;">🔬 STAGE 3: MULTIMODAL INSPECTION & DUAL-AI EVALUATION</h4>
+                        <span class="badge-live" style="background:#15803D; color:white;">GEMMA (42ms) + GEMINI 3.5 RUBRIC</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem; font-family:monospace; color:#CBD5E1;">
+                            <b style="color:#4ADE80;">Submitted Capstone Diagnostic Inspection:</b><br/>
+                            "Completed safety lockout procedure. Verified 0V residual on DC bus. Connected dual-trace oscilloscope to CAN-High/CAN-Low. Isolated differential noise at Splice S204."
+                        </div>
+                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem; color:#CBD5E1;">
+                            <b style="color:#FACC15;">Gemini Multimodal Vision & Code Rubric Breakdown:</b><br/>
+                            • Safety Lockout Compliance: <b style="color:#4ADE80;">100%</b><br/>
+                            • Signal Isolation Logic: <b style="color:#4ADE80;">95%</b><br/>
+                            • Technical Waveform Documentation: <b style="color:#4ADE80;">90%</b><br/>
+                            <div style="margin-top:6px; background:#166534; padding:6px; border-radius:6px; color:white; font-weight:700; text-align:center;">
+                                Final Score: 87.0% PASS (PLACED) | Seal: SHA-256 0x8F92A1B7
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            elif cur_stage == 4:
+                st.markdown("""
+                <div style="background:#090D16; border:2px solid #EAB308; padding:20px; border-radius:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h4 style="color:#FACC15; margin:0;">🌐 STAGE 4: WHOLE-WEB GROUNDED VACANCY RADAR</h4>
+                        <span class="badge-live" style="background:#A16207; color:white;">GOOGLE SEARCH GROUNDING ENGINE</span>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
+                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
+                            <b style="color:#FACC15;">Tata Motors Electric</b><br/>
+                            <span style="color:#CBD5E1;">Role: Senior ECU Diagnostic Tech</span><br/>
+                            <span style="color:#38BDF8; font-weight:700;">CTC: ₹6.5L - ₹9.0L PA</span><br/>
+                            <span style="background:#166534; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem;">94% Fit Score</span>
+                        </div>
+                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
+                            <b style="color:#FACC15;">Hero MotoCorp EV</b><br/>
+                            <span style="color:#CBD5E1;">Role: Harness & Hardware Engineer</span><br/>
+                            <span style="color:#38BDF8; font-weight:700;">CTC: ₹7.0L - ₹10.5L PA</span><br/>
+                            <span style="background:#166534; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem;">91% Fit Score</span>
+                        </div>
+                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
+                            <b style="color:#FACC15;">Ather Energy Mobility</b><br/>
+                            <span style="color:#CBD5E1;">Role: Battery & ECU Diagnostics</span><br/>
+                            <span style="color:#38BDF8; font-weight:700;">CTC: ₹8.0L - ₹12.0L PA</span><br/>
+                            <span style="background:#166534; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem;">88% Fit Score</span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="background:#090D16; border:2px solid #EC4899; padding:20px; border-radius:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h4 style="color:#F472B6; margin:0;">🚀 STAGE 5: AUTONOMOUS RECRUITER OUTBOX & LIVE PORTFOLIO PREVIEW</h4>
+                        <span class="badge-live" style="background:#BE185D; color:white;">SHA-256 SEALED OUTBOX DISPATCH</span>
+                    </div>
+                    <p style="color:#CBD5E1; font-size:0.85rem; margin-bottom:12px;">
+                        Candidate portfolio dossier auto-compiled & dispatched to recruiter outboxes. Preview live generated dossier below:
+                    </p>
+                    <div style="border:2px solid #334155; border-radius:10px; overflow:hidden; margin-bottom:16px;">
+                        <iframe src="http://localhost:8000/portfolio/STU-1001" style="width:100%; height:320px; border:none;"></iframe>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # TASKMASTER COMPARATIVE FRICTION ELIMINATION LEDGER
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%); border:2px solid #6366F1; border-radius:12px; padding:20px; margin-top:20px;">
+                <h4 style="color:#818CF8; margin:0 0 12px 0;">⚡ Friction Elimination Ledger (The Taskmaster Hook)</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; font-size:0.88rem;">
+                    <div style="background:#991B1B22; border:1px solid #EF4444; padding:14px; border-radius:8px; color:#FCA5A5;">
+                        <b style="color:#EF4444;">❌ Manual Human Educator Pipeline: 4.5 Hours</b><br/>
+                        • Question Crafting: 1.5 Hours<br/>
+                        • Paper Grading: 1.0 Hour<br/>
+                        • Resume Formatting: 1.0 Hour<br/>
+                        • Job Matching & Email Outreach: 1.0 Hour
+                    </div>
+                    <div style="background:#16653422; border:1px solid #22C55E; padding:14px; border-radius:8px; color:#86EFAC;">
+                        <b style="color:#22C55E;">⚡ Autonomous SkillForge Agent: 3.8 Seconds</b><br/>
+                        • Zero Human Latency<br/>
+                        • 100% Tamper-Proof Cryptographic Hasher Seal<br/>
+                        • Grounded Whole-Web Google Search Discovery<br/>
+                        • Sub-Second Recruiter Outbox Dispatch
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
     # --- MODAL DIALOGS FOR GOVERNANCE ---
     @st.dialog("🏢 Create New Institute & Initial Branch Node")
