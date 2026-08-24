@@ -383,6 +383,41 @@ elif current_page == "student_dashboard":
     if not student_data:
         st.warning("Candidate not found.")
     else:
+        # Calculate Profile Completeness (0% to 100%)
+        has_resume = 25 if (student_data.get('resume_pdf_path') or student_data.get('github_url')) else 0
+        has_github = 25 if student_data.get('github_url') else 0
+        has_skills = 25 if (student_data.get('skills_list') and len(student_data.get('skills_list')) > 3) else 0
+        has_exam = 25 if student_data.get('exam_completed') else 0
+        completeness_score = has_resume + has_github + has_skills + has_exam
+
+        # Glowing AI Career Readiness Advisory Card
+        if completeness_score < 100:
+            missing_items = []
+            if not has_resume: missing_items.append("📄 Upload PDF Resume (+25%)")
+            if not has_github: missing_items.append("🔗 Add GitHub Profile Link (+25%)")
+            if not has_skills: missing_items.append("⚡ Specify Skills & Target Role (+25%)")
+            if not has_exam: missing_items.append("🎓 Complete Practical Capstone Exam (+25%)")
+
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border: 2px solid #38BDF8; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                    <div>
+                        <h4 style="color:#38BDF8; margin:0;">💡 Copilot Advisory: Profile Health Score ({completeness_score}%)</h4>
+                        <p style="color:#CBD5E1; font-size:0.9rem; margin:4px 0 10px 0;">
+                            Completing your profile items increases top recruiter match conversion rate by <b>38%</b>.
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge-live" style="background:#0284C7; color:white;">HEALTH ADVISOR</span>
+                    </div>
+                </div>
+                <div style="font-size:0.85rem; color:#94A3B8; margin-bottom:8px;">
+                    <b>Actionable Recommendations to Reach 100%:</b> {' &nbsp;|&nbsp; '.join(missing_items)}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.progress(completeness_score / 100.0, text=f"Profile Health: {completeness_score}% Complete")
+
         # 4 UNIFIED CANDIDATE TABS
         s_tab1, s_tab2, s_tab3, s_tab4 = st.tabs([
             "👤 Profile & Resume",
@@ -757,16 +792,12 @@ else:
                 if st.button("5️⃣ Outbox", type="primary" if st.session_state["tour_stage"] == 5 else "secondary", use_container_width=True):
                     st.session_state["tour_stage"] = 5
                     
-            st.progress(st.session_state["tour_stage"] / 5.0, text=f"Stage {st.session_state['tour_stage']} of 5 Active")
-            
             # Mode Controls
             col_mc1, col_mc2, col_mc3 = st.columns([2, 2, 2])
             with col_mc1:
                 if st.button("▶️ Auto-Play Full Simulation Tour", type="primary", use_container_width=True):
-                    for stg in range(1, 6):
-                        st.session_state["tour_stage"] = stg
-                        time.sleep(0.4)
-                        st.rerun()
+                    st.session_state["is_autoplay_running"] = True
+                    st.rerun()
             with col_mc2:
                 if st.button("➡️ Step to Next Stage", use_container_width=True):
                     st.session_state["tour_stage"] = (st.session_state["tour_stage"] % 5) + 1
@@ -774,58 +805,59 @@ else:
             with col_mc3:
                 if st.button("❌ Close Tour View", use_container_width=True):
                     st.session_state["show_demo_tour"] = False
+                    st.session_state["is_autoplay_running"] = False
                     st.rerun()
 
-            # Dynamic Live Telemetry Log per Stage
-            cur_stage = st.session_state["tour_stage"]
-            if cur_stage == 1:
-                st.markdown("""
-                <div style="background:#090D16; border:1px solid #0284C7; padding:18px; border-radius:10px; font-family:monospace; color:#38BDF8; font-size:0.88rem; line-height:1.6;">
-                    <b style="color:#38BDF8;">STAGE 1: ZERO-FRICTION CANDIDATE & COURSE AI INGESTION</b><br/>
-                    [12:00:01.002] ⚡ Gemma Fast Token Screener: Ingested 'Alex Mercer - ECU Diagnostics Specialist'<br/>
-                    [12:00:01.040] 🧠 Gemini 3.5 Pro: Extracted 5 Core Skill Tags: [ECU Flashing, Oscilloscope Waveforms, CAN-bus, Safety Lockout, Wire Repair]<br/>
-                    [12:00:01.085] 📁 SQLite Multi-Tenant Ledger: Assigned Candidate ID STU-NAN-7C21 under Branch Nangloi Center Node<br/>
-                    [12:00:01.120] ✅ Zero Manual Form Entry Required (Saved ~45 minutes of manual registrar data entry)
-                </div>
-                """, unsafe_allow_html=True)
-            elif cur_stage == 2:
-                st.markdown("""
-                <div style="background:#090D16; border:1px solid #A855F7; padding:18px; border-radius:10px; font-family:monospace; color:#C084FC; font-size:0.88rem; line-height:1.6;">
-                    <b style="color:#A855F7;">STAGE 2: SYLLABUS-GROUNDED DYNAMIC EXAM SYNTHESIS</b><br/>
-                    [12:00:02.010] 🧠 Gemini 3.5 Pro Assessment Synthesizer: Loaded Course 'Automotive & Hardware Diagnostics'<br/>
-                    [12:00:02.150] 📖 Curriculum Grounding: Generated 10 MCQs evenly distributed across Module 1 (ECU Testing) & Module 2 (Safety Lockout)<br/>
-                    [12:00:02.280] 🔬 Practical Capstone Synthesis: Generated Multimodal Oscilloscope Signal Isolation Challenge<br/>
-                    [12:00:02.350] 🎓 Standalone Candidate Exam URL Dispatched: http://localhost:8501/?page=exam&sid=STU-NAN-7C21
-                </div>
-                """, unsafe_allow_html=True)
-            elif cur_stage == 3:
-                st.markdown("""
-                <div style="background:#090D16; border:1px solid #22C55E; padding:18px; border-radius:10px; font-family:monospace; color:#4ADE80; font-size:0.88rem; line-height:1.6;">
-                    <b style="color:#22C55E;">STAGE 3: DUAL-AI MULTIMODAL RUBRIC GRADED EVALUATION</b><br/>
-                    [12:00:03.005] ⚡ Gemma 2B/7B Fast Pre-Screen: Code Structure & Token Check PASS (42ms)<br/>
-                    [12:00:03.112] 🧠 Gemini 3.5 Multimodal Evaluation: Evaluated diagnostic code submission & image circuit schematic<br/>
-                    [12:00:03.450] 📊 Dynamic Score Calculation: Objective MCQ (45.0/50) + Practical Rubric (42.0/50) = 87.0% Aggregate<br/>
-                    [12:00:03.520] 🏆 Result: PASS (PLACED) | Verified SHA-256 Hasher Seal: 0x8F92A1B7E34F0C9A
-                </div>
-                """, unsafe_allow_html=True)
-            elif cur_stage == 4:
-                st.markdown("""
-                <div style="background:#090D16; border:1px solid #EAB308; padding:18px; border-radius:10px; font-family:monospace; color:#FACC15; font-size:0.88rem; line-height:1.6;">
-                    <b style="color:#EAB308;">STAGE 4: WHOLE-WEB REAL VACANCY DISCOVERY & MATCHING</b><br/>
-                    [12:00:04.020] 🌐 Google Search Grounding: Crawled 20 live open requisitions across Google Jobs, Indeed India, Naukri & Corporate Hubs<br/>
-                    [12:00:04.380] 🎯 Smart Match Engine: Calculated candidate acceptance probability score based on candidate skills vs employer specs<br/>
-                    [12:00:04.490] 🔥 High-Yield Match Flagged: Tata Motors Electric & Auto Tech (94% Match Score | ₹6.5L - ₹9.0L PA)<br/>
-                    [12:00:04.550] 🔗 Verified Live Deep-Link Attached: https://www.google.com/search?q=Automotive+Specialist+jobs+in+Delhi
-                </div>
-                """, unsafe_allow_html=True)
+            # Dynamic Telemetry Log Container
+            log_container = st.empty()
+
+            if st.session_state.get("is_autoplay_running"):
+                stages_data = [
+                    (1, "#0284C7", "#38BDF8", "STAGE 1: ZERO-FRICTION CANDIDATE & COURSE AI INGESTION",
+                     "[12:00:01.002] ⚡ Gemma Fast Token Screener: Ingested 'Alex Mercer - ECU Diagnostics Specialist'\n[12:00:01.040] 🧠 Gemini 3.5 Pro: Extracted 5 Core Skill Tags: [ECU Flashing, Oscilloscope Waveforms, CAN-bus, Safety Lockout, Wire Repair]\n[12:00:01.085] 📁 SQLite Multi-Tenant Ledger: Assigned Candidate ID STU-NAN-7C21 under Branch Nangloi Center Node\n[12:00:01.120] ✅ Zero Manual Form Entry Required (Saved ~45 minutes of manual registrar data entry)"),
+                    (2, "#A855F7", "#C084FC", "STAGE 2: SYLLABUS-GROUNDED DYNAMIC EXAM SYNTHESIS",
+                     "[12:00:02.010] 🧠 Gemini 3.5 Pro Assessment Synthesizer: Loaded Course 'Automotive & Hardware Diagnostics'\n[12:00:02.150] 📖 Curriculum Grounding: Generated 10 MCQs evenly distributed across Module 1 (ECU Testing) & Module 2 (Safety Lockout)\n[12:00:02.280] 🔬 Practical Capstone Synthesis: Generated Multimodal Oscilloscope Signal Isolation Challenge\n[12:00:02.350] 🎓 Standalone Candidate Exam URL Dispatched: http://localhost:8501/?page=exam&sid=STU-NAN-7C21"),
+                    (3, "#22C55E", "#4ADE80", "STAGE 3: DUAL-AI MULTIMODAL RUBRIC GRADED EVALUATION",
+                     "[12:00:03.005] ⚡ Gemma 2B/7B Fast Pre-Screen: Code Structure & Token Check PASS (42ms)\n[12:00:03.112] 🧠 Gemini 3.5 Multimodal Evaluation: Evaluated diagnostic code submission & image circuit schematic\n[12:00:03.450] 📊 Dynamic Score Calculation: Objective MCQ (45.0/50) + Practical Rubric (42.0/50) = 87.0% Aggregate\n[12:00:03.520] 🏆 Result: PASS (PLACED) | Verified SHA-256 Hasher Seal: 0x8F92A1B7E34F0C9A"),
+                    (4, "#EAB308", "#FACC15", "STAGE 4: WHOLE-WEB REAL VACANCY DISCOVERY & MATCHING",
+                     "[12:00:04.020] 🌐 Google Search Grounding: Crawled 20 live open requisitions across Google Jobs, Indeed India, Naukri & Corporate Hubs\n[12:00:04.380] 🎯 Smart Match Engine: Calculated candidate acceptance probability score based on candidate skills vs employer specs\n[12:00:04.490] 🔥 High-Yield Match Flagged: Tata Motors Electric & Auto Tech (94% Match Score | ₹6.5L - ₹9.0L PA)\n[12:00:04.550] 🔗 Verified Live Deep-Link Attached: https://www.google.com/search?q=Automotive+Specialist+jobs+in+Delhi"),
+                    (5, "#EC4899", "#F472B6", "STAGE 5: AUTONOMOUS RECRUITER OUTBOX DISPATCH & MULTI-CHANNEL ALERTS",
+                     "[12:00:05.010] 🎨 Domain-Adaptive Animated Portfolio Dossier Compiled: http://localhost:8000/portfolio/STU-NAN-7C21\n[12:00:05.200] 🚀 Recruiter Outbox Dispatch: Auto-dispatched candidate application payload to Tata Motors & Hero Tech\n[12:00:05.340] 🔔 Instant Multi-Channel Alerts: Sent interview slot notification to candidate workspace & institute ledger\n[12:00:05.410] ⏱️ 4.5 Hours of Manual Grading & Placement Outreach reduced to 3.2 Seconds by Autonomous Agent")
+                ]
+                for stg, b_color, txt_color, stage_title, stage_log in stages_data:
+                    st.session_state["tour_stage"] = stg
+                    formatted_log = stage_log.replace('\n', '<br/>')
+                    log_container.markdown(f"""
+                    <div style="background:#090D16; border:2px solid {b_color}; padding:18px; border-radius:10px; font-family:monospace; color:{txt_color}; font-size:0.88rem; line-height:1.6;">
+                        <b style="color:{b_color};">{stage_title}</b><br/>
+                        {formatted_log}
+                    </div>
+                    """, unsafe_allow_html=True)
+                    time.sleep(1.2)
+                st.session_state["is_autoplay_running"] = False
+                st.balloons()
             else:
-                st.markdown("""
-                <div style="background:#090D16; border:1px solid #EC4899; padding:18px; border-radius:10px; font-family:monospace; color:#F472B6; font-size:0.88rem; line-height:1.6;">
-                    <b style="color:#EC4899;">STAGE 5: AUTONOMOUS RECRUITER OUTBOX DISPATCH & MULTI-CHANNEL ALERTS</b><br/>
-                    [12:00:05.010] 🎨 Domain-Adaptive Animated Portfolio Dossier Compiled: http://localhost:8000/portfolio/STU-NAN-7C21<br/>
-                    [12:00:05.200] 🚀 Recruiter Outbox Dispatch: Auto-dispatched candidate application payload to Tata Motors & Hero Tech<br/>
-                    [12:00:05.340] 🔔 Instant Multi-Channel Alerts: Sent interview slot notification to candidate workspace & institute ledger<br/>
-                    [12:00:05.410] ⏱️ 4.5 Hours of Manual Grading & Placement Outreach reduced to 3.2 Seconds by Autonomous Agent
+                cur_stage = st.session_state["tour_stage"]
+                stage_colors = {1: ("#0284C7", "#38BDF8"), 2: ("#A855F7", "#C084FC"), 3: ("#22C55E", "#4ADE80"), 4: ("#EAB308", "#FACC15"), 5: ("#EC4899", "#F472B6")}
+                b_color, txt_color = stage_colors.get(cur_stage, ("#0284C7", "#38BDF8"))
+                
+                logs_map = {
+                    1: ("STAGE 1: ZERO-FRICTION CANDIDATE & COURSE AI INGESTION",
+                        "[12:00:01.002] ⚡ Gemma Fast Token Screener: Ingested 'Alex Mercer - ECU Diagnostics Specialist'<br/>[12:00:01.040] 🧠 Gemini 3.5 Pro: Extracted 5 Core Skill Tags: [ECU Flashing, Oscilloscope Waveforms, CAN-bus, Safety Lockout, Wire Repair]<br/>[12:00:01.085] 📁 SQLite Multi-Tenant Ledger: Assigned Candidate ID STU-NAN-7C21 under Branch Nangloi Center Node<br/>[12:00:01.120] ✅ Zero Manual Form Entry Required (Saved ~45 minutes of manual registrar data entry)"),
+                    2: ("STAGE 2: SYLLABUS-GROUNDED DYNAMIC EXAM SYNTHESIS",
+                        "[12:00:02.010] 🧠 Gemini 3.5 Pro Assessment Synthesizer: Loaded Course 'Automotive & Hardware Diagnostics'<br/>[12:00:02.150] 📖 Curriculum Grounding: Generated 10 MCQs evenly distributed across Module 1 (ECU Testing) & Module 2 (Safety Lockout)<br/>[12:00:02.280] 🔬 Practical Capstone Synthesis: Generated Multimodal Oscilloscope Signal Isolation Challenge<br/>[12:00:02.350] 🎓 Standalone Candidate Exam URL Dispatched: http://localhost:8501/?page=exam&sid=STU-NAN-7C21"),
+                    3: ("STAGE 3: DUAL-AI MULTIMODAL RUBRIC GRADED EVALUATION",
+                        "[12:00:03.005] ⚡ Gemma 2B/7B Fast Pre-Screen: Code Structure & Token Check PASS (42ms)<br/>[12:00:03.112] 🧠 Gemini 3.5 Multimodal Evaluation: Evaluated diagnostic code submission & image circuit schematic<br/>[12:00:03.450] 📊 Dynamic Score Calculation: Objective MCQ (45.0/50) + Practical Rubric (42.0/50) = 87.0% Aggregate<br/>[12:00:03.520] 🏆 Result: PASS (PLACED) | Verified SHA-256 Hasher Seal: 0x8F92A1B7E34F0C9A"),
+                    4: ("STAGE 4: WHOLE-WEB REAL VACANCY DISCOVERY & MATCHING",
+                        "[12:00:04.020] 🌐 Google Search Grounding: Crawled 20 live open requisitions across Google Jobs, Indeed India, Naukri & Corporate Hubs<br/>[12:00:04.380] 🎯 Smart Match Engine: Calculated candidate acceptance probability score based on candidate skills vs employer specs<br/>[12:00:04.490] 🔥 High-Yield Match Flagged: Tata Motors Electric & Auto Tech (94% Match Score | ₹6.5L - ₹9.0L PA)<br/>[12:00:04.550] 🔗 Verified Live Deep-Link Attached: https://www.google.com/search?q=Automotive+Specialist+jobs+in+Delhi"),
+                    5: ("STAGE 5: AUTONOMOUS RECRUITER OUTBOX DISPATCH & MULTI-CHANNEL ALERTS",
+                        "[12:00:05.010] 🎨 Domain-Adaptive Animated Portfolio Dossier Compiled: http://localhost:8000/portfolio/STU-NAN-7C21<br/>[12:00:05.200] 🚀 Recruiter Outbox Dispatch: Auto-dispatched candidate application payload to Tata Motors & Hero Tech<br/>[12:00:05.340] 🔔 Instant Multi-Channel Alerts: Sent interview slot notification to candidate workspace & institute ledger<br/>[12:00:05.410] ⏱️ 4.5 Hours of Manual Grading & Placement Outreach reduced to 3.2 Seconds by Autonomous Agent")
+                }
+                title, body = logs_map.get(cur_stage, logs_map[1])
+                log_container.markdown(f"""
+                <div style="background:#090D16; border:2px solid {b_color}; padding:18px; border-radius:10px; font-family:monospace; color:{txt_color}; font-size:0.88rem; line-height:1.6;">
+                    <b style="color:{b_color};">{title}</b><br/>
+                    {body}
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1141,7 +1173,49 @@ else:
                     use_container_width=True
                 )
                 
-            for stu in students:
+            # Search Bar & Pagination
+            col_sch1, col_sch2 = st.columns([3, 1])
+            with col_sch1:
+                roster_search = st.text_input("🔍 Search Roster by Name, Student ID, or Course", value="", key=f"r_search_{sel_branch['id']}")
+            with col_sch2:
+                st.write("") # spacing
+                
+            filtered_students = students
+            if roster_search:
+                filtered_students = [
+                    s for s in students if 
+                    roster_search.lower() in s['full_name'].lower() or
+                    roster_search.lower() in s['student_id'].lower() or
+                    roster_search.lower() in s['course_name'].lower()
+                ]
+                
+            r_items_per_page = 5
+            r_total_pages = max(1, (len(filtered_students) + r_items_per_page - 1) // r_items_per_page)
+            
+            if "roster_page_idx" not in st.session_state:
+                st.session_state["roster_page_idx"] = 0
+                
+            cur_r_page = min(st.session_state.get("roster_page_idx", 0), r_total_pages - 1)
+            r_start_i = cur_r_page * r_items_per_page
+            r_end_i = r_start_i + r_items_per_page
+            page_students = filtered_students[r_start_i:r_end_i]
+            
+            # Pagination Controls Header
+            col_pg1, col_pg2, col_pg3 = st.columns([1, 2, 1])
+            with col_pg1:
+                if st.button("⬅️ Previous", key=f"r_prev_{sel_branch['id']}", disabled=(cur_r_page == 0), use_container_width=True):
+                    st.session_state["roster_page_idx"] = max(0, cur_r_page - 1)
+                    st.rerun()
+            with col_pg2:
+                st.markdown(f'<div style="text-align:center; font-weight:600; padding-top:6px; color:#64748B;">Page {cur_r_page + 1} of {r_total_pages} ({len(filtered_students)} candidates)</div>', unsafe_allow_html=True)
+            with col_pg3:
+                if st.button("Next ➡️", key=f"r_next_{sel_branch['id']}", disabled=(cur_r_page >= r_total_pages - 1), use_container_width=True):
+                    st.session_state["roster_page_idx"] = cur_r_page + 1
+                    st.rerun()
+                    
+            st.divider()
+            
+            for stu in page_students:
                 with st.container():
                     col_st1, col_st2, col_st3, col_st4 = st.columns([2.5, 2, 2, 1.5])
                     with col_st1:
