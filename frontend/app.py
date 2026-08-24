@@ -34,10 +34,11 @@ APP_HOST = PUBLIC_BASE_URL
 FRONTEND_URL = PUBLIC_BASE_URL if PUBLIC_BASE_URL not in [BACKEND_API_BASE, "http://localhost:8000"] else "http://localhost:8501"
 
 def build_portfolio_dossier_url(student_id: str, existing_url: str = "") -> str:
-    """Constructs absolute portfolio dossier URL relative to active deployment domain."""
-    if existing_url and not ("http://localhost" in existing_url or "127.0.0.1" in existing_url):
+    """Constructs user-facing absolute portfolio dossier URL relative to active deployment domain."""
+    if existing_url and "?view=portfolio" in existing_url:
         return existing_url
-    return f"{PUBLIC_BASE_URL}/portfolio/{student_id}"
+    base = PUBLIC_BASE_URL.rstrip("/")
+    return f"{base}/?view=portfolio&id={student_id}"
 
 st.set_page_config(
     page_title="KaushalSetu | Autonomous Vocational Taskmaster",
@@ -45,6 +46,23 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# --- Direct Public Portfolio View Routing via Query Parameters ---
+query_params = st.query_params
+if (query_params.get("view") == "portfolio" and "id" in query_params) or "portfolio" in query_params:
+    student_id = query_params.get("id") or query_params.get("portfolio")
+    if student_id:
+        try:
+            res = requests.get(f"{BACKEND_API_BASE}/portfolio/{student_id}", timeout=10)
+            if res.status_code == 200 and res.text:
+                components.html(res.text, height=1200, scrolling=True)
+                st.stop()
+            else:
+                st.info("Portfolio dossier is currently being generated...")
+                st.stop()
+        except Exception as e:
+            st.error(f"Error loading candidate portfolio dossier: {e}")
+            st.stop()
 
 # Custom CSS for Modern UI & Visual Architecture Reset (Sanitized)
 st.markdown("""
