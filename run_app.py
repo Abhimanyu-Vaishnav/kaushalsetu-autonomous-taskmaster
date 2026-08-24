@@ -5,7 +5,7 @@ import os
 
 def run_app():
     print("=" * 60)
-    print("[SkillForge Autonomous] Starting Engine & Dashboard")
+    print("[KaushalSetu Taskmaster] Starting Engine & Dashboard")
     print("=" * 60)
     
     root_dir = os.path.dirname(os.path.abspath(__file__))
@@ -31,7 +31,7 @@ def run_app():
         backend_process.wait()
         frontend_process.wait()
     except KeyboardInterrupt:
-        print("\nShutting down SkillForge processes...")
+        print("\nShutting down KaushalSetu processes...")
         backend_process.terminate()
         frontend_process.terminate()
 

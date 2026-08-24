@@ -1,23 +1,43 @@
-# Python cache & virtualenv
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+backend/__pycache__/
+backend/*/__pycache__/
+
+# Environments & Virtual Envs
 venv/
-.venv/
 env/
-
-# Environment variables & secrets
-.env
+.venv/
+ENV/
 *.env
-!.env.example
+backend/.env
+backend/.env.example
 
-# IDEs & OS files
+# Local SQLite Database Temporary Files & Legacy DB
+*.db-shm
+*.db-wal
+backend/*.db-shm
+backend/*.db-wal
+backend/skillforge.db
+
+# User Uploaded Temporary Artifacts (Keep directory clean)
+backend/resumes/*
+!backend/resumes/.gitkeep
+
+# Local Demo & Submission Helper Markdown (Keep local only)
+DEVPOST_SUBMISSION.md
+DEMO_SCRIPT.md
+
+# Windows & OS Artifacts
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# IDE Artifacts
 .vscode/
 .idea/
-.DS_Store
-Thumbs.db
-
-# Logs & temp files
-*.log
-scratch/
-.pytest_cache/
+*.swp
+*.swo
