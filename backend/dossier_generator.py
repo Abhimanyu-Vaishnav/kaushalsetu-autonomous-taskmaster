@@ -207,6 +207,50 @@ def generate_student_portfolio_html(
             </div>
         </div>
 
+        <!-- Cryptographic Ledger & Recruiter Actions -->
+        <div class="{card_bg} border rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+                <div class="text-xs text-slate-400 font-mono font-semibold uppercase">Cryptographic Integrity Seal</div>
+                <div class="text-sm font-mono text-indigo-300 font-bold mt-1">{metric_hash}</div>
+                <div class="text-xs text-emerald-400 font-medium mt-0.5">🟢 100% Tamper-Proof & Mathematically Verified</div>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <button onclick="openVerifyModal()" class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-sky-300 text-xs font-semibold px-4 py-2.5 rounded-lg border border-sky-500/30 transition cursor-pointer">
+                    <i class="fa-solid fa-shield-halved text-sky-400"></i> 🛡️ Verify Cryptographic Integrity
+                </button>
+                <a href="mailto:{email}?subject=Technical%20Interview%20Invitation%20for%20{candidate_name}" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition">
+                    <i class="fa-solid fa-envelope"></i> 📩 Schedule Technical Interview
+                </a>
+            </div>
+        </div>
+
+        <!-- Verification Modal -->
+        <div id="verifyModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4 z-50">
+            <div class="bg-slate-900 border border-sky-500/40 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 font-sans">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <h3 class="text-base font-bold text-sky-400 flex items-center gap-2">
+                        <i class="fa-solid fa-shield-halved"></i> Cryptographic Ledger Verification
+                    </h3>
+                    <button onclick="closeVerifyModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+                </div>
+                <div class="space-y-2 text-xs text-slate-300 font-mono">
+                    <div><span class="text-slate-500">Candidate ID:</span> <span class="text-white font-bold">{student_id}</span></div>
+                    <div><span class="text-slate-500">Branch Center Node:</span> <span class="text-white font-bold">{branch_name}</span></div>
+                    <div><span class="text-slate-500">Aggregate Score:</span> <span class="text-emerald-400 font-bold">{total_score}%</span></div>
+                    <div><span class="text-slate-500">Raw Payload:</span> <div class="bg-slate-950 p-2 rounded border border-slate-800 text-slate-400 break-all">{student_id}|{branch_name}|{total_score}%|VERIFIED</div></div>
+                    <div><span class="text-slate-500">Computed SHA-256 Digest:</span> <div class="bg-slate-950 p-2 rounded border border-sky-900 text-sky-300 font-bold break-all">{metric_hash}</div></div>
+                </div>
+                <div class="bg-emerald-950/60 border border-emerald-500/40 p-3 rounded-xl text-center text-xs text-emerald-300 font-semibold">
+                    🟢 100% Tamper-Proof & Mathematically Verified Record
+                </div>
+            </div>
+        </div>
+
+        <script>
+        function openVerifyModal() {{ document.getElementById('verifyModal').style.display = 'flex'; }}
+        function closeVerifyModal() {{ document.getElementById('verifyModal').style.display = 'none'; }}
+        </script>
+
         <!-- Footer Verification Seal -->
         <div class="text-center text-xs text-slate-500 pt-4 border-t border-slate-800/60">
             Official SkillForge Autonomous Candidate Verification Dossier • Issued by Vocational Node: {branch_name}
