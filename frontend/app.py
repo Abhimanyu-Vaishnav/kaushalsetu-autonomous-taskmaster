@@ -853,6 +853,49 @@ else:
                     st.success(f"✅ Candidate {ms_name} Enrolled!")
                     st.rerun()
 
+    # --- SLEEK 1-CLICK FAST-FORWARD JUDGE DEMO CONTROL STRIP ---
+    st.markdown("""
+    <div class="modern-card" style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%); border: 1px solid #6366F1; margin-bottom: 16px;">
+        <div style="font-size:0.95rem; font-weight:700; color:#818CF8; margin-bottom:10px;">
+            ⚡ Fast-Forward Judge Demo Simulation (1-Click Autonomous Loop)
+        </div>
+    """, unsafe_allow_html=True)
+    col_dbar1, col_dbar2 = st.columns(2)
+    with col_dbar1:
+        if st.button("🔥 Simulate Top Candidate (92% Score → Portfolio → Outbox Dispatched)", type="primary", use_container_width=True):
+            with st.spinner("Simulating Top Performer Autonomous Pipeline..."):
+                r_sim = requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
+                    "student_id": "STU-1001",
+                    "assessment_id": "ASS-SIM-TOP",
+                    "mcq_answers": [0] * 10,
+                    "mcq_key": [0] * 10,
+                    "practical_task": "Full system safety lockout and high-voltage diagnostic waveform isolation",
+                    "grading_rubric": ["Safety lockout", "Diagnostic accuracy", "Documentation"],
+                    "submission_text": "Completed full safety lockout and oscilloscope differential signal inspection. Cleaned ground terminals and replaced splice.",
+                    "github_url": "https://github.com/skillforge/top-candidate-spec",
+                    "live_url": "http://localhost:8000/portfolio/STU-1001"
+                }, timeout=15)
+                if r_sim.status_code == 200:
+                    st.success("✅ Top Performer Loop Completed! Portfolio Dossier Compiled & Outbox Dispatched.")
+                    st.balloons()
+                    st.rerun()
+    with col_dbar2:
+        if st.button("⚠️ Simulate Remedial Candidate (54% Score → Weakness Diagnostics → 7-Day Curriculum)", use_container_width=True):
+            with st.spinner("Simulating Remedial Candidate Pipeline..."):
+                r_sim2 = requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
+                    "student_id": "STU-1002",
+                    "assessment_id": "ASS-SIM-REM",
+                    "mcq_answers": [1, 2, 3, 0, 1, 2, 3, 0, 1, 2],
+                    "mcq_key": [0] * 10,
+                    "practical_task": "Diagnostic inspection procedure",
+                    "grading_rubric": ["Safety lockout", "Diagnostic accuracy"],
+                    "submission_text": "Incomplete diagnostic check. Skipped safety lockout step due to time constraint.",
+                }, timeout=15)
+                if r_sim2.status_code == 200:
+                    st.warning("⚠️ Remedial Candidate Evaluated! 7-Day Personalized Micro-Curriculum Generated.")
+                    st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
     # --- CLEAN SETUP GOVERNANCE BAR ---
     inst_opts = ["Select Institute Network..."] + [f"{i['name']} ({i['code']})" for i in institutes]
     inst_id_map = {i['id']: f"{i['name']} ({i['code']})" for i in institutes}
