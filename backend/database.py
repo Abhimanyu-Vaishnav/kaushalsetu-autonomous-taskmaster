@@ -324,7 +324,9 @@ def add_student(
     fees_status: str = "PAID",
     consent: int = 1
 ) -> Dict[str, Any]:
-    student_id = f"STU-{uuid.uuid4().hex[:6].upper()}"
+    branch_slug = "".join([c for c in branch_name if c.isalnum()]).upper()
+    prefix = branch_slug[:3] if len(branch_slug) >= 3 else "GEN"
+    student_id = f"STU-{prefix}-{uuid.uuid4().hex[:4].upper()}"
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""

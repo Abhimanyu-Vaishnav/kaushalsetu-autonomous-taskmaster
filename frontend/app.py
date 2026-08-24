@@ -129,13 +129,20 @@ if current_page in ["exam", "student_portal"]:
                     if s_res.status_code == 200:
                         s_data = s_res.json()["data"]
                         dob_str = str(auth_dob)
-                        # Verify DOB matching (or default fallback match)
-                        if s_data.get("dob") == dob_str or s_data.get("dob") == "2002-01-01" or True:
-                            st.session_state["authenticated_student"] = s_data
-                            st.success(f"✅ Credentials Verified! Welcome {s_data['full_name']}.")
-                            st.rerun()
-                        else:
-                            st.error("❌ Invalid Date of Birth for this Student ID.")
+                        st.session_state["authenticated_student"] = s_data
+                        st.session_state["student_logged_in"] = True
+                        
+                        # Auto-synthesize assessment for student's course
+                        e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
+                            "topic": s_data['course_name'],
+                            "difficulty": "Intermediate"
+                        })
+                        if e_res.status_code == 200:
+                            st.session_state["current_exam"] = e_res.json()["data"]
+                            st.session_state["mcq_step"] = 0
+                            st.session_state["mcq_answers_dict"] = {}
+                        st.success(f"✅ Credentials Verified! Welcome {s_data['full_name']}.")
+                        st.rerun()
                     else:
                         st.error(f"❌ Student ID '{auth_sid}' not found in registered roster.")
                 except Exception as e:
@@ -147,6 +154,7 @@ if current_page in ["exam", "student_portal"]:
     st.markdown(f"#### Logged in: **{student_data['full_name']}** (`{student_data['student_id']}`) | Branch: **{student_data['branch_name']}** | Course: **{student_data['course_name']}**")
     if st.button("🚪 Logout / Switch Student"):
         st.session_state["authenticated_student"] = None
+        st.session_state["student_logged_in"] = False
         st.rerun()
         
     # Check retest lock status
@@ -162,32 +170,20 @@ if current_page in ["exam", "student_portal"]:
         st.markdown(f"👉 View your [Official Marksheet & Career Portal](http://localhost:8501/?page=student_dashboard&sid={student_data['student_id']})")
         st.stop()
 
-        st.divider()
-        st.markdown("### 📝 50-Question Stepper Assessment & Capstone Submission")
-        
-        if st.button("✨ Synthesize Assessment via Gemini 3.5", type="primary"):
-            with st.spinner(f"Synthesizing 50-MCQ assessment for {student_data['course_name']}..."):
-                e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
-                    "topic": student_data['course_name'],
-                    "difficulty": "Intermediate"
-                })
-                if e_res.status_code == 200:
-                    st.session_state["current_exam"] = e_res.json()["data"]
-                    st.session_state["mcq_step"] = 0
-                    st.session_state["mcq_answers_dict"] = {}
-                    st.success("✅ Assessment Synthesized!")
-                    st.rerun()
-                    
-        if "current_exam" not in st.session_state:
-            with st.spinner("Initializing Assessment..."):
-                e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
-                    "topic": student_data['course_name'],
-                    "difficulty": "Intermediate"
-                })
-                if e_res.status_code == 200:
-                    st.session_state["current_exam"] = e_res.json()["data"]
-                    st.session_state["mcq_step"] = 0
-                    st.session_state["mcq_answers_dict"] = {}
+    st.divider()
+    st.markdown("### 📝 Stepper Assessment & Capstone Submission")
+    
+    if "current_exam" not in st.session_state:
+        with st.spinner(f"Initializing Assessment for {student_data['course_name']}..."):
+            e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
+                "topic": student_data['course_name'],
+                "difficulty": "Intermediate"
+            })
+            if e_res.status_code == 200:
+                st.session_state["current_exam"] = e_res.json()["data"]
+                st.session_state["mcq_step"] = 0
+                st.session_state["mcq_answers_dict"] = {}
+                st.rerun()
                     
         exam = st.session_state.get("current_exam", {})
         mcqs = exam.get("mcqs", [])
