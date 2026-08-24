@@ -625,18 +625,39 @@ elif current_page == "student_dashboard":
                                     st.balloons()
                         st.divider()
 
-            # Filtering
-            col_fl1, col_fl2 = st.columns(2)
-            with col_fl1:
-                search_query = st.text_input("🔍 Filter by Role or Company", value="", key=f"search_job_{param_sid}")
-            with col_fl2:
-                loc_filter = st.selectbox("📍 Filter Location", options=["All Locations", "Remote", "Delhi NCR", "Bengaluru", "Pune", "Mumbai", "Hyderabad"], key=f"loc_job_{param_sid}")
-                
-            filtered_jobs = jobs
-            if search_query:
-                filtered_jobs = [j for j in filtered_jobs if search_query.lower() in j['role_title'].lower() or search_query.lower() in j['company_name'].lower()]
-            if loc_filter != "All Locations":
-                filtered_jobs = [j for j in filtered_jobs if loc_filter.lower() in j['location'].lower()]
+            # Reactive Real-Time Job Search & Source Filter Bar
+            col_search, col_source = st.columns([3, 1])
+            with col_search:
+                job_query = st.text_input(
+                    "🔍 Live Filter Openings (Role, Company, Tech Stack, Location)",
+                    placeholder="e.g. React, Tata Motors, Delhi, Remote...",
+                    key=f"job_live_search_{param_sid}"
+                ).strip().lower()
+            with col_source:
+                source_filter = st.selectbox(
+                    "Source Platform",
+                    ["All Sources", "Google Jobs", "Indeed", "Naukri", "LinkedIn"],
+                    key=f"job_source_filter_{param_sid}"
+                )
+
+            # Real-time filtering logic
+            filtered_jobs = []
+            for j in jobs:
+                matches_text = (
+                    not job_query
+                    or job_query in j.get("role_title", "").lower()
+                    or job_query in j.get("company_name", "").lower()
+                    or job_query in j.get("location", "").lower()
+                    or job_query in " ".join(j.get("skills_matched", [])).lower()
+                )
+                matches_source = (
+                    source_filter == "All Sources"
+                    or source_filter.lower() in j.get("source_badge", "").lower()
+                )
+                if matches_text and matches_source:
+                    filtered_jobs.append(j)
+
+            st.markdown(f'<div style="font-size:0.85rem; color:#34D399; font-weight:600; margin-bottom:12px;">Showing {len(filtered_jobs)} of {len(jobs)} matching live vacancies (Instant Filter)</div>', unsafe_allow_html=True)
                 
             # Metrics Ribbon
             jm1, jm2, jm3, jm4 = st.columns(4)
@@ -1103,21 +1124,25 @@ else:
                     use_container_width=True
                 )
                 
-            # Search Bar & Pagination
-            col_sch1, col_sch2 = st.columns([3, 1])
-            with col_sch1:
-                roster_search = st.text_input("🔍 Search Roster by Name, Student ID, or Course", value="", key=f"r_search_{sel_branch['id']}")
-            with col_sch2:
-                st.write("") # spacing
-                
-            filtered_students = students
-            if roster_search:
+            # Reactive Real-Time Search Bar & Pagination
+            search_query = st.text_input(
+                "🔍 Live Search Candidates (Name, Student ID, Email, Phone, Course)",
+                placeholder="Type to filter in real-time...",
+                key=f"r_search_{sel_branch['id']}"
+            ).strip().lower()
+
+            if search_query:
                 filtered_students = [
-                    s for s in students if 
-                    roster_search.lower() in s['full_name'].lower() or
-                    roster_search.lower() in s['student_id'].lower() or
-                    roster_search.lower() in s['course_name'].lower()
+                    s for s in students
+                    if search_query in s.get("full_name", "").lower()
+                    or search_query in s.get("student_id", "").lower()
+                    or search_query in s.get("email", "").lower()
+                    or search_query in s.get("phone", "").lower()
+                    or search_query in s.get("course_name", "").lower()
                 ]
+                st.markdown(f'<div style="font-size:0.85rem; color:#38BDF8; font-weight:600; margin-bottom:8px;">Displaying {len(filtered_students)} of {len(students)} Candidates (Live Filtered)</div>', unsafe_allow_html=True)
+            else:
+                filtered_students = students
                 
             r_items_per_page = 5
             r_total_pages = max(1, (len(filtered_students) + r_items_per_page - 1) // r_items_per_page)
