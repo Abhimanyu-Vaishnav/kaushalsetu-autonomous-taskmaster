@@ -16,72 +16,100 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for Rich Aesthetics
+# Custom CSS for Modern UI & Visual Architecture Reset
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background-color: #0B0F19;
+        color: #F9FAFB;
+    }
+
+    .stApp {
+        background-color: #0B0F19;
+    }
+
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {
+        color: #F9FAFB !important;
+        font-weight: 700 !important;
+    }
+
     .main-header {
-        font-size: 2.3rem;
+        font-size: 2.1rem;
         font-weight: 800;
-        background: linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #F9FAFB;
+        letter-spacing: -0.025em;
         margin-bottom: 0.2rem;
     }
     .sub-header {
-        color: #6B7280;
-        font-size: 1.05rem;
-        margin-bottom: 1.5rem;
+        color: #9CA3AF;
+        font-size: 0.95rem;
+        margin-bottom: 1.2rem;
     }
-    .badge-pending {
-        background-color: #FEF3C7;
-        color: #92400E;
-        font-weight: 600;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-    }
-    .badge-live {
-        background-color: #DEF7EC;
-        color: #03543F;
-        font-weight: 600;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-    }
-    .badge-interview {
-        background-color: #DBEAFE;
-        color: #1E40AF;
-        font-weight: 600;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-    }
-    .badge-intervention {
-        background-color: #FEF08A;
-        color: #854D0E;
-        font-weight: 600;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-    }
-    .terminal-window {
-        background-color: #0F172A;
-        color: #38BDF8;
-        font-family: monospace;
-        padding: 16px;
-        border-radius: 8px;
-        border: 1px solid #334155;
-        font-size: 0.88rem;
-        line-height: 1.5;
-    }
-    .job-card {
-        background: #FFFFFF;
-        padding: 20px;
+
+    /* Modern Card Styles */
+    .modern-card {
+        background-color: #111827;
+        border: 1px solid #1F2937;
         border-radius: 12px;
-        border: 1px solid #E5E7EB;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        margin-bottom: 15px;
+        padding: 20px;
+        margin-bottom: 16px;
     }
+
+    /* Status Badges & Seals */
+    .badge-emerald {
+        background-color: #065F46;
+        color: #34D399;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        border: 1px solid #059669;
+    }
+    .badge-blue {
+        background-color: #1E3A8A;
+        color: #60A5FA;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        border: 1px solid #2563EB;
+    }
+    .badge-amber {
+        background-color: #78350F;
+        color: #FBBF24;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        border: 1px solid #D97706;
+    }
+    .badge-red {
+        background-color: #7F1D1D;
+        color: #FCA5A5;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        border: 1px solid #DC2626;
+    }
+
+    /* Tab overrides */
+    button[data-baseweb="tab"] {
+        color: #9CA3AF !important;
+        font-weight: 600 !important;
+    }
+    button[aria-selected="true"] {
+        color: #38BDF8 !important;
+        border-bottom-color: #38BDF8 !important;
+    }
+
+    /* Hide Streamlit branding clutter */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -661,30 +689,34 @@ elif current_page == "student_dashboard":
 
 # ROUTE 3: ADMIN MULTI-TENANT WORKSPACE (?page=admin or default)
 else:
-    st.markdown('<div class="main-header">⚡ SkillForge Autonomous</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Multi-Tenant Institutional Governance & Autonomous Placement Engine | Taskmaster Track</div>', unsafe_allow_html=True)
-    
+    # --- SLEEK MINIMALIST NAVIGATION & GOVERNANCE HEADER ---
+    col_sb1, col_sb2 = st.columns([2, 1])
+    with col_sb1:
+        st.markdown('<div class="main-header">⚡ SkillForge Autonomous</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-header">Institutional AI Operations & Placement Copilot | Taskmaster Engine v7.3.0</div>', unsafe_allow_html=True)
+    with col_sb2:
+        st.markdown("""
+        <div style="text-align:right; padding-top:6px;">
+            <span class="badge-emerald">🟢 Engine: Active</span> &nbsp;
+            <span class="badge-blue">🔒 Multi-Tenant Guard</span>
+        </div>
+        """, unsafe_allow_html=True)
+
     with st.sidebar:
-        st.image("https://img.icons8.com/color/96/google-logo.png", width=45)
-        st.subheader("System Health Status")
-        st.success("🟢 FastAPI Backend (v4.1.0)")
-        st.success("⚡ Gemma Pre-check Screener Ready")
-        st.success("🤖 Gemini 3.5 Pro & Flash Active")
+        st.image("https://img.icons8.com/color/96/google-logo.png", width=40)
+        st.subheader("System Telemetry")
+        st.success("🟢 FastAPI Engine (v4.1.0)")
+        st.success("⚡ Gemma Token Screener")
+        st.success("🤖 Gemini 3.5 Multimodal")
         
         st.divider()
-        st.markdown("### ⚡ One-Click Judge Demo Switcher")
+        st.markdown("### ⚡ Fast-Forward Presets")
         if st.button("🟢 Preset A: Top Candidate (92%)", use_container_width=True):
             st.session_state["demo_preset"] = "PRESET_A"
-            st.info("Loaded Top Candidate Preset! Go to Exam page to run.")
+            st.info("Loaded Top Candidate Preset! Go to Student Workspace to test.")
         if st.button("🟠 Preset B: Remedial Candidate (54%)", use_container_width=True):
             st.session_state["demo_preset"] = "PRESET_B"
-            st.info("Loaded Remedial Candidate Preset! Go to Exam page to run.")
-
-        st.divider()
-        st.markdown("### Track Specification")
-        st.markdown("- **Taskmaster Track**")
-        st.markdown("- **Zero Chatbot UI**")
-        st.markdown("- **Gemma Bonus (+0.2 pts)**")
+            st.info("Loaded Remedial Candidate Preset! Go to Student Workspace to test.")
 
     # Fetch Institutes
     institutes = []
@@ -698,328 +730,6 @@ else:
     if not institutes:
         st.error("🔴 Could not connect to backend server. Ensure run_app.py is active.")
         st.stop()
-
-    # --- SLEEK TOP STATUS BAR & TOP-RIGHT FLOATING AUTO-PILOT BUTTON ---
-    col_sb1, col_sb2 = st.columns([3, 1])
-    with col_sb1:
-        st.markdown("""
-        <div style="background: #0A0E17; border: 1px solid #1E293B; padding: 12px 20px; border-radius: 10px; display:flex; align-items:center; gap:16px;">
-            <div style="font-size:0.9rem; color:#94A3B8;">
-                <span style="color:#22C55E; font-weight:700;">🟢 SkillForge Engine Online</span> &nbsp;|&nbsp; 
-                <span style="color:#A855F7;">⚡ Gemma Pre-Screen Active</span> &nbsp;|&nbsp; 
-                <span style="color:#38BDF8;">🧠 Gemini 3.5 Grounded</span> &nbsp;|&nbsp; 
-                <span style="color:#E2E8F0; font-weight:600;">🔒 System Integrity Verified</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    with col_sb2:
-        if st.button("🪄 Run Live Agent Visual Tour (Auto-Pilot)", type="primary", use_container_width=True):
-            st.session_state["show_spotlight_tour"] = True
-            st.session_state["spotlight_phase"] = 1
-
-    # --- CLIENT-SIDE INTERACTIVE JS SPOTLIGHT TOUR INJECTION ---
-    if st.session_state.get("show_spotlight_tour"):
-        tour_js = """
-        <script>
-        const tourSteps = [
-          {
-            title: "⚡ Step 1: Zero-Friction Syllabus Synthesis",
-            text: "The Agent ingests course topics or syllabi and synthesizes curriculum modules & evaluation rubrics in <2 seconds.",
-            targetTab: 0
-          },
-          {
-            title: "📝 Step 2: Dynamic Stepper Assessment",
-            text: "Syllabus-grounded MCQs and multimodal diagnostic tasks are dynamically generated for enrolled candidates.",
-            targetTab: 1
-          },
-          {
-            title: "🧠 Step 3: Multimodal Vision & Code Grading",
-            text: "Gemma pre-checks tokens, while Gemini 3.5 inspects submitted circuit waveforms & source code against practical rubrics.",
-            targetTab: 1
-          },
-          {
-            title: "🌐 Step 4: Whole-Web Grounded Job Crawl",
-            text: "The Agent executes real-time Google Search grounding across Naukri, Indeed, and Google Jobs without broken links.",
-            targetTab: 2
-          },
-          {
-            title: "🚀 Step 5: Cryptographic Outbox Dispatch",
-            text: "A domain-adaptive graphical portfolio (SHA-256 sealed) is compiled and dispatched directly to recruiter outboxes.",
-            targetTab: 2
-          }
-        ];
-
-        let currentStep = 0;
-        function showStep(index) {
-          if (index >= tourSteps.length) {
-            document.getElementById('tour-hud').style.display = 'none';
-            return;
-          }
-          const step = tourSteps[index];
-          document.getElementById('tour-title').innerText = step.title;
-          document.getElementById('tour-desc').innerText = step.text;
-          document.getElementById('tour-progress').style.width = ((index + 1) / tourSteps.length * 100) + '%';
-          
-          try {
-            const tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
-            if (tabs && tabs[step.targetTab]) {
-              tabs[step.targetTab].click();
-            }
-          } catch(e) { console.log(e); }
-        }
-
-        window.nextTourStep = function() {
-          currentStep = (currentStep + 1) % tourSteps.length;
-          showStep(currentStep);
-        };
-        window.prevTourStep = function() {
-          if (currentStep > 0) currentStep--;
-          showStep(currentStep);
-        };
-        window.closeTour = function() {
-          try { window.parent.location.reload(); } catch(e) {}
-        };
-
-        setTimeout(() => showStep(0), 400);
-        </script>
-
-        <div id="tour-hud" style="position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); z-index: 999999; background: rgba(15, 23, 42, 0.95); border: 2px solid #38BDF8; border-radius: 14px; padding: 20px; width: 620px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); color: #fff; font-family: sans-serif; backdrop-filter: blur(12px);">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span id="tour-title" style="font-weight: 700; font-size: 16px; color: #38BDF8;"></span>
-            <button onclick="closeTour()" style="background: none; border: none; color: #94A3B8; font-size: 18px; cursor: pointer;">✕</button>
-          </div>
-          <p id="tour-desc" style="font-size: 13.5px; color: #E2E8F0; line-height: 1.5; margin: 0 0 14px 0;"></p>
-          <div style="width: 100%; background: #334155; height: 6px; border-radius: 4px; margin-bottom: 14px; overflow: hidden;">
-            <div id="tour-progress" style="background: linear-gradient(90deg, #38BDF8, #818CF8); height: 100%; width: 20%; transition: width 0.3s ease;"></div>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 12px; color: #94A3B8;">⏱️ Saved 4.5h manual educator labor</span>
-            <div>
-              <button onclick="prevTourStep()" style="background: #1E293B; border: 1px solid #475569; color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer; margin-right: 8px; font-size: 13px;">Previous</button>
-              <button onclick="nextTourStep()" style="background: #2563EB; border: none; color: #fff; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">Next Step ➡️</button>
-            </div>
-          </div>
-        </div>
-        """
-        components.html(tour_js, height=200)
-
-    # --- MULTI-TASK AUTONOMOUS DELEGATION HUB ---
-    with st.expander("🤖 Delegate Autonomous Tasks to Agent", expanded=False):
-        st.markdown("**Select tasks to execute autonomously in background pipeline:**")
-        col_dt1, col_dt2 = st.columns(2)
-        with col_dt1:
-            t_course = st.checkbox("Synthesize Course Curriculum & Exam Rubrics", value=True)
-            t_eval = st.checkbox("Autonomous Multimodal Project Grading & SHA-256 Sealing", value=True)
-        with col_dt2:
-            t_job = st.checkbox("Whole-Web Job Radar Crawling & Top Recommendation Filtering", value=True)
-            t_outbox = st.checkbox("Automated Recruiter Outbox Dispatch & Interview Scheduling", value=True)
-            
-        if st.button("🚀 Execute Delegated Tasks Asynchronously", type="primary", use_container_width=True):
-            with st.spinner("Executing delegated agentic tasks..."):
-                time.sleep(1.0)
-                st.success("✅ All Delegated Tasks Executed Successfully! Operational audit log updated.")
-                st.balloons()
-                st.rerun()
-
-    if st.session_state.get("show_demo_tour"):
-        with st.container():
-            st.markdown("""
-            <div style="background:#0F172A; border:2px solid #38BDF8; padding:24px; border-radius:12px; margin-bottom:20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
-                    <div>
-                        <h3 style="color:#38BDF8; margin:0;">🎬 Interactive Agent Copilot Autonomous Simulation Tour</h3>
-                        <p style="color:#94A3B8; font-size:0.9rem; margin:4px 0 0 0;">
-                            Live stage-by-stage interactive demonstration of the autonomous vocational agent pipeline.
-                        </p>
-                    </div>
-                    <div>
-                        <span class="badge-live" style="font-size:0.85rem;">TASKMASTER AUTONOMOUS SIMULATOR</span>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Interactive Stage Stepper State
-            if "tour_stage" not in st.session_state:
-                st.session_state["tour_stage"] = 1
-                
-            col_tst1, col_tst2, col_tst3, col_tst4, col_tst5 = st.columns(5)
-            with col_tst1:
-                if st.button("1️⃣ Ingest", type="primary" if st.session_state["tour_stage"] == 1 else "secondary", use_container_width=True):
-                    st.session_state["tour_stage"] = 1
-            with col_tst2:
-                if st.button("2️⃣ Assessment", type="primary" if st.session_state["tour_stage"] == 2 else "secondary", use_container_width=True):
-                    st.session_state["tour_stage"] = 2
-            with col_tst3:
-                if st.button("3️⃣ Evaluation", type="primary" if st.session_state["tour_stage"] == 3 else "secondary", use_container_width=True):
-                    st.session_state["tour_stage"] = 3
-            with col_tst4:
-                if st.button("4️⃣ Web Search", type="primary" if st.session_state["tour_stage"] == 4 else "secondary", use_container_width=True):
-                    st.session_state["tour_stage"] = 4
-            with col_tst5:
-                if st.button("5️⃣ Outbox", type="primary" if st.session_state["tour_stage"] == 5 else "secondary", use_container_width=True):
-                    st.session_state["tour_stage"] = 5
-                    
-            # Mode Controls
-            col_mc1, col_mc2, col_mc3 = st.columns([2, 2, 2])
-            with col_mc1:
-                if st.button("▶️ Auto-Play Full Simulation Tour", type="primary", use_container_width=True):
-                    st.session_state["is_autoplay_running"] = True
-                    st.rerun()
-            with col_mc2:
-                if st.button("➡️ Step to Next Stage", use_container_width=True):
-                    st.session_state["tour_stage"] = (st.session_state["tour_stage"] % 5) + 1
-                    st.rerun()
-            with col_mc3:
-                if st.button("❌ Close Tour View", use_container_width=True):
-                    st.session_state["show_demo_tour"] = False
-                    st.session_state["is_autoplay_running"] = False
-                    st.rerun()
-
-            # Interactive Visual Execution Stage Content
-            cur_stage = st.session_state["tour_stage"]
-
-            if cur_stage == 1:
-                st.markdown("""
-                <div style="background:#090D16; border:2px solid #0284C7; padding:20px; border-radius:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h4 style="color:#38BDF8; margin:0;">📄 STAGE 1: ZERO-FRICTION RESUME & SYLLABUS AI INGESTION</h4>
-                        <span class="badge-live" style="background:#0284C7; color:white;">GEMMA TOKEN SCREENER</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
-                        <div style="background:#1E293B; p-3; padding:12px; border-radius:8px; font-size:0.8rem; color:#CBD5E1; font-family:monospace;">
-                            <b style="color:#38BDF8;">Raw Candidate Resume Text:</b><br/>
-                            Alex Mercer, Senior ECU Specialist with 3+ years experience in OBD-II diagnostics, CAN-bus protocol inspection, and high-voltage safety lockout...
-                        </div>
-                        <div style="background:#1E293B; p-3; padding:12px; border-radius:8px; font-size:0.8rem; color:#CBD5E1;">
-                            <b style="color:#22C55E;">Extracted Structured JSON Chips:</b><br/>
-                            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px;">
-                                <span style="background:#0284C7; color:white; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">Full Name: Alex Mercer</span>
-                                <span style="background:#0369A1; color:white; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">Domain: ECU & Circuit Diagnostics</span>
-                                <span style="background:#15803D; color:white; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">Exp: 3 Years Verified</span>
-                                <span style="background:#7E22CE; color:white; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">Skills: CAN-bus, Oscilloscope, Wire Splice</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            elif cur_stage == 2:
-                st.markdown("""
-                <div style="background:#090D16; border:2px solid #A855F7; padding:20px; border-radius:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h4 style="color:#C084FC; margin:0;">📝 STAGE 2: SYLLABUS-GROUNDED DYNAMIC QUESTION SYNTHESIS</h4>
-                        <span class="badge-live" style="background:#7E22CE; color:white;">GEMINI 3.5 PRO SYNTHESIZER</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
-                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
-                            <b style="color:#C084FC;">Question 1 (MCQ)</b><br/>
-                            <span style="color:#CBD5E1;">What is the primary baud rate for high-speed ISO 15765-4 CAN-bus diagnostics?</span><br/>
-                            <span style="color:#22C55E; font-weight:700; font-size:0.75rem;">Option A: 500 Kbps (Correct ✅)</span>
-                        </div>
-                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
-                            <b style="color:#C084FC;">Question 2 (MCQ)</b><br/>
-                            <span style="color:#CBD5E1;">Which step is mandatory before inspecting high-voltage battery terminals?</span><br/>
-                            <span style="color:#22C55E; font-weight:700; font-size:0.75rem;">Option B: High-Voltage Lockout (Correct ✅)</span>
-                        </div>
-                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
-                            <b style="color:#C084FC;">Practical Capstone Task</b><br/>
-                            <span style="color:#CBD5E1;">Isolate oscilloscope differential signal noise & repair Ground Terminal G201 splice.</span><br/>
-                            <span style="color:#38BDF8; font-weight:700; font-size:0.75rem;">Capstone Module Grounded</span>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            elif cur_stage == 3:
-                st.markdown("""
-                <div style="background:#090D16; border:2px solid #22C55E; padding:20px; border-radius:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h4 style="color:#4ADE80; margin:0;">🔬 STAGE 3: MULTIMODAL INSPECTION & DUAL-AI EVALUATION</h4>
-                        <span class="badge-live" style="background:#15803D; color:white;">GEMMA (42ms) + GEMINI 3.5 RUBRIC</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
-                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem; font-family:monospace; color:#CBD5E1;">
-                            <b style="color:#4ADE80;">Submitted Capstone Diagnostic Inspection:</b><br/>
-                            "Completed safety lockout procedure. Verified 0V residual on DC bus. Connected dual-trace oscilloscope to CAN-High/CAN-Low. Isolated differential noise at Splice S204."
-                        </div>
-                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem; color:#CBD5E1;">
-                            <b style="color:#FACC15;">Gemini Multimodal Vision & Code Rubric Breakdown:</b><br/>
-                            • Safety Lockout Compliance: <b style="color:#4ADE80;">100%</b><br/>
-                            • Signal Isolation Logic: <b style="color:#4ADE80;">95%</b><br/>
-                            • Technical Waveform Documentation: <b style="color:#4ADE80;">90%</b><br/>
-                            <div style="margin-top:6px; background:#166534; padding:6px; border-radius:6px; color:white; font-weight:700; text-align:center;">
-                                Final Score: 87.0% PASS (PLACED) | Seal: SHA-256 0x8F92A1B7
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            elif cur_stage == 4:
-                st.markdown("""
-                <div style="background:#090D16; border:2px solid #EAB308; padding:20px; border-radius:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h4 style="color:#FACC15; margin:0;">🌐 STAGE 4: WHOLE-WEB GROUNDED VACANCY RADAR</h4>
-                        <span class="badge-live" style="background:#A16207; color:white;">GOOGLE SEARCH GROUNDING ENGINE</span>
-                    </div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
-                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
-                            <b style="color:#FACC15;">Tata Motors Electric</b><br/>
-                            <span style="color:#CBD5E1;">Role: Senior ECU Diagnostic Tech</span><br/>
-                            <span style="color:#38BDF8; font-weight:700;">CTC: ₹6.5L - ₹9.0L PA</span><br/>
-                            <span style="background:#166534; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem;">94% Fit Score</span>
-                        </div>
-                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
-                            <b style="color:#FACC15;">Hero MotoCorp EV</b><br/>
-                            <span style="color:#CBD5E1;">Role: Harness & Hardware Engineer</span><br/>
-                            <span style="color:#38BDF8; font-weight:700;">CTC: ₹7.0L - ₹10.5L PA</span><br/>
-                            <span style="background:#166534; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem;">91% Fit Score</span>
-                        </div>
-                        <div style="background:#1E293B; padding:12px; border-radius:8px; font-size:0.8rem;">
-                            <b style="color:#FACC15;">Ather Energy Mobility</b><br/>
-                            <span style="color:#CBD5E1;">Role: Battery & ECU Diagnostics</span><br/>
-                            <span style="color:#38BDF8; font-weight:700;">CTC: ₹8.0L - ₹12.0L PA</span><br/>
-                            <span style="background:#166534; color:white; padding:2px 6px; border-radius:4px; font-size:0.75rem;">88% Fit Score</span>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div style="background:#090D16; border:2px solid #EC4899; padding:20px; border-radius:12px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <h4 style="color:#F472B6; margin:0;">🚀 STAGE 5: AUTONOMOUS RECRUITER OUTBOX & LIVE PORTFOLIO PREVIEW</h4>
-                        <span class="badge-live" style="background:#BE185D; color:white;">SHA-256 SEALED OUTBOX DISPATCH</span>
-                    </div>
-                    <p style="color:#CBD5E1; font-size:0.85rem; margin-bottom:12px;">
-                        Candidate portfolio dossier auto-compiled & dispatched to recruiter outboxes. Preview live generated dossier below:
-                    </p>
-                    <div style="border:2px solid #334155; border-radius:10px; overflow:hidden; margin-bottom:16px;">
-                        <iframe src="http://localhost:8000/portfolio/STU-1001" style="width:100%; height:320px; border:none;"></iframe>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # TASKMASTER COMPARATIVE FRICTION ELIMINATION LEDGER
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%); border:2px solid #6366F1; border-radius:12px; padding:20px; margin-top:20px;">
-                <h4 style="color:#818CF8; margin:0 0 12px 0;">⚡ Friction Elimination Ledger (The Taskmaster Hook)</h4>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; font-size:0.88rem;">
-                    <div style="background:#991B1B22; border:1px solid #EF4444; padding:14px; border-radius:8px; color:#FCA5A5;">
-                        <b style="color:#EF4444;">❌ Manual Human Educator Pipeline: 4.5 Hours</b><br/>
-                        • Question Crafting: 1.5 Hours<br/>
-                        • Paper Grading: 1.0 Hour<br/>
-                        • Resume Formatting: 1.0 Hour<br/>
-                        • Job Matching & Email Outreach: 1.0 Hour
-                    </div>
-                    <div style="background:#16653422; border:1px solid #22C55E; padding:14px; border-radius:8px; color:#86EFAC;">
-                        <b style="color:#22C55E;">⚡ Autonomous SkillForge Agent: 3.8 Seconds</b><br/>
-                        • Zero Human Latency<br/>
-                        • 100% Tamper-Proof Cryptographic Hasher Seal<br/>
-                        • Grounded Whole-Web Google Search Discovery<br/>
-                        • Sub-Second Recruiter Outbox Dispatch
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
 
     # --- MODAL DIALOGS FOR GOVERNANCE ---
     @st.dialog("🏢 Create New Institute & Initial Branch Node")
@@ -1061,7 +771,7 @@ else:
                     st.success(f"✅ Branch Added to {target_inst_name}!")
                     st.rerun()
 
-    @st.dialog("📚 ⚡ Context-Rich Course Synthesizer & Curriculum Builder")
+    @st.dialog("📚 Context-Rich Course Synthesizer")
     def modal_create_course(target_inst_id, target_branch_id, target_branch_name):
         st.markdown(f"Synthesize custom curriculum & skills for **{target_branch_name}**.")
         with st.form("modal_course_form"):
@@ -1084,7 +794,7 @@ else:
                         "default_mcq_count": mc_mcqs
                     })
                     if r_mc.status_code == 200:
-                        st.success(f"✅ Course '{mc_title}' Created for {target_branch_name}!")
+                        st.success(f"✅ Course '{mc_title}' Created!")
                         st.rerun()
 
     @st.dialog("👤 Enroll New Candidate")
@@ -1118,24 +828,22 @@ else:
                     st.success(f"✅ Candidate {ms_name} Enrolled!")
                     st.rerun()
 
-    # --- GLOBAL MODAL-BASED GOVERNANCE HEADER BAR ---
-    st.markdown("### 🏢 Multi-Tenant Governance Command Center")
-    col_hdr1, col_hdr2, col_hdr3, col_hdr4 = st.columns([3, 1, 3, 1])
-
+    # --- CLEAN SETUP GOVERNANCE BAR ---
     inst_opts = ["Select Institute Network..."] + [f"{i['name']} ({i['code']})" for i in institutes]
     inst_id_map = {i['id']: f"{i['name']} ({i['code']})" for i in institutes}
     label_inst_map = {f"{i['name']} ({i['code']})": i for i in institutes}
     
-    # Calculate active institute index
     default_inst_idx = 0
     cur_saved_inst = st.session_state.get("selected_inst_id")
     if cur_saved_inst and cur_saved_inst in inst_id_map:
         target_label = inst_id_map[cur_saved_inst]
         if target_label in inst_opts:
             default_inst_idx = inst_opts.index(target_label)
-            
-    sel_inst_label = col_hdr1.selectbox("🏢 Institute Network", inst_opts, index=default_inst_idx, label_visibility="collapsed")
+
+    st.markdown('<div class="modern-card">', unsafe_allow_html=True)
+    col_hdr1, col_hdr2, col_hdr3, col_hdr4 = st.columns([3, 1, 3, 1])
     
+    sel_inst_label = col_hdr1.selectbox("🏢 Institute Network", inst_opts, index=default_inst_idx, label_visibility="collapsed")
     with col_hdr2:
         if st.button("➕ New Inst", use_container_width=True):
             modal_create_institute()
@@ -1144,7 +852,6 @@ else:
     sel_branch = None
 
     if sel_inst:
-        # Update persistent query params & session state
         if st.session_state.get("selected_inst_id") != sel_inst['id']:
             st.session_state["selected_inst_id"] = sel_inst['id']
             st.query_params["inst"] = sel_inst['id']
@@ -1182,33 +889,27 @@ else:
         col_hdr3.selectbox("📍 Center Branch Node", ["Select Institute First..."], disabled=True, label_visibility="collapsed")
         with col_hdr4:
             st.button("➕ New Branch", disabled=True, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.divider()
-
-    # --- STRICT DASHBOARD GATE (IF NO BRANCH SELECTED) ---
+    # --- SETUP GATE IF NOT SELECTED ---
     if not sel_inst or not sel_branch:
         st.markdown("""
-        <div style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%); border: 2px dashed #6366F1; padding: 48px; border-radius: 16px; text-align: center; margin: 40px 0;">
-            <h2 style="color: #38BDF8; margin-bottom: 12px;">🛡️ Autonomous Mission Control Locked</h2>
-            <p style="color: #94A3B8; font-size: 1.1rem; max-width: 600px; margin: 0 auto 24px auto;">
-                Please select an active <b>Institute Network</b> and <b>Branch Center Node</b> from the top governance header bar above, or click <b>➕ New Institute</b> to launch Mission Control.
+        <div class="modern-card" style="text-align:center; padding: 48px;">
+            <h2 style="color: #38BDF8; margin-bottom: 8px;">🛡️ Multi-Tenant Governance Setup Required</h2>
+            <p style="color: #9CA3AF; font-size: 1.0rem; max-width: 500px; margin: 0 auto 16px auto;">
+                Select an active Institute Network and Branch Node from above to unlock Mission Control.
             </p>
-            <div style="font-size: 0.9rem; color: #818CF8; font-weight: 600;">
-                🔒 Strict Multi-Tenant Data Isolation Active | Taskmaster Track v6.3.0
-            </div>
         </div>
         """, unsafe_allow_html=True)
         st.stop()
 
-    # --- UNLOCKED DASHBOARD (INSTITUTE & BRANCH ACTIVE) ---
-    st.markdown(f"🟢 **Active Center Node:** **{sel_inst['name']}** $\\rightarrow$ **{sel_branch['branch_name']}** (`City: {sel_branch['city']}` | `Placement Threshold: {sel_inst['placement_threshold']}%`)")
+    # --- UNLOCKED 3-TAB COMMAND CENTER ---
+    st.markdown(f'<div style="font-size:0.85rem; color:#9CA3AF; margin-bottom:12px;">Active Node: <span style="color:#38BDF8; font-weight:600;">{sel_inst["name"]}</span> → <span style="color:#34D399; font-weight:600;">{sel_branch["branch_name"]} ({sel_branch["city"]})</span></div>', unsafe_allow_html=True)
 
-    # 4 CLEAN MISSION CONTROL TABS
     tabs = st.tabs([
-        "📋 Course & Curriculum Hub",
-        "👥 Student Roster & AI Exam Link Dispatch",
-        "🤖 Autonomous Placement & Live Ledger",
-        "📜 Real-Time Agent Operational Audit Log"
+        "📚 Course & Curriculum Management",
+        "👥 Student Roster & Assessment Hub",
+        "🤖 Autonomous Placement & Agent Action Ledger"
     ])
 
     # --- TAB 1: COURSE & CURRICULUM HUB ---
