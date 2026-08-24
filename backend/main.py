@@ -69,14 +69,16 @@ class BranchCreateReq(BaseModel):
     branch_name: str
     city: str
 
+from typing import List, Optional, Dict, Any, Union
+
 class CourseCreateReq(BaseModel):
     institute_id: str
     branch_id: str
     course_name: str
     curriculum_summary: str = ""
     course_description: str = ""
-    curriculum_sections: str = ""
-    core_skills: str = ""
+    curriculum_sections: Union[str, List[str], Any] = ""
+    core_skills: Union[str, List[str], Any] = ""
     default_mcq_count: int = 10
 
 class StudentCreateReq(BaseModel):
@@ -289,15 +291,27 @@ def api_create_course(req: CourseCreateReq):
     from agent_engine import enrich_and_synthesize_course_input
     from database import log_agent_activity
     
+    sections_raw = req.curriculum_sections
+    if isinstance(sections_raw, list):
+        sections_str = ", ".join(sections_raw)
+    else:
+        sections_str = str(sections_raw or "")
+
+    skills_raw = req.core_skills
+    if isinstance(skills_raw, list):
+        skills_str = ", ".join(skills_raw)
+    else:
+        skills_str = str(skills_raw or "")
+
     # Run Gemini 3.5 AI Auto-Correction & Curriculum Enrichment
     enriched = enrich_and_synthesize_course_input(
-        req.course_name, req.course_description or "", req.curriculum_sections or "", req.core_skills or ""
+        req.course_name, req.course_description or "", sections_str, skills_str
     )
     
     final_title = enriched.get("course_title", req.course_name)
     final_desc = enriched.get("course_description", req.course_description or req.curriculum_summary)
-    final_sections = json.dumps(enriched.get("curriculum_sections", [])) if isinstance(enriched.get("curriculum_sections"), list) else str(enriched.get("curriculum_sections", req.curriculum_sections))
-    final_skills = json.dumps(enriched.get("core_skills", [])) if isinstance(enriched.get("core_skills"), list) else str(enriched.get("core_skills", req.core_skills))
+    final_sections = json.dumps(enriched.get("curriculum_sections", [])) if isinstance(enriched.get("curriculum_sections"), list) else str(enriched.get("curriculum_sections", sections_str))
+    final_skills = json.dumps(enriched.get("core_skills", [])) if isinstance(enriched.get("core_skills"), list) else str(enriched.get("core_skills", skills_str))
     
     course = create_course(
         req.institute_id, req.branch_id, final_title, final_desc,

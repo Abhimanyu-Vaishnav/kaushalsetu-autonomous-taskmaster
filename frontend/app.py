@@ -889,14 +889,17 @@ def main_app_layout():
                             modules_list = [m.strip() for m in mc_sections.replace("\n", ",").split(",") if m.strip()]
                             skills_list = [s.strip() for s in mc_skills.replace("\n", ",").split(",") if s.strip()]
 
+                            modules_str = ", ".join(modules_list) if isinstance(modules_list, list) else str(modules_list)
+                            skills_str = ", ".join(skills_list) if isinstance(skills_list, list) else str(skills_list)
+
                             r_mc = requests.post(f"{BACKEND_URL}/api/courses/create", json={
                                 "institute_id": target_inst_id,
                                 "branch_id": target_branch_id,
                                 "course_name": mc_title.strip(),
                                 "course_description": mc_desc.strip(),
                                 "curriculum_summary": mc_desc.strip(),
-                                "curriculum_sections": modules_list,
-                                "core_skills": skills_list,
+                                "curriculum_sections": modules_str,
+                                "core_skills": skills_str,
                                 "default_mcq_count": mc_mcqs
                             }, timeout=12)
                             if r_mc.status_code in [200, 201]:
