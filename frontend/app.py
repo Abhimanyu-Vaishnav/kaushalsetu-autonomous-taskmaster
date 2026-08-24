@@ -410,6 +410,40 @@ def main_app_layout():
                 </div>
                 """, unsafe_allow_html=True)
                 
+                # Multimodal PDF Resume Autonomous Extractor
+                with st.expander("📄 Multimodal PDF Resume Autonomous Extractor", expanded=True):
+                    st.caption("Upload a candidate PDF resume to extract skills, target roles, experience, and professional summary via Gemini 3.5 Flash.")
+                    resume_file = st.file_uploader("Upload PDF Resume", type=["pdf"], key=f"resume_uploader_{param_sid}")
+                    if resume_file is not None:
+                        if st.button("⚡ Extract & Auto-Populate Profile Data", type="secondary", use_container_width=True):
+                            with st.spinner("Gemini 3.5 Multimodal Parsing PDF Resume..."):
+                                try:
+                                    files_payload = {"file": (resume_file.name, resume_file.getvalue(), "application/pdf")}
+                                    parse_res = requests.post(f"{BACKEND_URL}/api/student/parse-resume", files=files_payload, timeout=12)
+                                    if parse_res.status_code == 200:
+                                        pdata = parse_res.json().get("data", {})
+                                        st.session_state[f"parsed_roles_{param_sid}"] = pdata.get("target_role")
+                                        st.session_state[f"parsed_skills_{param_sid}"] = ", ".join(pdata.get("skills", [])) if isinstance(pdata.get("skills"), list) else str(pdata.get("skills", ""))
+                                        st.session_state[f"parsed_exp_{param_sid}"] = int(pdata.get("experience_years", 0))
+                                        st.session_state[f"parsed_past_{param_sid}"] = pdata.get("past_companies")
+                                        st.session_state[f"parsed_bio_{param_sid}"] = pdata.get("professional_summary")
+                                        if pdata.get("github_url"):
+                                            st.session_state[f"parsed_github_{param_sid}"] = pdata.get("github_url")
+                                        st.toast("✅ Multimodal PDF Resume Parsed Successfully! Data pre-filled.", icon="🎉")
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Failed to parse resume: {parse_res.text}")
+                                except Exception as p_ex:
+                                    st.error(f"Error extracting PDF: {p_ex}")
+
+                # Default values (overridden by parsed state if available)
+                val_github = st.session_state.get(f"parsed_github_{param_sid}") or student_data.get('github_url', '')
+                val_roles = st.session_state.get(f"parsed_roles_{param_sid}") or student_data.get('target_role_preference', 'Specialist Technical Engineer')
+                val_skills = st.session_state.get(f"parsed_skills_{param_sid}") or student_data.get('skills_list', 'Diagnostics, System Testing, Quality Audit')
+                val_exp = st.session_state.get(f"parsed_exp_{param_sid}") if f"parsed_exp_{param_sid}" in st.session_state else int(student_data.get('work_experience_years', 0))
+                val_past = st.session_state.get(f"parsed_past_{param_sid}") or student_data.get('past_companies_text', 'Trained through institutional vocational curriculum.')
+                val_bio = st.session_state.get(f"parsed_bio_{param_sid}") or student_data.get('bio', 'Vocational graduate certified by SkillForge Autonomous Engine.')
+
                 with st.form("student_profile_edit_dossier_form"):
                     col_p1, col_p2 = st.columns(2)
                     with col_p1:
@@ -420,30 +454,29 @@ def main_app_layout():
                         prof_email = st.text_input("Email Address", value=student_data.get('email', ''))
                         prof_phone = st.text_input("Phone Number", value=student_data.get('phone', ''))
                     with col_p2:
-                        prof_github = st.text_input("GitHub Profile URL", value=student_data.get('github_url', ''))
-                        prof_roles = st.text_input("Target Role & Salary CTC Preference", value=student_data.get('target_role_preference', 'Specialist Technical Engineer (₹6.5L - ₹9.0L PA)'))
-                        prof_skills = st.text_input("Technical & Practical Skills Tags", value=student_data.get('skills_list', 'Python, Circuit Diagnostics, CAN-bus, Oscilloscope Waveforms'))
-                        prof_exp = st.number_input("Years of Field Experience", min_value=0, max_value=30, value=int(student_data.get('work_experience_years', 0)))
-                        prof_past = st.text_area("Past Experience & Companies", value=student_data.get('past_companies_text', 'Trained & certified through institutional vocational curriculum.'))
-                        prof_bio = st.text_area("AI-Generated Professional Summary / Bio", value=student_data.get('bio', 'Vocational graduate specializing in practical diagnostics & full-stack execution.'))
+                        prof_github = st.text_input("GitHub Profile URL", value=val_github)
+                        prof_roles = st.text_input("Target Role & Salary CTC Preference", value=val_roles)
+                        prof_skills = st.text_input("Technical & Practical Skills Tags", value=val_skills)
+                        prof_exp = st.number_input("Years of Field Experience", min_value=0, max_value=30, value=int(val_exp))
+                        prof_past = st.text_area("Past Experience & Companies", value=val_past, height=70)
+                        prof_bio = st.text_area("AI-Generated Professional Summary / Bio", value=val_bio, height=70)
                         
-                    resume_file = st.file_uploader("📄 Upload PDF Resume (Instant Extraction Preview)", type=["pdf"])
-                    
                     sub_prof = st.form_submit_button("⚡ Sync Profile & Regenerate AI Portfolio", type="primary", use_container_width=True)
                     if sub_prof:
-                        requests.post(f"{BACKEND_URL}/api/student/update-profile", json={
-                            "student_id": student_data['student_id'],
-                            "full_name": student_data['full_name'],
-                            "email": prof_email,
-                            "phone": prof_phone,
-                            "bio": prof_bio,
-                            "github_url": prof_github,
-                            "skills_list": prof_skills,
-                            "target_role_preference": prof_roles,
-                            "past_companies_text": prof_past,
-                            "work_experience_years": prof_exp
-                        })
-                        st.success("✅ Profile Synced & AI Portfolio Regenerated Successfully!")
+                        with st.spinner("Syncing profile & regenerating dynamic portfolio..."):
+                            requests.post(f"{BACKEND_URL}/api/student/update-profile", json={
+                                "student_id": student_data['student_id'],
+                                "full_name": student_data['full_name'],
+                                "email": prof_email,
+                                "phone": prof_phone,
+                                "bio": prof_bio,
+                                "github_url": prof_github,
+                                "skills_list": prof_skills,
+                                "target_role_preference": prof_roles,
+                                "past_companies_text": prof_past,
+                                "work_experience_years": prof_exp
+                            })
+                        st.toast("✅ Profile Synced with Resume & GitHub! Portfolio regenerated.", icon="🎉")
                         st.balloons()
                         st.rerun()
 

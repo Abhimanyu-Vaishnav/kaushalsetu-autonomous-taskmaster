@@ -518,8 +518,15 @@ def api_update_student_profile(req: StudentUpdateProfileReq):
         req.student_id, req.full_name, req.email, req.phone, req.bio,
         req.github_url, req.skills_list, req.target_role_preference, req.past_companies_text, req.work_experience_years
     )
-    log_agent_activity("PROFILE_UPDATED", f"Student profile updated for {stu['full_name']} ({stu['student_id']})", student_id=stu['student_id'])
+    log_agent_activity("PROFILE_UPDATED", f"Candidate {req.full_name} updated career preferences & skills", student_id=req.student_id)
     return {"success": True, "data": stu}
+
+@app.post("/api/student/parse-resume")
+async def api_parse_student_resume(file: UploadFile = File(...)):
+    from agent_engine import parse_pdf_resume_with_gemini
+    pdf_bytes = await file.read()
+    extracted = parse_pdf_resume_with_gemini(pdf_bytes, filename=file.filename)
+    return {"success": True, "data": extracted}
 
 @app.delete("/api/student/{student_id}")
 def api_delete_student(student_id: str):

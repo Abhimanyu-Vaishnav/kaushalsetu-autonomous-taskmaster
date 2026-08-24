@@ -182,6 +182,35 @@ def generate_student_portfolio_html(
         </div>
         """
 
+    # 3. Harvest Live GitHub Repositories
+    from agent_engine import fetch_github_profile_data
+    github_data = fetch_github_profile_data(github_url)
+    gh_projects = github_data.get("projects", [])
+    
+    if gh_projects:
+        gh_cards_html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">'
+        for proj in gh_projects:
+            gh_cards_html += f"""
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <a href="{proj['repo_url']}" target="_blank" class="font-bold text-sky-400 hover:text-sky-300 text-sm truncate flex items-center gap-1.5">
+                            <i class="fa-brands fa-github"></i> {proj['name']}
+                        </a>
+                        <span class="text-[10px] bg-slate-900 text-slate-400 px-2 py-0.5 rounded border border-slate-800">⭐ {proj['stars']}</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1 line-clamp-2">{proj['description']}</p>
+                </div>
+                <div class="flex justify-between items-center text-[10px] text-slate-500 mt-2.5 pt-2 border-t border-slate-900">
+                    <span class="text-indigo-400 font-semibold">● {proj['language']}</span>
+                    <span>Updated {proj['updated_at']}</span>
+                </div>
+            </div>
+            """
+        gh_cards_html += '</div>'
+    else:
+        gh_cards_html = ""
+
     skills_badges = "".join([f'<span class="text-xs font-semibold px-3 py-1.5 rounded-lg border {badge_bg}">{s}</span>' for s in skills])
     fallback_github = github_url or "https://github.com/skillforge-autonomous"
 
@@ -280,7 +309,8 @@ def generate_student_portfolio_html(
             </h3>
             <h4 class="text-md font-semibold text-slate-200">{project_title}</h4>
             {interactive_widget}
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-300 text-sm font-mono leading-relaxed">
+            {f'<div class="pt-2"><h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"><i class="fa-brands fa-github text-sky-400 mr-1.5"></i> Live GitHub Public Repositories (Harvested)</h5>{gh_cards_html}</div>' if gh_cards_html else ''}
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-300 text-sm font-mono leading-relaxed mt-3">
                 {project_description}
             </div>
             <div class="flex flex-wrap gap-4 pt-2">
