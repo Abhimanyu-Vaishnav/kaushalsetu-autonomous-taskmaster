@@ -190,6 +190,47 @@ def api_create_branch(req: BranchCreateReq):
     branch = create_branch(req.institute_id, req.branch_name, req.city)
     return {"success": True, "data": branch}
 
+class CourseSynthesizeReq(BaseModel):
+    institute_id: str
+    branch_id: str
+    course_input: str
+
+class SmartIngestReq(BaseModel):
+    institute_id: str
+    branch_id: str
+    course_id: str
+    branch_name: str
+    course_name: str
+    raw_text_or_url: str
+
+@app.post("/api/courses/synthesize")
+def api_synthesize_course(req: CourseSynthesizeReq):
+    from agent_engine import synthesize_course_from_input
+    data = synthesize_course_from_input(req.course_input)
+    course = create_course(req.institute_id, req.branch_id, data['course_name'], data['curriculum_summary'])
+    from database import log_agent_activity
+    log_agent_activity("COURSE_SYNTHESIZED", f"AI Course Synthesizer generated course '{data['course_name']}'", institute_id=req.institute_id, branch_id=req.branch_id)
+    return {"success": True, "data": course, "synthesis": data}
+
+@app.post("/api/students/smart-ingest")
+def api_smart_ingest_student(req: SmartIngestReq):
+    from agent_engine import parse_resume_profile
+    parsed = parse_resume_profile(req.raw_text_or_url)
+    skills_str = ", ".join(parsed.get('skills_list', []))
+    stu = add_student(
+        req.institute_id, req.branch_id, req.course_id, req.branch_name, req.course_name,
+        parsed.get('full_name', 'Student Candidate'), "2002-01-01", parsed.get('email', 'candidate@skillforge-edu.org'),
+        parsed.get('phone', ''), parsed.get('bio', ''), "PAID", 1
+    )
+    from database import update_student_profile, log_agent_activity
+    update_student_profile(
+        stu['student_id'], parsed.get('full_name'), parsed.get('email'), parsed.get('phone'),
+        parsed.get('bio'), "", skills_str, parsed.get('target_role_preference'),
+        parsed.get('past_companies_text'), parsed.get('work_experience_years', 0)
+    )
+    log_agent_activity("STUDENT_SMART_INGESTED", f"Smart AI Ingestion created student {stu['full_name']} ({stu['student_id']})", institute_id=req.institute_id, branch_id=req.branch_id, student_id=stu['student_id'])
+    return {"success": True, "data": stu, "parsed_profile": parsed}
+
 @app.get("/api/courses")
 def api_get_courses(branch_id: str):
     return {"success": True, "data": get_courses_by_branch(branch_id)}

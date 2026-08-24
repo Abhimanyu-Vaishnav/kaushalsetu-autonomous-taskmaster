@@ -792,25 +792,26 @@ else:
                         st.rerun()
                         
         with col_m3:
-            st.markdown("#### 3️⃣ Add Branch-Isolated Course")
+            st.markdown("#### 3️⃣ ⚡ AI Course Synthesizer (Zero-Friction)")
             if not sel_branch:
                 st.caption("Please select a branch above.")
             else:
-                with st.form("create_branch_course_form"):
+                with st.form("ai_course_synthesizer_form"):
                     st.caption(f"Parent Branch: **{sel_branch['branch_name']}**")
-                    cc_title = st.text_input("Course Title", value="EV & Solar Maintenance")
-                    cc_summary = st.text_area("Curriculum Summary", value="Hands-on electric vehicle diagnostics and solar inverter maintenance.")
-                    sub_cc = st.form_submit_button("Save Isolated Course", type="primary")
-                    if sub_cc:
-                        r_cc = requests.post(f"{BACKEND_URL}/api/courses/create", json={
-                            "institute_id": sel_inst["id"],
-                            "branch_id": sel_branch["id"],
-                            "course_name": cc_title,
-                            "curriculum_summary": cc_summary
-                        })
-                        if r_cc.status_code == 200:
-                            st.success(f"✅ Course Isolated to {sel_branch['branch_name']}!")
-                            st.rerun()
+                    cs_input = st.text_area("Course Title or Syllabus Topic", value="EV Diagnostics & Solar Inverter Maintenance", height=80)
+                    sub_cs = st.form_submit_button("⚡ AI Synthesize & Isolate Course", type="primary", use_container_width=True)
+                    if sub_cs:
+                        with st.spinner("Gemini 3.5 is synthesizing curriculum, skill tags & rubric..."):
+                            r_cs = requests.post(f"{BACKEND_URL}/api/courses/synthesize", json={
+                                "institute_id": sel_inst["id"],
+                                "branch_id": sel_branch["id"],
+                                "course_input": cs_input
+                            })
+                            if r_cs.status_code == 200:
+                                res_d = r_cs.json()
+                                st.success(f"✅ Course Synthesized: **{res_d['synthesis']['course_name']}**!")
+                                st.caption("Skills: " + ", ".join(res_d['synthesis'].get('skills_list', [])))
+                                st.rerun()
 
         st.divider()
         with st.expander("⚙️ Institute Configurable Exam Parameters & Policy Settings", expanded=True):
@@ -856,7 +857,7 @@ else:
                 
             course_opts = {c['course_name']: c['id'] for c in branch_courses} if branch_courses else {"Automotive & Hardware Diagnostics": "CRS-AUTO-01"}
             
-            tab_intake1, tab_intake2 = st.tabs(["📝 Mode A: Manual Candidate Intake", "📁 Mode B: Bulk Upload via Excel / CSV"])
+            tab_intake1, tab_intake2, tab_intake3 = st.tabs(["📝 Mode A: Manual Intake", "📁 Mode B: Bulk CSV Upload", "📄 Mode C: Smart AI Resume Ingestion"])
             
             with tab_intake1:
                 with st.form("enroll_student_isolated_form"):
@@ -937,6 +938,28 @@ else:
                             st.rerun()
                     except Exception as ex:
                         st.error(f"Error parsing bulk file: {ex}")
+
+            with tab_intake3:
+                st.caption("Paste Resume Text, Bio, or GitHub/LinkedIn URL for 1-Click AI Extraction.")
+                with st.form("smart_resume_ingest_form"):
+                    sm_cname = st.selectbox("Assign Course", list(course_opts.keys()), key="smart_course_sel")
+                    sm_text = st.text_area("Paste Resume Text / GitHub URL / Bio", value="Alex Mercer - Certified Automotive ECU Diagnostic Specialist with 2 years experience at Bosch Labs. Skills: ECU Flashing, Oscilloscope, Multimeter, Fault Logging.", height=100)
+                    sub_sm = st.form_submit_button("⚡ Smart AI Auto-Ingest Student Profile", type="primary", use_container_width=True)
+                    if sub_sm:
+                        c_id = course_opts.get(sm_cname, "CRS-GENERIC")
+                        with st.spinner("Gemma + Gemini 3.5 extracting profile details..."):
+                            r_sm = requests.post(f"{BACKEND_URL}/api/students/smart-ingest", json={
+                                "institute_id": sel_inst["id"],
+                                "branch_id": sel_branch["id"],
+                                "course_id": c_id,
+                                "branch_name": sel_branch["branch_name"],
+                                "course_name": sm_cname,
+                                "raw_text_or_url": sm_text
+                            })
+                            if r_sm.status_code == 200:
+                                res_sm = r_sm.json()
+                                st.success(f"🎉 Student Smart-Ingested: **{res_sm['data']['full_name']}** (`{res_sm['data']['student_id']}`)!")
+                                st.rerun()
 
             st.divider()
             
