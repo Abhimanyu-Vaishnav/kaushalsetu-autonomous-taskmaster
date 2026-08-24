@@ -109,6 +109,7 @@ class AssessmentGenReq(BaseModel):
     topic: str
     difficulty: str = "Intermediate"
     institute_id: str = "INST-GLOBAL-01"
+    num_questions: int = 10
 
 class FullEvaluationReq(BaseModel):
     student_id: str
@@ -272,7 +273,11 @@ def api_get_assessments(institute_id: Optional[str] = None):
 @app.post("/api/assessment/generate")
 def api_generate_exam(req: AssessmentGenReq):
     try:
-        exam = generate_assessment(req.topic, req.difficulty, req.institute_id)
+        from database import get_institute_by_id, log_agent_activity
+        inst = get_institute_by_id(req.institute_id)
+        num_q = req.num_questions or (inst.get("num_mcqs_config", 10) if inst else 10)
+        exam = generate_assessment(req.topic, req.difficulty, req.institute_id, num_questions=num_q)
+        log_agent_activity("ASSESSMENT_SYNTHESIZED", f"Assessment Synthesized for Course: {req.topic} (Questions: {len(exam.get('mcqs', []))})", institute_id=req.institute_id)
         return {"success": True, "data": exam}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

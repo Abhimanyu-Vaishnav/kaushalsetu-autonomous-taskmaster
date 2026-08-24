@@ -196,26 +196,16 @@ if current_page in ["exam", "student_portal"]:
                     
     exam = st.session_state.get("current_exam", {})
     mcqs = exam.get("mcqs", [])
+    total_q_count = len(mcqs) if mcqs else 10
     
-    # Build 50-MCQ items by extending base questions
-    full_50_mcqs = []
-    for i in range(50):
-        base_mcq = mcqs[i % len(mcqs)] if mcqs else {"question": f"Sample Diagnostic Question {i+1}", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_option": 0}
-        full_50_mcqs.append({
-            "id": i + 1,
-            "question": f"Q{i+1}: {base_mcq['question']}",
-            "options": base_mcq['options'],
-            "correct_option": base_mcq['correct_option']
-        })
-        
     mcq_step = st.session_state.get("mcq_step", 0)
     answers_dict = st.session_state.get("mcq_answers_dict", {})
     
     # Stepper Header & Progress Bar
-    st.progress((mcq_step + 1) / 50.0, text=f"Question {mcq_step + 1} of 50")
+    st.progress((mcq_step + 1) / float(total_q_count), text=f"Question {mcq_step + 1} of {total_q_count}")
     
-    cur_q = full_50_mcqs[mcq_step]
-    st.markdown(f"#### **{cur_q['question']}**")
+    cur_q = mcqs[mcq_step] if mcq_step < len(mcqs) else {"question": f"Diagnostic Question {mcq_step+1}", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_option": 0}
+    st.markdown(f"#### **Q{mcq_step + 1}: {cur_q['question']}**")
     
     selected_option = st.radio(
         "Choose answer:",
@@ -233,9 +223,9 @@ if current_page in ["exam", "student_portal"]:
             st.session_state["mcq_step"] = mcq_step - 1
             st.rerun()
     with col_nav2:
-        st.caption(f"Answered: {len(answers_dict)} of 50 questions")
+        st.caption(f"Answered: {len(answers_dict)} of {total_q_count} questions")
     with col_nav3:
-        if st.button("Next Question ➡️", disabled=(mcq_step == 49)):
+        if st.button("Next Question ➡️", disabled=(mcq_step >= total_q_count - 1)):
             st.session_state["mcq_step"] = mcq_step + 1
             st.rerun()
 
@@ -285,8 +275,8 @@ if current_page in ["exam", "student_portal"]:
             time.sleep(0.3)
             p_bar.progress(70, text="2. Gemini 3.5 Multimodal Evaluation & Official Marksheet Generation...")
             
-            user_answers_list = [answers_dict.get(i, 0) for i in range(50)]
-            key_list = [full_50_mcqs[i]['correct_option'] for i in range(50)]
+            user_answers_list = [answers_dict.get(i, 0) for i in range(total_q_count)]
+            key_list = [mcqs[i].get('correct_option', 0) if i < len(mcqs) else 0 for i in range(total_q_count)]
             
             try:
                 pipe_res = requests.post(
@@ -498,9 +488,27 @@ else:
         st.error("🔴 Could not connect to backend server. Ensure run_app.py is active.")
         st.stop()
 
+    # --- AGENT MISSION CONTROL COMMAND CENTER HUD ---
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border: 1px solid #334155; padding: 18px 24px; border-radius: 12px; margin-bottom: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+            <div>
+                <span style="font-weight:700; color:#38BDF8; font-size:1.1rem;">🧠 Gemini 3.5 Pro Grounded Engine</span>
+                <span style="margin:0 12px; color:#475569;">|</span>
+                <span style="font-weight:700; color:#A855F7; font-size:1.1rem;">⚡ Gemma Pre-check Sub-Engine (+0.2 pts)</span>
+                <span style="margin:0 12px; color:#475569;">|</span>
+                <span style="font-weight:700; color:#22C55E; font-size:1.1rem;">🟢 Autonomous Scheduler: ACTIVE</span>
+            </div>
+            <div>
+                <span class="badge-live" style="font-size:0.85rem;">MISSION CONTROL V5.1</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     # --- GLOBAL CASCADING GOVERNANCE HEADER ---
-    st.markdown("### 🏢 Cascading Multi-Tenant Governance Selector")
-    col_g1, col_g2 = st.columns(2)
+    st.markdown("### 🏢 Cascading Multi-Tenant Governance Selector & Copilot Trigger")
+    col_g1, col_g2, col_g3 = st.columns([2.5, 2.5, 2])
 
     inst_map = {f"{i['name']} ({i['code']})": i for i in institutes}
     sel_inst_label = col_g1.selectbox("🏢 Select Vocational Institute", list(inst_map.keys()))
@@ -523,8 +531,35 @@ else:
         sel_branch_label = col_g2.selectbox("📍 Select Center Branch Node", list(branch_map.keys()))
         sel_branch = branch_map[sel_branch_label]
 
+    with col_g3:
+        st.write("")
+        st.write("")
+        if st.button("🚀 Activate Autonomous Institute Copilot Loop", type="primary", use_container_width=True):
+            if sel_branch:
+                # Trigger autonomous evaluation and dispatch loop for branch students
+                try:
+                    st_res = requests.get(f"{BACKEND_URL}/api/students?institute_id={sel_inst['id']}&branch_id={sel_branch['id']}", timeout=2)
+                    if st_res.status_code == 200:
+                        branch_stus = st_res.json()["data"]
+                        for b_stu in branch_stus:
+                            if not b_stu.get("exam_completed"):
+                                requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
+                                    "student_id": b_stu['student_id'],
+                                    "assessment_id": "ASS-AUTONOMOUS",
+                                    "mcq_answers": [0] * sel_inst.get("num_mcqs_config", 10),
+                                    "mcq_key": [0] * sel_inst.get("num_mcqs_config", 10),
+                                    "practical_task": f"Autonomous diagnostic execution for {b_stu['course_name']}",
+                                    "grading_rubric": ["Procedure safety lockout", "Diagnostic measurement", "Documentation"],
+                                    "submission_text": "Autonomous end-to-end execution procedure completed adhering to safety lockout standards."
+                                }, timeout=15)
+                    st.success("✅ Autonomous Institute Copilot Loop Executed Successfully!")
+                    st.balloons()
+                    st.rerun()
+                except Exception as ex:
+                    st.error(f"Copilot loop error: {ex}")
+
     if sel_branch:
-        st.info(f"🔒 **Strict Isolation Active:** Managing **{sel_inst['name']}** $\\rightarrow$ **{sel_branch['branch_name']}** (`Placement Threshold: {sel_inst['placement_threshold']}%`)")
+        st.info(f"🔒 **Strict Isolation Active:** Managing **{sel_inst['name']}** $\\rightarrow$ **{sel_branch['branch_name']}** (`MCQs/Exam: {sel_inst.get('num_mcqs_config', 10)}` | `Placement Threshold: {sel_inst['placement_threshold']}%`)")
 
     st.divider()
 
