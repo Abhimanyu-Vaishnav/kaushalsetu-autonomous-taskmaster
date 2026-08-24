@@ -535,17 +535,19 @@ elif current_page == "student_dashboard":
                     with col_j1:
                         st.markdown(f"#### **{job['role_title']}**")
                         st.markdown(f"🏢 **{job['company_name']}** | 📍 `{job['location']}`")
+                        s_badge = job.get('source_badge', '🌐 Whole-Web Search')
+                        st.markdown(f'<span class="badge-pending" style="background:#E0F2FE; color:#0369A1;">{s_badge}</span>', unsafe_allow_html=True)
                         st.caption(f"🎁 Perks & Benefits: {job['key_benefits']}")
                     with col_j2:
                         st.markdown(f"💰 **Salary:** `{job['salary_range']}`")
                         st.markdown(f"🎯 **Match Score:** `{job['match_percentage']}% Match`")
                         st.caption(f"Experience: {job['experience_required']}")
                     with col_j3:
-                        linkedin_url = job.get('verified_search_url', job.get('direct_application_url'))
+                        verified_link = job.get('verified_search_url', job.get('direct_application_url'))
                         portal_url = job.get('company_career_url', 'https://careers.google.com/jobs')
                         
-                        st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration:none;"><button style="background:#0F172A; color:#38BDF8; border:1px solid #0284C7; border-radius:6px; padding:6px 10px; font-size:0.78rem; font-weight:600; cursor:pointer; width:100%; margin-bottom:4px;">🔗 View Live Jobs on LinkedIn</button></a>', unsafe_allow_html=True)
-                        st.markdown(f'<a href="{portal_url}" target="_blank" style="text-decoration:none;"><button style="background:#1E1B4B; color:#A5B4FC; border:1px solid #6366F1; border-radius:6px; padding:6px 10px; font-size:0.78rem; font-weight:600; cursor:pointer; width:100%; margin-bottom:6px;">🏢 Visit Official Career Portal</button></a>', unsafe_allow_html=True)
+                        st.markdown(f'<a href="{verified_link}" target="_blank" style="text-decoration:none;"><button style="background:#0F172A; color:#38BDF8; border:1px solid #0284C7; border-radius:6px; padding:6px 10px; font-size:0.78rem; font-weight:600; cursor:pointer; width:100%; margin-bottom:4px;">🔗 View Post on {s_badge.split()[-1] if s_badge else "Portal"}</button></a>', unsafe_allow_html=True)
+                        st.markdown(f'<a href="{portal_url}" target="_blank" style="text-decoration:none;"><button style="background:#1E1B4B; color:#A5B4FC; border:1px solid #6366F1; border-radius:6px; padding:6px 10px; font-size:0.78rem; font-weight:600; cursor:pointer; width:100%; margin-bottom:6px;">🏢 Visit Company Portal</button></a>', unsafe_allow_html=True)
                         
                         if new_mode:
                             st.markdown('<span class="badge-live" style="display:block; text-align:center;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)

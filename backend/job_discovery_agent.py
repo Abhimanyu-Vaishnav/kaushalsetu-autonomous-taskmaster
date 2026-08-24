@@ -51,13 +51,33 @@ def discover_live_jobs(course_name: str, skills: List[str], location: str = "Ind
     for i, (comp, portal_url, loc, sal, base_match, ben) in enumerate(companies):
         role_title = f"{course_name} Specialist" if i % 2 == 0 else f"Lead {course_name} Engineer"
         
-        # Build 100% active, live platform search deep-links (LinkedIn Jobs & Google Jobs)
         kw_enc = urllib.parse.quote_plus(f"{role_title} {comp.split()[0]}")
         loc_enc = urllib.parse.quote_plus(loc.split('/')[0].strip())
         
+        # Assign diverse whole-web platforms & source badges
+        platform_idx = i % 5
+        if platform_idx == 0:
+            source_badge = "🌐 Google Jobs Search"
+            verified_url = f"https://www.google.com/search?q={kw_enc}+jobs+in+{loc_enc}&ibp=htl;jobs"
+        elif platform_idx == 1:
+            source_badge = "💼 Indeed Direct"
+            verified_url = f"https://in.indeed.com/jobs?q={kw_enc}&l={loc_enc}"
+        elif platform_idx == 2:
+            role_slug = urllib.parse.quote_plus(role_title.lower().replace(" ", "-"))
+            loc_slug = urllib.parse.quote_plus(loc.split('/')[0].strip().lower().replace(" ", "-"))
+            source_badge = "📄 Naukri Hub"
+            verified_url = f"https://www.naukri.com/{role_slug}-jobs-in-{loc_slug}"
+        elif platform_idx == 3:
+            source_badge = "🏢 Company Career Portal"
+            verified_url = portal_url
+        else:
+            source_badge = "👔 LinkedIn Jobs"
+            verified_url = f"https://www.linkedin.com/jobs/search/?keywords={kw_enc}&location={loc_enc}"
+            
         linkedin_url = f"https://www.linkedin.com/jobs/search/?keywords={kw_enc}&location={loc_enc}"
         google_jobs_url = f"https://www.google.com/search?q={kw_enc}+jobs+in+{loc_enc}&ibp=htl;jobs"
         indeed_url = f"https://in.indeed.com/jobs?q={kw_enc}&l={loc_enc}"
+        naukri_url = f"https://www.naukri.com/{urllib.parse.quote_plus(role_title.lower().replace(' ', '-'))}-jobs"
         
         # Smart Match & Acceptance Probability Calculation
         match_score = base_match
@@ -73,11 +93,13 @@ def discover_live_jobs(course_name: str, skills: List[str], location: str = "Ind
             "salary_range": sal,
             "experience_required": "0-3 Years (Entry/Junior Level)",
             "key_benefits": ben,
-            "verified_search_url": linkedin_url,
+            "source_badge": source_badge,
+            "verified_search_url": verified_url,
             "google_jobs_url": google_jobs_url,
             "indeed_url": indeed_url,
+            "naukri_url": naukri_url,
             "company_career_url": portal_url,
-            "direct_application_url": linkedin_url,
+            "direct_application_url": verified_url,
             "match_percentage": match_score,
             "acceptance_probability_score": match_score,
             "is_top_recommendation": is_top_rec,
