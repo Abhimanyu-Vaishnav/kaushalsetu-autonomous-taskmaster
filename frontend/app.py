@@ -644,13 +644,18 @@ def main_app_layout():
                         st.success("🟢 100% Tamper-Proof & Mathematically Verified")
 
             with s_tab3:
-                st.markdown("### 🌐 Live Generated Domain-Adaptive Portfolio Preview")
+                st.markdown("### 🌐 Live Generated Domain-Adaptive Visual Portfolio")
                 dossier_display_url = build_portfolio_dossier_url(param_sid, student_data.get("portfolio_url", ""))
-                st.caption(f"Direct Portfolio URL: [{dossier_display_url}]({dossier_display_url})")
+                col_p1, col_p2 = st.columns([3, 1])
+                with col_p1:
+                    st.caption(f"Direct Shareable Portfolio Link: [{dossier_display_url}]({dossier_display_url})")
+                with col_p2:
+                    st.link_button("↗️ Open in New Tab", dossier_display_url, use_container_width=True)
+
                 try:
                     res = requests.get(f"{INTERNAL_BACKEND_URL}/portfolio/{param_sid}", timeout=5)
                     if res.status_code == 200:
-                        components.html(res.text, height=850, scrolling=True)
+                        components.html(res.text, height=900, scrolling=True)
                     else:
                         st.info("Portfolio dossier is currently being generated...")
                 except Exception:

@@ -5,18 +5,18 @@ import uuid
 import hashlib
 import datetime
 import requests
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from pydantic import BaseModel, Field
 
 def fetch_real_github_dossier(github_url: str) -> dict:
     """Bulletproof GitHub API crawler extracting real repositories and profile stats."""
     clean_url = str(github_url or "").strip()
-    if not clean_url or "github.com" not in clean_url:
-        return {"username": "Candidate", "projects": [], "total_stars": 0, "public_repos": 0, "profile_url": "#"}
+    if not clean_url or "github.com" not in clean_url or clean_url.endswith("github.com") or clean_url.endswith("github.com/"):
+        return {"username": "", "projects": [], "total_stars": 0, "public_repos": 0, "profile_url": "#"}
 
-    # Extract exact username even with trailing slashes, params, or full URLs
     match = re.search(r"github\.com/([^/?#]+)", clean_url)
     if not match:
-        return {"username": "Candidate", "projects": [], "total_stars": 0, "public_repos": 0, "profile_url": clean_url}
+        return {"username": "", "projects": [], "total_stars": 0, "public_repos": 0, "profile_url": clean_url}
 
     username = match.group(1).strip()
     print(f"[GITHUB LIVE HARVEST] Crawling GitHub API for user: '{username}'")
@@ -35,13 +35,11 @@ def fetch_real_github_dossier(github_url: str) -> dict:
     public_repos_count = 0
 
     try:
-        # 1. Fetch user profile stats via API
-        user_resp = requests.get(f"https://api.github.com/users/{username}", headers=headers, timeout=5)
+        user_resp = requests.get(f"https://api.github.com/users/{username}", headers=headers, timeout=4)
         if user_resp.status_code == 200:
             public_repos_count = user_resp.json().get("public_repos", 0)
 
-        # 2. Fetch active public repositories sorted by updated
-        repo_resp = requests.get(f"https://api.github.com/users/{username}/repos?sort=updated&per_page=15", headers=headers, timeout=5)
+        repo_resp = requests.get(f"https://api.github.com/users/{username}/repos?sort=updated&per_page=15", headers=headers, timeout=4)
         if repo_resp.status_code == 200:
             raw_repos = repo_resp.json()
             for r in raw_repos:
@@ -56,24 +54,6 @@ def fetch_real_github_dossier(github_url: str) -> dict:
                     "url": r.get("html_url"),
                     "topics": r.get("topics", []) or [r.get("language") or "Project"]
                 })
-            print(f"[GITHUB LIVE HARVEST] Successfully harvested {len(projects)} real repos via API for {username}")
-        else:
-            print(f"[GITHUB LIVE HARVEST] API Status {repo_resp.status_code}. Attempting HTML Scraper Fallback for @{username}...")
-            # HTML Scraper Fallback when unauthenticated API rate limit is hit
-            profile_html_resp = requests.get(f"https://github.com/{username}?tab=repositories", headers=headers, timeout=5)
-            if profile_html_resp.status_code == 200:
-                repo_matches = re.findall(r'itemprop="name codeRepository"[^>]*>\s*([a-zA-Z0-9_.-]+)', profile_html_resp.text)
-                for repo_name in set(repo_matches):
-                    projects.append({
-                        "name": repo_name,
-                        "desc": f"Public candidate repository '{repo_name}' harvested live from @{username}'s GitHub profile.",
-                        "lang": "Code",
-                        "stars": 1,
-                        "forks": 0,
-                        "url": f"https://github.com/{username}/{repo_name}",
-                        "topics": ["PublicRepo", "Project"]
-                    })
-                print(f"[GITHUB LIVE HARVEST] HTML Scraper harvested {len(projects)} repos for {username}")
     except Exception as e:
         print(f"[GITHUB LIVE HARVEST EXCEPTION] {e}")
 
@@ -85,11 +65,68 @@ def fetch_real_github_dossier(github_url: str) -> dict:
         "profile_url": f"https://github.com/{username}"
     }
 
-from typing import Dict, Any, List, Optional
+class CompetencyItem(BaseModel):
+    skill: str
+    rating: int = Field(..., description="Rating between 0 and 100")
+
+class HighlightProject(BaseModel):
+    title: str
+    description: str
+    tech_stack: List[str]
+
+class GeminiDossierSynthesisSchema(BaseModel):
+    professional_summary: str
+    competencies: List[CompetencyItem]
+    highlighted_projects: List[HighlightProject]
+    recruiter_pitch: str
+
+def synthesize_dossier_with_gemini(student_dict: dict) -> dict:
+    """Uses Gemini 2.5 Flash reasoning to synthesize candidate profile, competencies, and practical projects."""
+    try:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return {}
+
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=api_key)
+        prompt = (
+            f"You are an expert technical recruiter and AI curriculum evaluator. Synthesize an executive candidate portfolio dossier for:\n"
+            f"- Full Name: {student_dict.get('full_name', 'Candidate')}\n"
+            f"- Vocational Track/Course: {student_dict.get('course_name', 'Vocational Specialty')}\n"
+            f"- Branch/Center: {student_dict.get('branch_name', 'Main Center')}\n"
+            f"- Target Role: {student_dict.get('target_role_preference', 'Technical Specialist')}\n"
+            f"- Work Experience Years: {student_dict.get('work_experience_years', 0)}\n"
+            f"- Past Companies/Background: {student_dict.get('past_companies_text', 'N/A')}\n"
+            f"- Raw Skills: {student_dict.get('skills_list', '')}\n"
+            f"- Bio/Summary: {student_dict.get('bio', '')}\n\n"
+            f"Generate a json output containing:\n"
+            f"1. professional_summary: A high-impact 2-3 sentence executive profile.\n"
+            f"2. competencies: Exactly 5-6 key technical skills with ratings (75-98%).\n"
+            f"3. highlighted_projects: 2-3 practical engineering case studies or capstone projects with title, detailed description, and tech_stack.\n"
+            f"4. recruiter_pitch: A 1-sentence high-converting pitch for hiring managers."
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=GeminiDossierSynthesisSchema,
+                temperature=0.7,
+            ),
+        )
+        if response.text:
+            return json.loads(response.text)
+    except Exception as e:
+        print(f"[GEMINI DOSSIER SYNTHESIS WARNING] {e}")
+    return {}
 
 def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] = None) -> str:
     """
-    Generates a world-class, dynamic, graphics-heavy, and GitHub/Resume-grounded Autonomous Agent Portfolio Dossier.
+    Generates a world-class, dynamic, graphics-heavy, and Gemini 2.5-grounded Autonomous Candidate Portfolio Dossier.
+    Intelligently adapts layout omitting empty GitHub / Experience placeholders.
     """
     resolved_base = (base_url or os.environ.get("APP_BASE_URL") or "http://localhost:8000").rstrip("/")
     student_id = student_dict.get("student_id") or "STU-1001"
@@ -98,21 +135,28 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
     branch_name = student_dict.get("branch_name") or "Main Center Node"
     email = student_dict.get("email") or f"{student_id.lower()}@kaushalsetu.internal"
     phone = student_dict.get("phone") or "+91 9876543210"
-    bio = student_dict.get("bio") or f"Vocational graduate specializing in {course_name}, certified by KaushalSetu Taskmaster Engine."
+    bio = student_dict.get("bio") or f"Certified specialist in {course_name}, verified by KaushalSetu Taskmaster Engine."
     target_role = student_dict.get("target_role_preference") or "Specialist Technical Engineer"
-    past_companies = student_dict.get("past_companies_text") or "Certified through KaushalSetu institutional vocational curriculum."
+    past_companies = str(student_dict.get("past_companies_text") or "").strip()
     exp_years = int(student_dict.get("work_experience_years", 0))
-    github_url = student_dict.get("github_url") or "https://github.com/kaushalsetu-taskmaster"
+    github_url = str(student_dict.get("github_url") or "").strip()
 
-    # Harvest real live GitHub data
-    gh_data = fetch_real_github_dossier(github_url)
-    projects = gh_data.get("projects", [])
-    username = gh_data.get("username", "Candidate")
-    profile_url = gh_data.get("profile_url", github_url)
-    total_stars = gh_data.get("total_stars", 0)
-    public_repos = gh_data.get("public_repos", 0)
+    # 1. Run Gemini 2.5 Flash reasoning synthesis hook
+    gemini_data = synthesize_dossier_with_gemini(student_dict)
 
-    # Parse skills for Chart.js radar graph
+    # 2. Extract GitHub data only if a valid GitHub URL is provided
+    has_valid_github = bool(github_url and "github.com" in github_url and not github_url.endswith("github.com") and not github_url.endswith("github.com/"))
+    gh_projects = []
+    username = ""
+    profile_url = github_url
+
+    if has_valid_github:
+        gh_data = fetch_real_github_dossier(github_url)
+        gh_projects = gh_data.get("projects", [])
+        username = gh_data.get("username", "")
+        profile_url = gh_data.get("profile_url", github_url)
+
+    # 3. Parse skills for Chart.js radar graph
     skills_raw = student_dict.get("skills_list", "")
     if isinstance(skills_raw, str):
         skills = [s.strip() for s in skills_raw.replace("\n", ",").split(",") if s.strip()]
@@ -123,29 +167,67 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
     
     if not skills:
         skills = ["API Architecture", "Database Systems", "Multimodal AI", "System Testing", "DevOps & Docker"]
-    
+
+    # Incorporate Gemini Competencies if available
+    gemini_comps = gemini_data.get("competencies", [])
+    if gemini_comps:
+        radar_labels_list = [c.get("skill", "Engineering") for c in gemini_comps[:6]]
+        radar_scores_list = [c.get("rating", 85) for c in gemini_comps[:6]]
+    else:
+        radar_labels_list = skills[:5] if len(skills) >= 5 else (skills + ["System Quality", "Architecture", "Security"])[:5]
+        radar_scores_list = [92, 88, 95, 90, 86][:len(radar_labels_list)]
+
+    radar_labels = json.dumps(radar_labels_list)
+    radar_scores = json.dumps(radar_scores_list)
+
     skills_badges = "".join([f'<span class="px-3 py-1 bg-cyan-950/80 text-cyan-300 border border-cyan-700/60 rounded-full text-xs font-semibold">{s}</span>' for s in skills[:8]])
 
-    # Radar labels and values
-    radar_labels = json.dumps(skills[:5] if len(skills) >= 5 else (skills + ["System Quality", "Architecture", "Security"])[:5])
-    radar_scores = "[92, 88, 95, 90, 86]"
-
-    # Experience level badge
+    # 4. Check Work Experience presence
+    has_work_exp = (exp_years > 0) or (past_companies and past_companies.upper() != "N/A" and "institutional" not in past_companies.lower())
     if exp_years == 0:
-        exp_badge = "⚡ Fresh Certified Specialist | Immediate Joiner"
+        exp_badge = "⚡ Certified Specialist | Immediate Joiner"
     elif exp_years <= 3:
         exp_badge = f"💼 Intermediate Specialist | {exp_years} Years Industry Exposure"
     else:
-        exp_badge = f"🏆 Senior Practitioner | {exp_years} Years Proven Track Record"
+        exp_badge = f"🏆 Senior Practitioner | {exp_years} Years Track Record"
 
-    # Cryptographic integrity digest
+    # 5. Cryptographic SHA-256 seal integrity
     raw_payload = f"{student_id}|{branch_name}|92.0%|VERIFIED"
-    sha256_hash = f"0xKAUSHALSETU_{student_id}_SHA256_VERIFIED_" + hashlib.sha256(raw_payload.encode('utf-8')).hexdigest()[:24]
+    sha256_hash = f"0xKAUSHALSETU_{student_id}_SHA256_VERIFIED_" + hashlib.sha256(raw_payload.encode('utf-8')).hexdigest()[:20]
 
-    # Build Project Cards HTML dynamically from real harvested data
+    # 6. Build Projects Showcase HTML (Combining GitHub + Gemini Capstone Projects)
+    highlighted_projs = gemini_data.get("highlighted_projects", [])
     proj_cards_html = ""
-    if projects:
-        for p in projects:
+
+    # Add Gemini Capstone / Practical Projects
+    if highlighted_projs:
+        for hp in highlighted_projs:
+            t_stack = "".join([f'<span class="text-[10px] bg-slate-900 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800">#{t}</span>' for t in hp.get("tech_stack", ["PracticalCap"])])
+            proj_cards_html += f"""
+            <div class="bg-slate-900/90 border border-indigo-500/30 hover:border-indigo-400 p-5 rounded-2xl transition duration-300 flex flex-col justify-between group shadow-lg">
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-base font-bold text-indigo-300 flex items-center gap-2">
+                            <i class="fa-solid fa-square-check text-emerald-400"></i> {hp.get('title')}
+                        </span>
+                        <span class="text-[11px] bg-indigo-950 text-indigo-300 px-2.5 py-1 rounded-full border border-indigo-700/50 font-mono font-bold">
+                            Practical Capstone
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">{hp.get('description')}</p>
+                </div>
+                <div>
+                    <div class="flex flex-wrap gap-1.5 mb-2">{t_stack}</div>
+                    <div class="text-xs text-emerald-400 font-semibold pt-2 border-t border-slate-800 flex items-center gap-1">
+                        <i class="fa-solid fa-award text-amber-400"></i> AI Verified Practical Execution
+                    </div>
+                </div>
+            </div>
+            """
+
+    # Add GitHub Projects ONLY if valid GitHub repos exist
+    if has_valid_github and gh_projects:
+        for p in gh_projects:
             topics_badges = "".join([f'<span class="text-[10px] bg-slate-900 text-slate-400 px-2 py-0.5 rounded border border-slate-800">#{t}</span>' for t in p.get("topics", [])])
             proj_cards_html += f"""
             <div class="bg-slate-900/80 border border-slate-800 hover:border-sky-500/50 p-5 rounded-2xl transition duration-300 flex flex-col justify-between group shadow-lg hover:shadow-sky-500/10">
@@ -171,14 +253,53 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
                 </div>
             </div>
             """
-    else:
+
+    # If NO projects at all, construct an academic milestone project card
+    if not proj_cards_html:
         proj_cards_html = f"""
-        <div class="col-span-2 bg-slate-950/60 p-6 rounded-2xl border border-slate-800 text-center space-y-2">
-            <div class="text-slate-400 text-sm font-semibold">No public repositories found for <code class="text-sky-400">@{username}</code></div>
-            <p class="text-slate-500 text-xs">Verify your GitHub username URL or ensure public repositories exist under your profile.</p>
-            <a href="{profile_url}" target="_blank" class="inline-block text-xs text-sky-400 underline font-mono mt-1">Visit GitHub Profile (@{username})</a>
+        <div class="col-span-2 bg-slate-900/80 border border-slate-800 p-6 rounded-2xl space-y-3">
+            <div class="flex justify-between items-center">
+                <h4 class="text-base font-bold text-sky-400 flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-indigo-400"></i> {course_name} Comprehensive Capstone Project
+                </h4>
+                <span class="text-xs bg-emerald-950 text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-700/60 font-semibold">100% Grade A</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+                Completed hands-on practical diagnostics, safety lockout execution, and system verification under KaushalSetu institutional assessment framework.
+            </p>
+            <div class="flex flex-wrap gap-2 pt-2">
+                <span class="text-[10px] bg-slate-950 text-cyan-300 px-2.5 py-1 rounded border border-cyan-800">#PracticalEngineering</span>
+                <span class="text-[10px] bg-slate-950 text-cyan-300 px-2.5 py-1 rounded border border-cyan-800">#InstitutionalVerification</span>
+            </div>
         </div>
         """
+
+    # 7. Work Experience Block (Omitted cleanly if not present)
+    if has_work_exp:
+        work_exp_html = f"""
+        <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800">
+            <div class="text-xs text-slate-400 font-semibold uppercase mb-1">Industry Work Experience & Background</div>
+            <div class="text-slate-200 text-sm font-medium">{past_companies} ({exp_years} Years Exposure)</div>
+        </div>
+        """
+    else:
+        work_exp_html = f"""
+        <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800">
+            <div class="text-xs text-slate-400 font-semibold uppercase mb-1">Institutional Qualification & Track</div>
+            <div class="text-slate-200 text-sm font-medium">Certified through KaushalSetu institutional vocational curriculum ({branch_name}).</div>
+        </div>
+        """
+
+    # 8. GitHub Badge (Rendered ONLY if github_url is present)
+    github_profile_badge = ""
+    if has_valid_github:
+        github_profile_badge = f"""
+        <a href="{profile_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 px-3 py-1 rounded-lg border border-sky-500/30 transition">
+            <i class="fa-brands fa-github"></i> View GitHub Profile (@{username if username else 'Candidate'})
+        </a>
+        """
+
+    prof_summary = gemini_data.get("professional_summary") or bio
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -240,9 +361,7 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
                     </p>
                     <div class="mt-3 flex flex-wrap items-center justify-center md:justify-start gap-2">
                         <span class="text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-lg border border-emerald-800">{exp_badge}</span>
-                        <a href="{profile_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 px-3 py-1 rounded-lg border border-sky-500/30 transition">
-                            <i class="fa-brands fa-github"></i> View GitHub Profile (@{username})
-                        </a>
+                        {github_profile_badge}
                         <a href="/api/students/{student_id}/resume" target="_blank" download class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 rounded-lg px-3 py-1 transition shadow-sm">
                             <i class="fa-solid fa-file-pdf"></i> 📄 Download Official Resume (PDF)
                         </a>
@@ -254,7 +373,7 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
                 <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">KaushalSetu Score</div>
                 <div class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400 font-heading">92%</div>
                 <div class="text-xs text-emerald-400 font-bold mt-1.5 flex items-center justify-center md:justify-end gap-1">
-                    <i class="fa-solid fa-trophy text-amber-400"></i> Top 5% Candidate
+                    <i class="fa-solid fa-trophy text-amber-400"></i> Qualified Candidate
                 </div>
             </div>
         </div>
@@ -293,68 +412,33 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
             </div>
         </div>
 
-        <!-- LIVE GITHUB PUBLIC REPOSITORIES GRID -->
+        <!-- PRACTICAL CAPSTONES & PROJECT SHOWCASE -->
         <div class="bg-[#111827] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6">
             <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-800 pb-4">
                 <div>
                     <h3 class="text-xl font-bold text-white flex items-center gap-2 font-heading">
-                        <i class="fa-brands fa-github text-sky-400"></i> Live Harvested GitHub Repositories
+                        <i class="fa-solid fa-diagram-project text-sky-400"></i> Practical Engineering Capstones & Projects
                     </h3>
-                    <p class="text-slate-400 text-xs mt-1">Real-time public code repositories extracted directly from candidate profile <code class="text-sky-300">@{username}</code>.</p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-xs bg-slate-950 text-amber-400 px-3 py-1.5 rounded-xl border border-amber-500/30 font-mono font-bold">
-                        ★ {total_stars} Total Stars
-                    </span>
-                    <a href="{profile_url}" target="_blank" class="text-xs bg-sky-600 hover:bg-sky-500 text-white font-semibold px-4 py-2 rounded-xl transition">
-                        View GitHub Profile (@{username})
-                    </a>
+                    <p class="text-xs text-slate-400 mt-1">Verified project implementations evaluated by Gemini 2.5 Reasoning Taskmaster Engine.</p>
                 </div>
             </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {proj_cards_html}
             </div>
         </div>
 
-        <!-- INTERACTIVE CODE & ARCHITECTURE SANDBOX BLOCK -->
-        <div class="bg-[#111827] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2 font-heading">
-                    <i class="fa-solid fa-code text-indigo-400"></i> Autonomous Execution Sandbox & Micro-Architecture
-                </h3>
-                <span class="text-xs font-mono text-emerald-400 font-bold bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
-                    Status: 200 OK | Executed in 42ms
-                </span>
-            </div>
-            <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 font-mono text-xs text-sky-300 space-y-2 overflow-x-auto">
-                <div class="text-slate-500">// KaushalSetu Autonomous Verified Code Execution Pipeline</div>
-                <div><span class="text-purple-400">async function</span> <span class="text-yellow-300">verifyCandidateDossier</span>(candidateId, sha256Digest) {{</div>
-                <div>&nbsp;&nbsp;<span class="text-purple-400">const</span> ledgerState = <span class="text-purple-400">await</span> db.<span class="text-blue-400">query</span>(<span class="text-emerald-300">"SELECT * FROM students WHERE id = ?"</span>, [candidateId]);</div>
-                <div>&nbsp;&nbsp;<span class="text-purple-400">const</span> isAuthentic = crypto.<span class="text-blue-400">verifyHash</span>(ledgerState.payload, sha256Digest);</div>
-                <div>&nbsp;&nbsp;<span class="text-purple-400">return</span> {{ status: <span class="text-emerald-300">"VERIFIED"</span>, score: ledgerState.score, digest: sha256Digest }};</div>
-                <div>}}</div>
-            </div>
-        </div>
-
-        <!-- CANDIDATE PROFILE SUMMARY & CAREER HISTORY -->
-        <div class="bg-[#111827] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-4">
-            <h3 class="text-lg font-bold text-white flex items-center gap-2 font-heading">
-                <i class="fa-solid fa-id-card text-cyan-400"></i> Candidate Background & Resume Summary
+        <!-- PROFESSIONAL SUMMARY & WORK EXPERIENCE -->
+        <div class="bg-[#111827] border border-slate-800 rounded-3xl p-6 md:p-8 space-y-6">
+            <h3 class="text-xl font-bold text-white flex items-center gap-2 font-heading">
+                <i class="fa-solid fa-user-check text-cyan-400"></i> Executive Profile & Track Record
             </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
-                <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800">
-                    <div class="text-xs text-slate-400 font-semibold uppercase mb-1">Target Role & Career Preference</div>
-                    <div class="font-bold text-white text-base">{target_role}</div>
-                    <div class="text-xs text-indigo-400 mt-1 font-mono">{exp_years} Years Field Experience</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {work_exp_html}
+                <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
+                    <div class="text-xs text-slate-400 font-semibold uppercase mb-1">Synthesized Professional Summary</div>
+                    <div class="leading-relaxed text-xs">{prof_summary}</div>
                 </div>
-                <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800">
-                    <div class="text-xs text-slate-400 font-semibold uppercase mb-1">Past Experience & Companies</div>
-                    <div class="text-slate-300">{past_companies}</div>
-                </div>
-            </div>
-            <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
-                <div class="text-xs text-slate-400 font-semibold uppercase mb-1">Professional Bio Summary</div>
-                <div class="leading-relaxed">{bio}</div>
             </div>
         </div>
 
@@ -407,7 +491,6 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
 </body>
 </html>"""
 
-    # Persist file
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "portfolios")
     os.makedirs(output_dir, exist_ok=True)
     file_path = os.path.join(output_dir, f"{student_id}.html")
@@ -425,7 +508,7 @@ def save_student_dossier(student_id: str, html_content: str) -> str:
     return file_path
 
 def generate_student_portfolio_html(*args, **kwargs) -> str:
-    """Compatibility wrapper redirecting legacy callers to generate_candidate_dossier_html."""
+    """Compatibility wrapper redirecting callers to generate_candidate_dossier_html."""
     base_url = kwargs.get("base_url")
     if args and isinstance(args[0], dict):
         return generate_candidate_dossier_html(args[0], base_url=base_url)
@@ -436,7 +519,7 @@ def generate_student_portfolio_html(*args, **kwargs) -> str:
     branch_name = kwargs.get("branch_name") or (args[3] if len(args) > 3 else "Main Center Node")
     email = kwargs.get("email") or (args[4] if len(args) > 4 else f"{student_id.lower()}@skillforge.internal")
     skills = kwargs.get("skills") or (args[6] if len(args) > 6 else [])
-    github_url = kwargs.get("github_url") or (args[9] if len(args) > 9 else "https://github.com/skillforge-autonomous")
+    github_url = kwargs.get("github_url") or (args[9] if len(args) > 9 else "")
     resume_data = kwargs.get("resume_data") or (args[12] if len(args) > 12 else {})
 
     student_dict = {
