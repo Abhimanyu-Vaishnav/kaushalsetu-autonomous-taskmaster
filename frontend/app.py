@@ -922,28 +922,43 @@ def main_app_layout():
                 ms_dob = st.date_input("Date of Birth", value=datetime.date(2001, 5, 15))
                 ms_email = st.text_input("Email Address", value="alex.m@skillforge-edu.org")
                 ms_phone = st.text_input("Phone Number", value="+91 9876543210")
-                ms_cname = st.selectbox("Assign Course", list(course_options_dict.keys()))
-                ms_bio = st.text_area("Candidate Bio & Skill Summary", value="Trained in full stack engineering and circuit diagnostics.")
-                sub_ms = st.form_submit_button("Enroll Candidate", type="primary", use_container_width=True)
+                ms_cname = st.selectbox("Assign Course", list(course_options_dict.keys()) if course_options_dict else ["Vocational Course"])
+                ms_role = st.text_input("Target Role Preference", value="Specialist Engineer")
+                ms_skills = st.text_input("Core Skills (Comma Separated)", value="Diagnostics, Circuit Inspection, System Testing")
+                ms_bio = st.text_area("Candidate Bio & Skill Summary", value="Trained in full stack engineering and circuit diagnostics.", height=70)
+                sub_ms = st.form_submit_button("🚀 Register & Enroll Candidate", type="primary", use_container_width=True)
                 if sub_ms:
-                    c_id = course_options_dict.get(ms_cname, "CRS-GENERIC")
-                    r_ms = requests.post(f"{BACKEND_URL}/api/students/add", json={
-                        "institute_id": target_inst_id,
-                        "branch_id": target_branch_id,
-                        "course_id": c_id,
-                        "branch_name": target_branch_name,
-                        "course_name": ms_cname,
-                        "full_name": ms_name,
-                        "dob": str(ms_dob),
-                        "email": ms_email,
-                        "phone": ms_phone,
-                        "bio": ms_bio,
-                        "fees_status": "PAID",
-                        "consent": 1
-                    })
-                    if r_ms.status_code == 200:
-                        st.success(f"✅ Candidate {ms_name} Enrolled!")
-                        st.rerun()
+                    if not ms_name.strip():
+                        st.error("⚠️ Please provide candidate full name.")
+                    else:
+                        c_id = course_options_dict.get(ms_cname, "CRS-GENERIC") if course_options_dict else "CRS-GENERIC"
+                        payload = {
+                            "institute_id": target_inst_id,
+                            "branch_id": target_branch_id,
+                            "course_id": c_id,
+                            "branch_name": target_branch_name,
+                            "course_name": ms_cname,
+                            "full_name": ms_name.strip(),
+                            "dob": str(ms_dob),
+                            "email": ms_email.strip(),
+                            "phone": ms_phone.strip(),
+                            "bio": ms_bio.strip(),
+                            "target_role_preference": ms_role.strip(),
+                            "skills_list": ms_skills.strip(),
+                            "fees_status": "PAID",
+                            "consent": 1
+                        }
+                        try:
+                            with st.spinner("Enrolling candidate & synthesizing base profile..."):
+                                resp = requests.post(f"{BACKEND_URL}/api/students", json=payload, timeout=8)
+                            if resp.status_code in [200, 201]:
+                                st.toast(f"✅ Candidate {ms_name} Enrolled Successfully!", icon="🎉")
+                                st.session_state["roster_refresh_key"] = time.time()
+                                st.rerun()
+                            else:
+                                st.error(f"❌ Registration Failed (Code {resp.status_code}): {resp.text}")
+                        except Exception as err:
+                            st.error(f"❌ Connection Error: {str(err)}")
 
         # --- SLEEK 1-CLICK FAST-FORWARD JUDGE DEMO CONTROL STRIP ---
         st.markdown("""

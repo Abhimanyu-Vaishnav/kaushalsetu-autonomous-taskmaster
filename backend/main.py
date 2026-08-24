@@ -357,6 +357,82 @@ def api_create_course(req: CourseCreateReq):
 def api_get_students(institute_id: Optional[str] = None, branch_id: Optional[str] = None):
     return {"success": True, "data": get_all_students(institute_id, branch_id)}
 
+@app.post("/api/students")
+async def register_single_student(payload: dict):
+    try:
+        print("[DEBUG] Incoming Student Registration Payload:", payload)
+        
+        student_id = payload.get("student_id") or f"STU-{uuid.uuid4().hex[:6].upper()}"
+        inst_id = str(payload.get("institute_id", "")).strip()
+        branch_id = str(payload.get("branch_id", "")).strip()
+        course_id = str(payload.get("course_id", "")).strip()
+        branch_name = str(payload.get("branch_name", "Main Center Node")).strip()
+        course_name = str(payload.get("course_name", "Vocational Course")).strip()
+        full_name = str(payload.get("full_name", "Enrolled Candidate")).strip()
+        dob = str(payload.get("dob", "2000-01-01")).strip()
+        email = str(payload.get("email", f"{student_id.lower()}@skillforge.internal")).strip()
+        phone = str(payload.get("phone", "+91 9876543210")).strip()
+        bio = str(payload.get("bio", "Enrolled vocational candidate specializing in practical diagnostics.")).strip()
+        github_url = str(payload.get("github_url", "https://github.com")).strip()
+        portfolio_url = str(payload.get("portfolio_url", f"http://localhost:8000/portfolio/{student_id}")).strip()
+        target_role = str(payload.get("target_role_preference", "Specialist Engineer")).strip()
+        
+        skills_raw = payload.get("skills_list", "")
+        if isinstance(skills_raw, list):
+            skills_list_str = ", ".join(skills_raw)
+        else:
+            skills_list_str = str(skills_raw)
+
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Ensure foreign key records exist to avoid silent constraint drops
+        if inst_id:
+            cursor.execute("INSERT OR IGNORE INTO institutes (id, name, code) VALUES (?, ?, ?)", (inst_id, "Default Institute Network", inst_id))
+        if branch_id:
+            cursor.execute("INSERT OR IGNORE INTO branches (id, institute_id, branch_name, city) VALUES (?, ?, ?, ?)", (branch_id, inst_id or "INST-GLOBAL-01", branch_name, "Delhi"))
+        if course_id:
+            cursor.execute("INSERT OR IGNORE INTO courses (id, institute_id, branch_id, course_name) VALUES (?, ?, ?, ?)", (course_id, inst_id or "INST-GLOBAL-01", branch_id or "BR-NANGLOI", course_name))
+
+        cursor.execute("""
+            INSERT INTO students (
+                student_id, institute_id, branch_id, course_id,
+                branch_name, course_name, full_name, dob, email, phone,
+                bio, github_url, portfolio_url, target_role_preference,
+                skills_list, past_companies_text, work_experience_years,
+                fees_status, consent_given, exam_completed, portfolio_generated
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            student_id, inst_id, branch_id, course_id,
+            branch_name, course_name, full_name, dob, email, phone,
+            bio, github_url, portfolio_url, target_role,
+            skills_list_str, "N/A", 0, "PAID", 1, 0, 0
+        ))
+        conn.commit()
+        conn.close()
+
+        from database import log_agent_activity
+        log_agent_activity("STUDENT_ENROLLED", f"Registered single candidate {full_name} ({student_id})", institute_id=inst_id, branch_id=branch_id, student_id=student_id)
+
+        print(f"[SUCCESS] Student {student_id} ({full_name}) registered successfully.")
+        return {
+            "status": "success",
+            "success": True,
+            "student_id": student_id,
+            "full_name": full_name,
+            "course_name": course_name,
+            "data": {
+                "student_id": student_id,
+                "full_name": full_name,
+                "course_name": course_name
+            }
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database Insertion Failed: {str(e)}")
+
 @app.get("/api/student/{student_id}")
 def api_get_student_detail(student_id: str):
     stu = get_student_by_id(student_id)
@@ -372,7 +448,7 @@ def api_add_student(req: StudentCreateReq):
     )
     from database import log_agent_activity
     log_agent_activity("STUDENT_ENROLLED", f"Enrolled candidate {stu['full_name']} ({stu['student_id']}) to {stu['branch_name']}", institute_id=stu['institute_id'], branch_id=stu['branch_id'], student_id=stu['student_id'])
-    return {"success": True, "data": stu}
+    return {"success": True, "status": "success", "data": stu}
 
 @app.post("/api/student/update-profile")
 def api_update_student_profile(req: StudentUpdateProfileReq):
