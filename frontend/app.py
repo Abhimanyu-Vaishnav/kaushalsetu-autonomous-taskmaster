@@ -563,8 +563,9 @@ def main_app_layout():
             with s_tab3:
                 st.markdown("### 🌐 Live Generated Domain-Adaptive Portfolio Preview")
                 dossier_url = student_data.get("portfolio_url") or f"http://localhost:8000/portfolio/{param_sid}"
+                cache_busting_url = f"{dossier_url}?t={int(time.time())}"
                 st.caption(f"Direct Portfolio URL: [{dossier_url}]({dossier_url})")
-                st.components.v1.iframe(dossier_url, height=600, scrolling=True)
+                st.components.v1.iframe(cache_busting_url, height=600, scrolling=True)
 
             with s_tab4:
                 col_hdr1, col_hdr2 = st.columns([3, 1])

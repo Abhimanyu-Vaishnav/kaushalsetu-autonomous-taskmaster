@@ -165,74 +165,17 @@ def health_check():
         "version": "4.1.0"
     }
 
-# Standalone Portfolio HTML Route - Dynamic On-Demand Universal Dossier Generation
+# Standalone Portfolio HTML Route - Autonomous Gemini 3.5 AI Dossier Synthesizer
 @app.get("/portfolio/{student_id}", response_class=HTMLResponse)
 def get_student_portfolio(student_id: str):
-    from database import get_student_by_id, get_assessments
-    from dossier_generator import generate_student_portfolio_html
-    import hashlib
+    from database import get_student_by_id
+    from dossier_generator import generate_candidate_dossier_html
 
     student = get_student_by_id(student_id)
     if not student:
         raise HTTPException(status_code=404, detail=f"Student record '{student_id}' not found.")
 
-    # Fetch scores or set defaults
-    assessments = get_assessments(student_id)
-    if assessments:
-        top_ass = assessments[0]
-        mcq_s = float(top_ass.get("mcq_score", 42.0))
-        prac_s = float(top_ass.get("practical_score", 45.0))
-        tot_s = int(top_ass.get("total_score", 87.0))
-    else:
-        tot_s = int(student.get("aggregate_percentage", 88.0))
-        mcq_s = round(tot_s * 0.48, 1)
-        prac_s = round(tot_s * 0.52, 1)
-
-    scores = {
-        "total_score": tot_s,
-        "mcq_score": mcq_s,
-        "practical_score": prac_s
-    }
-
-    # Parse skills
-    skills_raw = student.get("skills_list", "")
-    if isinstance(skills_raw, str):
-        skills_list = [s.strip() for s in skills_raw.replace("\n", ",").split(",") if s.strip()]
-    elif isinstance(skills_raw, list):
-        skills_list = [str(s).strip() for s in skills_raw if str(s).strip()]
-    else:
-        skills_list = ["Practical Diagnostics", "Quality Testing", "Domain Engineering"]
-
-    if not skills_list:
-        skills_list = ["System Engineering", "Vocational Diagnostics", "Quality Audit"]
-
-    # SHA-256 Digest
-    raw_payload = f"{student_id}|{student.get('branch_name', 'Main Center Node')}|{tot_s}%|VERIFIED"
-    computed_hash = "0x" + hashlib.sha256(raw_payload.encode('utf-8')).hexdigest()
-
-    resume_data = {
-        "target_role_preference": student.get("target_role_preference") or "Specialist Engineer",
-        "work_experience_years": student.get("work_experience_years", 0),
-        "past_companies_text": student.get("past_companies_text") or "Certified through SkillForge institutional curriculum.",
-        "bio": student.get("bio") or f"Vocational candidate specializing in {student.get('course_name', 'Technical Course')}."
-    }
-
-    html_content = generate_student_portfolio_html(
-        candidate_name=student.get("full_name", "Enrolled Candidate"),
-        student_id=student_id,
-        course_name=student.get("course_name", "Vocational Specialty"),
-        branch_name=student.get("branch_name", "Main Center Node"),
-        email=student.get("email", f"{student_id.lower()}@skillforge.internal"),
-        scores=scores,
-        skills=skills_list,
-        project_title=f"Multimodal Capstone: {student.get('course_name', 'Vocational Specialty')}",
-        project_description=f"Autonomously evaluated practical capstone project demonstrating industry readiness in {student.get('course_name')}.",
-        github_url=student.get("github_url", "https://github.com/skillforge-autonomous"),
-        live_url=student.get("portfolio_url", f"http://localhost:8000/portfolio/{student_id}"),
-        metric_hash=computed_hash,
-        resume_data=resume_data
-    )
-
+    html_content = generate_candidate_dossier_html(student)
     return HTMLResponse(content=html_content)
 
 # 1. Relational Governance Endpoints (Institutes -> Branches -> Courses)
