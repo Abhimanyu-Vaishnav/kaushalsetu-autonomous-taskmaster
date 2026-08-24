@@ -470,9 +470,26 @@ elif current_page == "student_dashboard":
             if top_recs:
                 with st.expander("🔥 Agent Top Recommendations (Highest Conversion Chance)", expanded=True):
                     for tr in top_recs[:2]:
-                        st.markdown(f"⭐ **{tr['role_title']}** at **{tr['company_name']}** (`{tr['salary_range']}`)")
-                        st.caption(f"💡 {tr.get('match_rationale', '')}")
-                        st.markdown(f'<span class="badge-live">{tr.get("recommendation_badge")}</span>', unsafe_allow_html=True)
+                        with st.container():
+                            col_tr1, col_tr2 = st.columns([3, 2])
+                            with col_tr1:
+                                st.markdown(f"⭐ **{tr['role_title']}** at **{tr['company_name']}**")
+                                st.markdown(f"📍 `{tr['location']}` | 💰 `{tr['salary_range']}` | 🎯 `{tr['match_percentage']}% Match`")
+                                st.caption(f"💡 **Why Agent Recommends:** {tr.get('match_rationale', '')}")
+                                st.markdown(f'<span class="badge-live">{tr.get("recommendation_badge")}</span>', unsafe_allow_html=True)
+                            with col_tr2:
+                                tr_url = tr.get('verified_search_url', tr.get('direct_application_url'))
+                                st.link_button("🔗 View Official Job Post", tr_url, use_container_width=True)
+                                if st.button(f"🚀 Apply with Verified Dossier", key=f"rec_apply_{tr['job_id']}", type="primary", use_container_width=True):
+                                    requests.post(f"{BACKEND_URL}/api/jobs/apply", json={
+                                        "student_id": param_sid,
+                                        "company_name": tr['company_name'],
+                                        "role_title": tr['role_title'],
+                                        "match_percentage": tr['match_percentage'],
+                                        "dossier_sent_url": student_data.get("portfolio_url") or f"http://localhost:8000/portfolio/{param_sid}"
+                                    })
+                                    st.success(f"✅ AI Dossier Dispatched to {tr['company_name']}!")
+                                    st.balloons()
                         st.divider()
 
             # Filtering
