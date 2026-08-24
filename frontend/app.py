@@ -159,15 +159,39 @@ if current_page in ["exam", "student_portal"]:
         
     # Check retest lock status
     if student_data.get("exam_completed") and not student_data.get("retest_approved"):
-        st.error("🔒 **Assessment Already Completed!** Re-test trigger is locked until approved by your Base Institute Admin.")
-        if student_data.get("retest_requested"):
-            st.info("⏳ Your Re-test approval request is currently pending admin review.")
-        else:
-            if st.button("📩 Request Re-test Approval from Institute Admin", type="primary"):
-                requests.post(f"{BACKEND_URL}/api/students/request-retest", json={"student_id": student_data['student_id']})
-                st.success("✅ Re-test request sent to Institute Admin!")
-                st.rerun()
-        st.markdown(f"👉 View your [Official Marksheet & Career Portal](http://localhost:8501/?page=student_dashboard&sid={student_data['student_id']})")
+        target_dash = f"http://localhost:8501/?page=student_dashboard&sid={student_data['student_id']}"
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%); border:2px solid #6366F1; padding:28px; border-radius:16px; text-align:center; color:white; margin:20px 0;">
+            <h2 style="color:#F43F5E; margin-top:0;">🔒 Assessment Already Completed!</h2>
+            <p style="font-size:1.1rem; color:#CBD5E1;">Your submission has been verified by the AI Agent.</p>
+            <p style="font-size:1rem; color:#A5B4FC;">You will be automatically redirected to your Official Marksheet in <b id="countdown">5</b> seconds...</p>
+        </div>
+        <script>
+            var seconds = 5;
+            var el = document.getElementById('countdown');
+            var timer = setInterval(function() {{
+                seconds--;
+                if (el) el.innerText = seconds;
+                if (seconds <= 0) {{
+                    clearInterval(timer);
+                    window.location.href = "{target_dash}";
+                }}
+            }}, 1000);
+        </script>
+        """, unsafe_allow_html=True)
+        
+        col_lk1, col_lk2 = st.columns(2)
+        with col_lk1:
+            if st.button("👉 Go to Marksheet Now", type="primary", use_container_width=True):
+                st.markdown(f'<meta http-equiv="refresh" content="0;url={target_dash}">', unsafe_allow_html=True)
+        with col_lk2:
+            if student_data.get("retest_requested"):
+                st.info("⏳ Your Re-test approval request is currently pending admin review.")
+            else:
+                if st.button("📩 Request Re-test Approval from Institute Admin", use_container_width=True):
+                    requests.post(f"{BACKEND_URL}/api/students/request-retest", json={"student_id": student_data['student_id']})
+                    st.success("✅ Re-test request sent to Institute Admin!")
+                    st.rerun()
         st.stop()
 
     st.divider()
@@ -301,8 +325,11 @@ if current_page in ["exam", "student_portal"]:
                     res_data = pipe_res.json()["data"]
                     eval_out = res_data["evaluation"]
                     
-                    st.success("✅ 50-MCQ Exam Evaluated & Marksheet Dossier Generated!")
-                    st.markdown(f"👉 View your [Official Marksheet & Job Comparison Portal](http://localhost:8501/?page=student_dashboard&sid={student_data['student_id']})")
+                    target_dash = f"http://localhost:8501/?page=student_dashboard&sid={student_data['student_id']}"
+                    st.success("🎉 Assessment Submitted Successfully! Scores calculated & verified dossier compiled.")
+                    st.info("🔄 Redirecting to your Official Marksheet in 2 seconds...")
+                    time.sleep(1.5)
+                    st.markdown(f'<meta http-equiv="refresh" content="0;url={target_dash}">', unsafe_allow_html=True)
                 else:
                     st.error(f"Pipeline error: {pipe_res.text}")
             except Exception as e:
@@ -723,7 +750,9 @@ else:
                 
             course_opts = {c['course_name']: c['id'] for c in branch_courses} if branch_courses else {"Automotive & Hardware Diagnostics": "CRS-AUTO-01"}
             
-            with st.expander("➕ Enroll Candidate to Branch", expanded=False):
+            tab_intake1, tab_intake2 = st.tabs(["📝 Mode A: Manual Candidate Intake", "📁 Mode B: Bulk Upload via Excel / CSV"])
+            
+            with tab_intake1:
                 with st.form("enroll_student_isolated_form"):
                     sc1, sc2 = st.columns(2)
                     with sc1:
@@ -761,6 +790,47 @@ else:
                         if r_en.status_code == 200:
                             st.success(f"✅ Candidate Enrolled! ID: `{r_en.json()['data']['student_id']}`")
                             st.rerun()
+
+            with tab_intake2:
+                st.caption("Upload a `.csv` or `.xlsx` file with headers: `FullName`, `DOB`, `Email`, `Phone`, `CourseName`.")
+                
+                # Sample CSV generator
+                sample_csv = "FullName,DOB,Email,Phone,CourseName\nPriya Sharma,2001-05-14,priya.s@skillforge-edu.org,+91 9811223344,Automotive & Hardware Diagnostics\nKaran Verma,1999-11-20,karan.v@skillforge-edu.org,+91 9877665544,EV & Solar Maintenance\n"
+                st.download_button("📥 Download Sample Excel/CSV Template", sample_csv, "skillforge_student_import_template.csv", "text/csv")
+                
+                bulk_file = st.file_uploader("Upload CSV / Excel Roster", type=["csv"])
+                if bulk_file is not None:
+                    import pandas as pd
+                    try:
+                        df = pd.read_csv(bulk_file)
+                        st.markdown("#### 📊 Roster Preview:")
+                        st.dataframe(df, use_container_width=True)
+                        
+                        if st.button("🚀 Import All Students to Branch", type="primary"):
+                            imported_count = 0
+                            for _, row in df.iterrows():
+                                c_name_row = str(row.get("CourseName", list(course_opts.keys())[0]))
+                                c_id = course_opts.get(c_name_row, "CRS-GENERIC")
+                                r_b = requests.post(f"{BACKEND_URL}/api/students/add", json={
+                                    "institute_id": sel_inst["id"],
+                                    "branch_id": sel_branch["id"],
+                                    "course_id": c_id,
+                                    "branch_name": sel_branch["branch_name"],
+                                    "course_name": c_name_row,
+                                    "full_name": str(row.get("FullName", "Student")),
+                                    "dob": str(row.get("DOB", "2000-01-01")),
+                                    "email": str(row.get("Email", "bulk@skillforge-edu.org")),
+                                    "phone": str(row.get("Phone", "+91 9876543210")),
+                                    "bio": "Bulk imported roster candidate",
+                                    "fees_status": "PAID",
+                                    "consent": 1
+                                })
+                                if r_b.status_code == 200:
+                                    imported_count += 1
+                            st.success(f"🎉 Successfully imported {imported_count} candidates to {sel_branch['branch_name']}!")
+                            st.rerun()
+                    except Exception as ex:
+                        st.error(f"Error parsing bulk file: {ex}")
 
             st.divider()
             
