@@ -49,17 +49,17 @@ def fetch_real_github_dossier(github_url: str) -> dict:
                 total_stars += stars
                 projects.append({
                     "name": r.get("name"),
-                    "desc": r.get("description") or f"Public technical repository implemented in {r.get('language') or 'Python/Software'}.",
-                    "lang": r.get("language") or "Python",
+                    "desc": r.get("description") or f"Public technical repository implemented in {r.get('language') or 'Software/Code'}.",
+                    "lang": r.get("language") or "Code",
                     "stars": stars,
                     "forks": r.get("forks_count", 0),
                     "url": r.get("html_url"),
-                    "topics": r.get("topics", []) or [r.get("language") or "Dev"]
+                    "topics": r.get("topics", []) or [r.get("language") or "Project"]
                 })
             print(f"[GITHUB LIVE HARVEST] Successfully harvested {len(projects)} real repos via API for {username}")
         else:
-            print(f"[GITHUB LIVE HARVEST] API Status {repo_resp.status_code}. Attempting HTML Scraper Fallback...")
-            # HTML Scraper Fallback when unauthenticated rate limit (60 req/hr) is exceeded
+            print(f"[GITHUB LIVE HARVEST] API Status {repo_resp.status_code}. Attempting HTML Scraper Fallback for @{username}...")
+            # HTML Scraper Fallback when unauthenticated API rate limit is hit
             profile_html_resp = requests.get(f"https://github.com/{username}?tab=repositories", headers=headers, timeout=5)
             if profile_html_resp.status_code == 200:
                 repo_matches = re.findall(r'itemprop="name codeRepository"[^>]*>\s*([a-zA-Z0-9_.-]+)', profile_html_resp.text)
@@ -67,50 +67,15 @@ def fetch_real_github_dossier(github_url: str) -> dict:
                     projects.append({
                         "name": repo_name,
                         "desc": f"Public candidate repository '{repo_name}' harvested live from @{username}'s GitHub profile.",
-                        "lang": "Python",
+                        "lang": "Code",
                         "stars": 1,
                         "forks": 0,
                         "url": f"https://github.com/{username}/{repo_name}",
-                        "topics": ["OpenSource", "Project"]
+                        "topics": ["PublicRepo", "Project"]
                     })
                 print(f"[GITHUB LIVE HARVEST] HTML Scraper harvested {len(projects)} repos for {username}")
-
     except Exception as e:
         print(f"[GITHUB LIVE HARVEST EXCEPTION] {e}")
-
-    # Fallback to candidate's verified repositories if API limit is exhausted and scraping is blocked
-    if not projects:
-        projects = [
-            {
-                "name": "kaushalsetu-autonomous-taskmaster",
-                "desc": "Autonomous Dual-AI Institutional Taskmaster Engine for Vocational Skilling, Multimodal Evaluation & Zero-HITL Job Dispatch.",
-                "lang": "Python",
-                "stars": 12,
-                "forks": 3,
-                "url": f"https://github.com/{username}/kaushalsetu-autonomous-taskmaster",
-                "topics": ["FastAPI", "Gemini-3.5", "Gemma", "Streamlit"]
-            },
-            {
-                "name": "ai-multimodal-grading-engine",
-                "desc": "Multimodal visual inspection & capstone grading service using Gemini Flash and Gemma AST pre-screening.",
-                "lang": "Python",
-                "stars": 8,
-                "forks": 2,
-                "url": f"https://github.com/{username}",
-                "topics": ["Multimodal-AI", "Vision", "Python"]
-            },
-            {
-                "name": "search-grounded-job-radar",
-                "desc": "Live web vacancy crawler & match matrix powered by Google Search Tool Grounding API.",
-                "lang": "Python",
-                "stars": 6,
-                "forks": 1,
-                "url": f"https://github.com/{username}",
-                "topics": ["GoogleSearch", "JobDiscovery", "FastAPI"]
-            }
-        ]
-        total_stars = 26
-        public_repos_count = len(projects)
 
     return {
         "username": username,
