@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import requests
 import json
 import time
@@ -716,55 +717,91 @@ else:
             st.session_state["show_spotlight_tour"] = True
             st.session_state["spotlight_phase"] = 1
 
-    # --- GLASSMORPHIC AGENT SPOTLIGHT HUD OVERLAY (WHEN AUTO-PILOT ACTIVE) ---
+    # --- CLIENT-SIDE INTERACTIVE JS SPOTLIGHT TOUR INJECTION ---
     if st.session_state.get("show_spotlight_tour"):
-        cur_phase = st.session_state.get("spotlight_phase", 1)
-        phase_titles = {
-            1: "Phase 1: Course & Dynamic Assessment Synthesis",
-            2: "Phase 2: Candidate Resume & Zero-Friction Profile Ingest",
-            3: "Phase 3: Dual-AI Multimodal Vision Rubric Inspection",
-            4: "Phase 4: Whole-Web Grounded Job Discovery Radar",
-            5: "Phase 5: SHA-256 Sealed Recruiter Outbox & Portfolio Dispatch"
+        tour_js = """
+        <script>
+        const tourSteps = [
+          {
+            title: "⚡ Step 1: Zero-Friction Syllabus Synthesis",
+            text: "The Agent ingests course topics or syllabi and synthesizes curriculum modules & evaluation rubrics in <2 seconds.",
+            targetTab: 0
+          },
+          {
+            title: "📝 Step 2: Dynamic Stepper Assessment",
+            text: "Syllabus-grounded MCQs and multimodal diagnostic tasks are dynamically generated for enrolled candidates.",
+            targetTab: 1
+          },
+          {
+            title: "🧠 Step 3: Multimodal Vision & Code Grading",
+            text: "Gemma pre-checks tokens, while Gemini 3.5 inspects submitted circuit waveforms & source code against practical rubrics.",
+            targetTab: 1
+          },
+          {
+            title: "🌐 Step 4: Whole-Web Grounded Job Crawl",
+            text: "The Agent executes real-time Google Search grounding across Naukri, Indeed, and Google Jobs without broken links.",
+            targetTab: 2
+          },
+          {
+            title: "🚀 Step 5: Cryptographic Outbox Dispatch",
+            text: "A domain-adaptive graphical portfolio (SHA-256 sealed) is compiled and dispatched directly to recruiter outboxes.",
+            targetTab: 2
+          }
+        ];
+
+        let currentStep = 0;
+        function showStep(index) {
+          if (index >= tourSteps.length) {
+            document.getElementById('tour-hud').style.display = 'none';
+            return;
+          }
+          const step = tourSteps[index];
+          document.getElementById('tour-title').innerText = step.title;
+          document.getElementById('tour-desc').innerText = step.text;
+          document.getElementById('tour-progress').style.width = ((index + 1) / tourSteps.length * 100) + '%';
+          
+          try {
+            const tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+            if (tabs && tabs[step.targetTab]) {
+              tabs[step.targetTab].click();
+            }
+          } catch(e) { console.log(e); }
         }
-        phase_comments = {
-            1: "🤖 Agent Action: Loaded syllabus modules and synthesized 5 syllabus-grounded MCQs + practical capstone task (Saved 1.5h).",
-            2: "🤖 Agent Action: Auto-parsed resume PDF into structured skills and populated candidate dossier with institutional data locks.",
-            3: "🤖 Agent Action: Gemma fast-prescreened syntax in 42ms; Gemini 3.5 evaluated circuit noise isolation rubric (Score: 87.0%).",
-            4: "🤖 Agent Action: Google Search Grounding crawled 20 live openings across Naukri, Indeed & Google Jobs with 94% fit match.",
-            5: "🤖 Agent Action: Sealed academic marksheet with SHA-256 seal & auto-dispatched portfolio dossier to employer outboxes (Saved 4.5h total)."
-        }
-        
-        st.markdown(f"""
-        <div style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border: 2px solid #38BDF8; border-radius: 14px; padding: 20px; margin: 16px 0; box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.3);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h3 style="color:#38BDF8; margin:0;">🪄 Autonomous Agent Spotlight Tour — {phase_titles.get(cur_phase)}</h3>
-                <span class="badge-live" style="background:#0284C7; color:white;">AUTO-PILOT ACTIVE</span>
+
+        window.nextTourStep = function() {
+          currentStep = (currentStep + 1) % tourSteps.length;
+          showStep(currentStep);
+        };
+        window.prevTourStep = function() {
+          if (currentStep > 0) currentStep--;
+          showStep(currentStep);
+        };
+        window.closeTour = function() {
+          try { window.parent.location.reload(); } catch(e) {}
+        };
+
+        setTimeout(() => showStep(0), 400);
+        </script>
+
+        <div id="tour-hud" style="position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); z-index: 999999; background: rgba(15, 23, 42, 0.95); border: 2px solid #38BDF8; border-radius: 14px; padding: 20px; width: 620px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); color: #fff; font-family: sans-serif; backdrop-filter: blur(12px);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span id="tour-title" style="font-weight: 700; font-size: 16px; color: #38BDF8;"></span>
+            <button onclick="closeTour()" style="background: none; border: none; color: #94A3B8; font-size: 18px; cursor: pointer;">✕</button>
+          </div>
+          <p id="tour-desc" style="font-size: 13.5px; color: #E2E8F0; line-height: 1.5; margin: 0 0 14px 0;"></p>
+          <div style="width: 100%; background: #334155; height: 6px; border-radius: 4px; margin-bottom: 14px; overflow: hidden;">
+            <div id="tour-progress" style="background: linear-gradient(90deg, #38BDF8, #818CF8); height: 100%; width: 20%; transition: width 0.3s ease;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 12px; color: #94A3B8;">⏱️ Saved 4.5h manual educator labor</span>
+            <div>
+              <button onclick="prevTourStep()" style="background: #1E293B; border: 1px solid #475569; color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer; margin-right: 8px; font-size: 13px;">Previous</button>
+              <button onclick="nextTourStep()" style="background: #2563EB; border: none; color: #fff; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">Next Step ➡️</button>
             </div>
-            <div style="background:#090D16; border:1px solid #1E293B; padding:12px 16px; border-radius:8px; color:#FACC15; font-family:monospace; font-size:0.88rem; margin-bottom:12px;">
-                {phase_comments.get(cur_phase)}
-            </div>
+          </div>
         </div>
-        """, unsafe_allow_html=True)
-        
-        col_stp1, col_stp2, col_stp3 = st.columns([2, 2, 2])
-        with col_stp1:
-            if st.button("➡️ Advance Auto-Pilot Phase", type="primary", use_container_width=True):
-                if cur_phase < 5:
-                    st.session_state["spotlight_phase"] = cur_phase + 1
-                else:
-                    st.session_state["spotlight_phase"] = 1
-                st.rerun()
-        with col_stp2:
-            if st.button("▶️ Play Full Auto-Pilot Continuous Tour", use_container_width=True):
-                for p in range(1, 6):
-                    st.session_state["spotlight_phase"] = p
-                    time.sleep(1.2)
-                    st.rerun()
-                st.balloons()
-        with col_stp3:
-            if st.button("❌ Exit Visual Tour", use_container_width=True):
-                st.session_state["show_spotlight_tour"] = False
-                st.rerun()
+        """
+        components.html(tour_js, height=200)
 
     # --- MULTI-TASK AUTONOMOUS DELEGATION HUB ---
     with st.expander("🤖 Delegate Autonomous Tasks to Agent", expanded=False):
