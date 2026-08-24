@@ -1186,12 +1186,19 @@ def main_app_layout():
             with col_sr3:
                 st.markdown('<span style="font-size:0.8rem; font-weight:600; color:#475569;">📁 Bulk Excel Import Available Below</span>', unsafe_allow_html=True)
 
+            if "csv_uploader_key" not in st.session_state:
+                st.session_state["csv_uploader_key"] = 0
+
             with st.expander("📁 Bulk Import Candidates via Excel / CSV Roster", expanded=False):
                 st.caption("Upload a `.csv` file with headers: `FullName`, `DOB`, `Email`, `Phone`, `CourseName`.")
                 sample_csv = "FullName,DOB,Email,Phone,CourseName\nPriya Sharma,2001-05-14,priya.s@skillforge-edu.org,+91 9811223344,Automotive & Hardware Diagnostics\nKaran Verma,1999-11-20,karan.v@skillforge-edu.org,+91 9877665544,Full Stack Web Development\n"
                 st.download_button("📥 Download Sample Excel/CSV Template", sample_csv, "skillforge_roster_template.csv", "text/csv")
                 
-                bulk_file = st.file_uploader("Upload CSV Roster File", type=["csv"], key=f"bulk_upload_{sel_branch['id']}")
+                bulk_file = st.file_uploader(
+                    "Upload CSV / Excel Candidate Roster",
+                    type=["csv", "xlsx", "xls"],
+                    key=f"bulk_roster_uploader_{st.session_state['csv_uploader_key']}"
+                )
                 if bulk_file is not None:
                     import pandas as pd
                     try:
@@ -1204,7 +1211,7 @@ def main_app_layout():
                             for _, row in df.iterrows():
                                 c_name_row = str(row.get("CourseName", list(course_opts.keys())[0]))
                                 c_id = course_opts.get(c_name_row, "CRS-GENERIC")
-                                r_b = requests.post(f"{BACKEND_URL}/api/students/add", json={
+                                r_b = requests.post(f"{BACKEND_URL}/api/students", json={
                                     "institute_id": sel_inst["id"],
                                     "branch_id": sel_branch["id"],
                                     "course_id": c_id,
@@ -1218,9 +1225,10 @@ def main_app_layout():
                                     "fees_status": "PAID",
                                     "consent": 1
                                 })
-                                if r_b.status_code == 200:
+                                if r_b.status_code in [200, 201]:
                                     imported_count += 1
-                            st.success(f"🎉 Successfully imported {imported_count} candidates into {sel_branch['branch_name']}!")
+                            st.session_state["csv_uploader_key"] += 1
+                            st.toast(f"✅ Successfully imported {imported_count} candidates into {sel_branch['branch_name']}! Uploader reset.", icon="🎉")
                             st.rerun()
                     except Exception as ex:
                         st.error(f"Error parsing bulk file: {ex}")

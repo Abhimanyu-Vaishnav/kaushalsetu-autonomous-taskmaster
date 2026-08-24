@@ -457,7 +457,7 @@ async def register_single_student(payload: dict):
             cursor.execute("INSERT OR IGNORE INTO courses (id, institute_id, branch_id, course_name) VALUES (?, ?, ?, ?)", (course_id, inst_id or "INST-GLOBAL-01", branch_id or "BR-NANGLOI", course_name))
 
         cursor.execute("""
-            INSERT INTO students (
+            INSERT OR REPLACE INTO students (
                 student_id, institute_id, branch_id, course_id,
                 branch_name, course_name, full_name, dob, email, phone,
                 bio, github_url, portfolio_url, target_role_preference,

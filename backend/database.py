@@ -178,6 +178,9 @@ def init_db():
             except sqlite3.OperationalError:
                 pass  # Column already exists
 
+        # Ensure unique candidate email constraint per branch
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_students_unique_email ON students(institute_id, branch_id, email)")
+
         conn.commit()
         
         # Seed initial data if institutes empty
