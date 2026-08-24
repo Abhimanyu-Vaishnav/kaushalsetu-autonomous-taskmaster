@@ -8,7 +8,7 @@ import io
 BACKEND_URL = "http://localhost:8000"
 
 st.set_page_config(
-    page_title="SkillForge Autonomous - Enterprise Multi-Tenant SaaS",
+    page_title="SkillForge Autonomous - Live Job Search & Autonomous Placement Engine",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -72,20 +72,26 @@ st.markdown("""
         font-size: 0.88rem;
         line-height: 1.5;
     }
+    .job-card {
+        background: #FFFFFF;
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid #E5E7EB;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 15px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# Query Param Routing: Detect if query param ?page=exam or ?view=student_portal is set
+# Clean URL Parameter Routing
 query_params = st.query_params
-current_page = query_params.get("page") or query_params.get("view")
-is_standalone_exam = (current_page in ["exam", "student_portal"])
+current_page = query_params.get("page") or query_params.get("view") or "admin"
 
-if is_standalone_exam:
-    # --- STANDALONE FULL-SCREEN STUDENT EXAM WORKSPACE ---
+# ROUTE 1: STANDALONE STUDENT EXAM PORTAL (?page=exam)
+if current_page in ["exam", "student_portal"]:
     st.markdown('<div class="main-header">🎓 Student Dedicated Exam Workspace</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">SkillForge Autonomous Assessment & Live Portfolio Finalizer</div>', unsafe_allow_html=True)
     
-    # Query Param Pre-fills
     param_sid = query_params.get("sid", "")
     param_dob = query_params.get("dob", "")
     
@@ -179,12 +185,18 @@ if is_standalone_exam:
             uploaded_img = st.file_uploader("Attach Project Artifact (Hardware Photo / Diagram / PDF / Code Zip)", type=["jpg", "png", "jpeg", "pdf", "zip"])
             
             st.divider()
-            consent_check = st.checkbox("Authorize SkillForge AI Agent to build my live portfolio dossier & auto-apply for matching jobs", value=True)
-            
-            submit_exam = st.form_submit_button("🚀 Submit Exam & Activate AI Placement Agent", type="primary", use_container_width=True)
+            col_cn1, col_cn2 = st.columns(2)
+            with col_cn1:
+                consent_check = st.checkbox("Authorize SkillForge AI Agent to build my live portfolio dossier", value=True)
+            with col_cn2:
+                auto_apply_toggle = st.checkbox("Auto-Apply Engine ACTIVE (Autonomous Dispatch to Top Matches)", value=True)
+                
+            submit_exam = st.form_submit_button("🚀 Submit Exam & Activate Placement Agent", type="primary", use_container_width=True)
             
         if submit_exam:
             requests.post(f"{BACKEND_URL}/api/students/consent", json={"student_id": student_data['student_id'], "consent": consent_check})
+            requests.post(f"{BACKEND_URL}/api/students/auto-apply-mode", json={"student_id": student_data['student_id'], "auto_apply_mode": auto_apply_toggle})
+            
             img_b64 = None
             if uploaded_img is not None and uploaded_img.type in ["image/jpeg", "image/png", "image/jpg"]:
                 img_b64 = base64.b64encode(uploaded_img.getvalue()).decode("utf-8")
@@ -222,17 +234,85 @@ if is_standalone_exam:
                     st.success("✅ Assessment Evaluated & HTML Dossier Portfolio Generated!")
                     st.markdown(f"#### 🌐 Live Portfolio Link: [{eval_out['portfolio_url']}]({eval_out['portfolio_url']})")
                     st.info(dispatch_out["notifications"]["student_alert"])
+                    st.markdown(f"👉 Go to [Student Career & Job Comparison Dashboard](http://localhost:8501/?page=student_dashboard&sid={student_data['student_id']})")
                 else:
                     st.error(f"Pipeline error: {pipe_res.text}")
             except Exception as e:
                 st.error(f"Connection error: {e}")
 
+# ROUTE 2: STUDENT CAREER & LIVE JOB MATCHING DASHBOARD (?page=student_dashboard)
+elif current_page == "student_dashboard":
+    param_sid = query_params.get("sid", "STU-1001")
+    st.markdown('<div class="main-header">💼 Student Career & Live Job Match Center</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Real-World Discovered Vacancies & Student-Guided Match Center</div>', unsafe_allow_html=True)
+    
+    student_data = None
+    try:
+        s_res = requests.get(f"{BACKEND_URL}/api/student/{param_sid}", timeout=2)
+        if s_res.status_code == 200:
+            student_data = s_res.json()["data"]
+    except Exception:
+        pass
+        
+    if not student_data:
+        st.warning("Candidate not found.")
+    else:
+        col_sd1, col_sd2 = st.columns([2, 1])
+        with col_sd1:
+            st.markdown(f"### Candidate: **{student_data['full_name']}** (`{student_data['student_id']}`)")
+            st.caption(f"Course: **{student_data['course_name']}** | Branch: **{student_data['branch_name']}**")
+        with col_sd2:
+            cur_mode = bool(student_data.get("auto_apply_mode", 1))
+            new_mode = st.toggle("🤖 Autonomous Auto-Apply Engine", value=cur_mode)
+            if new_mode != cur_mode:
+                requests.post(f"{BACKEND_URL}/api/students/auto-apply-mode", json={"student_id": param_sid, "auto_apply_mode": new_mode})
+                st.success("✅ Placement Mode Updated!")
+                st.rerun()
+                
+        if student_data.get("portfolio_url"):
+            st.info(f"🌐 **Verified Animated Portfolio Dossier Live:** [{student_data['portfolio_url']}]({student_data['portfolio_url']})")
+            
+        st.divider()
+        st.markdown("### 🔍 Live Discovered Job Openings (Grounding Google Search)")
+        
+        # Discover jobs from API
+        jobs = []
+        try:
+            jres = requests.get(f"{BACKEND_URL}/api/jobs/discover?course_name={student_data['course_name']}", timeout=5)
+            if jres.status_code == 200:
+                jobs = jres.json()["data"]
+        except Exception:
+            pass
+            
+        if not jobs:
+            st.info("Searching for live openings...")
+        else:
+            for job in jobs:
+                with st.container():
+                    col_j1, col_j2, col_j3 = st.columns([3, 2, 1.5])
+                    with col_j1:
+                        st.markdown(f"#### **{job['role_title']}**")
+                        st.markdown(f"🏢 **{job['company_name']}** | 📍 {job['location']}")
+                        st.caption(f"Perks & Benefits: {job['key_benefits']}")
+                    with col_j2:
+                        st.markdown(f"💰 **Salary:** `{job['salary_range']}`")
+                        st.markdown(f"🎯 **Match Score:** `{job['match_percentage']}% Match`")
+                        st.caption(f"Experience: {job['experience_required']}")
+                    with col_j3:
+                        st.write("")
+                        if new_mode:
+                            st.markdown('<span class="badge-live">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
+                        else:
+                            if st.button("🚀 Apply with Dossier", key=f"btn_apply_{job['job_id']}", type="primary"):
+                                st.success(f"✅ Application submitted to {job['company_name']}!")
+                                st.balloons()
+                    st.divider()
+
+# ROUTE 3: ADMIN MULTI-TENANT WORKSPACE (?page=admin or default)
 else:
-    # --- ADMIN WORKSPACE & CASCADING GOVERNANCE ---
     st.markdown('<div class="main-header">⚡ SkillForge Autonomous</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Multi-Tenant Institutional Governance & Autonomous Placement Engine | Taskmaster Track</div>', unsafe_allow_html=True)
     
-    # Sidebar
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/google-logo.png", width=45)
         st.subheader("System Health Status")
@@ -380,7 +460,6 @@ else:
             st.subheader(f"👥 Candidate Roster for {sel_branch['branch_name']}")
             st.markdown("Enroll candidates, dispatch AI Exam URLs, and track student status badges.")
             
-            # Fetch Courses for selected branch
             branch_courses = []
             try:
                 cres = requests.get(f"{BACKEND_URL}/api/courses?branch_id={sel_branch['id']}", timeout=2)
@@ -427,7 +506,6 @@ else:
 
             st.divider()
             
-            # Fetch Isolated Students
             students = []
             try:
                 st_res = requests.get(f"{BACKEND_URL}/api/students?institute_id={sel_inst['id']}&branch_id={sel_branch['id']}", timeout=2)
@@ -454,7 +532,6 @@ else:
                             show_link = st.session_state.get(f"dispatched_link_{s['student_id']}", clean_exam_link)
                             st.code(show_link, language="text")
                         with col_r3:
-                            # Complete Status Badges: PENDING_EXAM -> EVALUATING -> PORTFOLIO_LIVE -> JOB_HUNTING -> INTERVIEW_SCHEDULED
                             if s.get("interview_count", 0) > 0:
                                 st.markdown('<span class="badge-interview">📅 INTERVIEW_SCHEDULED</span>', unsafe_allow_html=True)
                             elif s.get("portfolio_generated") or s.get("portfolio_url"):
@@ -468,6 +545,7 @@ else:
                             if s.get("portfolio_generated") or s.get("portfolio_url"):
                                 port_url = s.get("portfolio_url") or f"http://localhost:8000/portfolio/{s['student_id']}"
                                 st.markdown(f"🌐 [View Portfolio]({port_url})")
+                                st.markdown(f"💼 [Match Hub](http://localhost:8501/?page=student_dashboard&sid={s['student_id']})")
                             else:
                                 st.caption("No Portfolio Yet")
                     st.divider()
@@ -518,11 +596,12 @@ else:
         st.markdown("Real-time execution logs showing the continuous background action engine discovering jobs, generating portfolios, and scheduling interviews.")
         
         telemetry_logs = st.session_state.get("last_telemetry", [
-            {"timestamp": "20:00:01.002", "step": "START", "message": "Autonomous Agent initialized for Candidate STU-1001"},
-            {"timestamp": "20:00:01.045", "step": "GEMMA_PRECHECK", "message": "Gemma sub-millisecond check passed (Structure Score: 85/100)"},
-            {"timestamp": "20:00:02.112", "step": "DOSSIER_GEN", "message": "Synthesized standalone HTML portfolio dossier at /portfolio/STU-1001"},
-            {"timestamp": "20:00:02.340", "step": "ACTION_DISPATCHED", "message": "Auto-dispatched job application to Tata Motors for Automotive Systems Technician"},
-            {"timestamp": "20:00:02.510", "step": "ALERTS_SENT", "message": "Dispatched interview notification alerts to Candidate & Branch Node."}
+            {"timestamp": "09:30:01.002", "step": "START", "message": "Autonomous Agent initialized for Candidate STU-1001"},
+            {"timestamp": "09:30:01.045", "step": "GEMMA_PRECHECK", "message": "Gemma sub-millisecond syntax check passed (Structure Score: 85/100)"},
+            {"timestamp": "09:30:02.112", "step": "DOSSIER_GEN", "message": "Synthesized standalone HTML portfolio dossier at /portfolio/STU-1001"},
+            {"timestamp": "09:30:02.250", "step": "LIVE_WEB_JOB_SEARCH", "message": "Grounded search via Gemini 3.5 for live openings: Found Tata Motors, Infosys"},
+            {"timestamp": "09:30:02.340", "step": "ACTION_DISPATCHED", "message": "Auto-dispatched job application to Tata Motors for Automotive Systems Specialist (92% Match)"},
+            {"timestamp": "09:30:02.510", "step": "ALERTS_SENT", "message": "Dispatched interview notification alerts to Candidate & Branch Node."}
         ])
         
         log_text = "\n".join([f"[{t['timestamp']}] [{t['step']}] {t['message']}" for t in telemetry_logs])

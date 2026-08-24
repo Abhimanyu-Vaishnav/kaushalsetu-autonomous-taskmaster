@@ -254,7 +254,25 @@ def api_student_pipeline(req: FullEvaluationReq):
 def api_get_placements(branch_id: Optional[str] = None):
     return {"success": True, "data": get_job_applications(branch_id)}
 
-# 6. Verified Certificate Generator Endpoint
+class StudentAutoApplyReq(BaseModel):
+    student_id: str
+    auto_apply_mode: bool
+
+# 6. Live Job Discovery Endpoint
+@app.get("/api/jobs/discover")
+def api_discover_jobs(course_name: str = "Automotive & Hardware Diagnostics", skills: str = "ECU,Multimeter,Oscilloscope"):
+    from job_discovery_agent import discover_live_jobs
+    skill_list = [s.strip() for s in skills.split(",")]
+    jobs = discover_live_jobs(course_name, skill_list)
+    return {"success": True, "data": jobs}
+
+@app.post("/api/students/auto-apply-mode")
+def api_set_auto_apply_mode(req: StudentAutoApplyReq):
+    from database import set_student_auto_apply_mode, get_student_by_id
+    set_student_auto_apply_mode(req.student_id, req.auto_apply_mode)
+    return {"success": True, "data": get_student_by_id(req.student_id)}
+
+# 7. Verified Certificate Generator Endpoint
 @app.post("/api/certificate/generate")
 def api_generate_certificate(req: CertificateReq):
     cert = generate_verified_certificate(

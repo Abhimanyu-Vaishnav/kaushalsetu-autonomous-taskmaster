@@ -74,6 +74,7 @@ def init_db():
             fees_status TEXT DEFAULT 'PAID',
             consent_given INTEGER DEFAULT 0,
             consent_for_job_dispatch INTEGER DEFAULT 0,
+            auto_apply_mode INTEGER DEFAULT 1,     -- 1 for Autonomous Auto-Apply, 0 for Student-Guided Comparison
             exam_completed INTEGER DEFAULT 0,
             portfolio_generated INTEGER DEFAULT 0,
             interview_count INTEGER DEFAULT 0,
@@ -335,6 +336,13 @@ def set_student_consent(student_id: str, consent: bool) -> bool:
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("UPDATE students SET consent_given = ?, consent_for_job_dispatch = ? WHERE student_id = ?", (1 if consent else 0, 1 if consent else 0, student_id))
+        conn.commit()
+        return True
+
+def set_student_auto_apply_mode(student_id: str, mode: bool) -> bool:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE students SET auto_apply_mode = ? WHERE student_id = ?", (1 if mode else 0, student_id))
         conn.commit()
         return True
 

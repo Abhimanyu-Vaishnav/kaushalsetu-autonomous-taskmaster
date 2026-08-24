@@ -131,22 +131,21 @@ class AutonomousRecruiterAgent:
         mark_student_exam_complete(student_id, github_url or "", portfolio_url)
         self.log_telemetry("DOSSIER_SAVED", f"Portfolio dossier generated and live at: {portfolio_url}")
 
-        # 6. Task B & C: Autonomous Recruiter Matching & Placement Action Execution
+        # 6. Task B & C: Autonomous Recruiter Matching & Live Web Job Search
         consent_given = bool(student.get("consent_given", 1) or student.get("consent_for_job_dispatch", 1))
+        auto_apply_active = bool(student.get("auto_apply_mode", 1))
         current_interviews = student.get("interview_count", 0)
         verified = placement_ready and consent_given and (current_interviews < cap_limit)
 
-        if verified:
-            self.log_telemetry("RECRUITER_MATCH", "Matching candidate against partner requisitions (Tata Motors, Infosys)...")
-            reqs = get_requisitions()
-            best_req = reqs[0] if reqs else {"company_name": "Tata Motors Technical Services", "role_title": "Automotive Systems Technician"}
-            for r in reqs:
-                if student["course_name"].lower() in r["role_title"].lower() or r["role_title"].lower() in student["course_name"].lower():
-                    best_req = r
-                    break
-
-            hiring_partner = best_req.get("company_name", "Enterprise Partner")
-            role = best_req.get("role_title", student["course_name"])
+        if verified and auto_apply_active:
+            self.log_telemetry("LIVE_WEB_JOB_SEARCH", f"Grounding live search for '{student['course_name']}' matching candidate skill stack...")
+            from job_discovery_agent import discover_live_jobs
+            discovered_jobs = discover_live_jobs(student["course_name"], strengths or ["Diagnostics", "ECU Testing"])
+            best_job = discovered_jobs[0] if discovered_jobs else {"company_name": "Tata Motors Electric & Auto Tech", "role_title": f"{student['course_name']} Specialist"}
+            
+            hiring_partner = best_job.get("company_name", "Tata Motors Electric & Auto Tech")
+            role = best_job.get("role_title", student["course_name"])
+            match_pct = best_job.get("match_percentage", total_score)
             
             # Determine if special salary or manual contract requires human intervention flag
             status_flag = "NEEDS_HUMAN_INTERVENTION" if total_score > 95 else "INTERVIEW_SCHEDULED"
@@ -168,7 +167,7 @@ class AutonomousRecruiterAgent:
                     student_id,
                     hiring_partner,
                     role,
-                    total_score,
+                    match_pct,
                     portfolio_url,
                     status_flag,
                     f"Scheduled for {interview_time} via Google Meet",
@@ -178,23 +177,20 @@ class AutonomousRecruiterAgent:
 
             self.log_telemetry(
                 "ACTION_DISPATCHED",
-                f"🚀 Auto-dispatched application to {hiring_partner} for role '{role}'!",
+                f"🚀 Auto-dispatched application to {hiring_partner} for role '{role}' ({match_pct}% Match)!",
                 {"job_id": job_id, "hiring_partner": hiring_partner, "role": role}
             )
 
             # Task D: Simulated Webhook Alerts
-            student_alert = f"📧 DISPATCHED TO {student['email']}: Interview candidate profile auto-submitted to {hiring_partner} for {role} role."
+            student_alert = f"📧 DISPATCHED TO {student['email']}: Candidate live portfolio dossier submitted to {hiring_partner} for {role} role."
             branch_alert = f"🏛️ ALERT TO BRANCH '{student['branch_name']}': Candidate {student['full_name']} passed placement gate and auto-applied to {hiring_partner}."
             self.log_telemetry("ALERTS_SENT", f"Outbox alerts sent to Student and Branch '{student['branch_name']}'.")
 
             dispatch_res = {
-                "status": "APPLIED_AND_DISPATCHED",
-                "job_id": job_id,
+                "status": status_flag,
                 "hiring_partner": hiring_partner,
                 "role": role,
-                "match_score": total_score,
-                "verified_metric_hash": metric_hash,
-                "portfolio_url": portfolio_url,
+                "job_id": job_id,
                 "notifications": {
                     "student_alert": student_alert,
                     "branch_alert": branch_alert

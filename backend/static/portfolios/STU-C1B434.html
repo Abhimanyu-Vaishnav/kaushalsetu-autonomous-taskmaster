@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillForge Dossier - Rohan Mehta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.8); }
+        }
+        .glow-card { animation: pulseGlow 4s infinite; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen p-4 md:p-8">
+    <div class="max-w-4xl mx-auto space-y-8">
+        
+        <!-- Header Profile Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 glow-card">
+            <div class="flex items-center gap-5">
+                <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-3xl font-extrabold text-white shadow-lg">
+                    R
+                </div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                        Rohan Mehta
+                        <span class="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-medium">Verified Dossier</span>
+                    </h1>
+                    <p class="text-slate-400 text-sm mt-1">ID: <code class="text-indigo-400 font-mono">STU-C1B434</code> | Branch: <span class="text-slate-200">Yamuna Vihar Center</span></p>
+                    <p class="text-indigo-400 text-sm font-semibold mt-1">Accounting & Financial Tally</p>
+                </div>
+            </div>
+            <div class="text-center md:text-right bg-slate-950/60 p-4 rounded-xl border border-slate-800/80">
+                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">SkillForge Score</div>
+                <div class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">90%</div>
+                <div class="text-xs text-emerald-400 font-medium mt-0.5">Placement Qualified 🚀</div>
+            </div>
+        </div>
+
+        <!-- Scores & Verification Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl text-center">
+                <div class="text-slate-400 text-xs font-semibold uppercase">MCQ Objective Assessment</div>
+                <div class="text-3xl font-bold text-emerald-400 mt-2">30.0 <span class="text-sm font-normal text-slate-500">/ 30 pts</span></div>
+                <p class="text-xs text-slate-500 mt-1">Direct Technical Knowledge</p>
+            </div>
+            <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl text-center">
+                <div class="text-slate-400 text-xs font-semibold uppercase">Practical Vision Grading</div>
+                <div class="text-3xl font-bold text-indigo-400 mt-2">60.0 <span class="text-sm font-normal text-slate-500">/ 70 pts</span></div>
+                <p class="text-xs text-slate-500 mt-1">Multimodal Vision Inspection</p>
+            </div>
+            <div class="bg-slate-900/80 border border-slate-800 p-5 rounded-xl text-center">
+                <div class="text-slate-400 text-xs font-semibold uppercase">Cryptographic Integrity</div>
+                <div class="text-sm font-mono text-indigo-300 mt-3 truncate px-2">0x27adefbb9f8837fa</div>
+                <p class="text-xs text-emerald-400 mt-2">SHA-256 Verified</p>
+            </div>
+        </div>
+
+        <!-- Project Highlight & Artifacts -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 md:p-8 space-y-4">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-microchip text-indigo-400"></i> Verified Practical Project Artifact
+            </h2>
+            <h3 class="text-lg font-semibold text-indigo-300">Accounting & Financial Tally Practical Capstone</h3>
+            <p class="text-slate-300 text-sm leading-relaxed bg-slate-950 p-4 rounded-lg border border-slate-800">
+                "First, performed a full safety lockout procedure and verified system power status using a multimeter. Next, connected an oscilloscope to signal lines to measure voltage waveforms. Found ground signal degradation due to terminal connector corrosion. Cleaned terminal connector, replaced wiring splice adhering to standard procedure, and re-tested signal verification with clean 2.5V differential voltage."
+            </p>
+            
+            <div class="flex flex-wrap gap-4 pt-2">
+                <a href="https://github.com/skillforge/stu-c1b434" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium rounded-lg border border-slate-700 transition-colors"><i class="fa-brands fa-github text-base"></i> GitHub Code Repository</a>
+                <a href="http://localhost:8000/portfolio/STU-C1B434" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg shadow-md transition-colors"><i class="fa-solid fa-globe text-base"></i> Live Project Demo</a>
+            </div>
+        </div>
+
+        <!-- Verified Competency Tags -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-3">
+            <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Verified Technical Competencies</h3>
+            <div class="flex flex-wrap gap-2">
+                <span class="bg-indigo-900 text-indigo-200 text-xs font-semibold px-3 py-1 rounded-full border border-indigo-700">Verified lockout procedure</span><span class="bg-indigo-900 text-indigo-200 text-xs font-semibold px-3 py-1 rounded-full border border-indigo-700">Accurate signal waveform analysis</span><span class="bg-indigo-900 text-indigo-200 text-xs font-semibold px-3 py-1 rounded-full border border-indigo-700">Clean diagnostic documentation</span>
+            </div>
+        </div>
+
+        <!-- Footer Seal -->
+        <div class="text-center text-xs text-slate-500 pt-4 border-t border-slate-800/80">
+            <p>SkillForge Autonomous Continuous Placement Engine | Issued for Candidate ID: STU-C1B434</p>
+        </div>
+    </div>
+</body>
+</html>
