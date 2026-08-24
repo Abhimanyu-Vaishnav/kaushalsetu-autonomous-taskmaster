@@ -222,10 +222,9 @@ if current_page in ["exam", "student_portal"]:
     mcqs = exam.get("mcqs", [])
     total_q_count = len(mcqs) if mcqs else 10
     
-    if "exam_stage" not in st.session_state:
-        st.session_state["exam_stage"] = "MCQ"
-        
     exam_stage = st.session_state.get("exam_stage", "MCQ")
+    mcq_step = st.session_state.get("mcq_step", 0)
+    answers_dict = st.session_state.get("mcq_answers_dict", {})
     
     if exam_stage == "MCQ":
         st.subheader("Stage 1: Objective MCQ Assessment")
