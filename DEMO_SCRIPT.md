@@ -6,7 +6,7 @@
 ---
 
 ### ⏱️ SECTION 1: THE BYOF PROBLEM & VISION (0:00 - 0:45)
-**Screen to Show:** Title Slide & Tab 4 ("📖 System Guide, Architecture & Tech Inspector")  
+**Screen to Show:** Title Slide & Tab 4 ("🤖 AI Agent Operational Log & Activity Ledger")  
 **Voiceover Script:**
 > "Hi judges! Welcome to **SkillForge Autonomous**, an institutional SaaS continuous action engine built for vocational skilling foundations and training institutes.  
 > Grassroots centers teaching automotive repair, CNC machining, and web development face a massive problem we call **BYOF: Bring Your Own Friction**. Instructors spend 20+ hours every week manually creating exams, grading physical circuit repair logs, and delaying candidate job applications.  
@@ -14,39 +14,37 @@
 
 ---
 
-### ⏱️ SECTION 2: INSTITUTE GOVERNANCE & CENTER HUB (0:45 - 1:30)
-**Screen to Show:** Tab 1 ("🏛️ Center Operations & Curriculum Hub")  
+### ⏱️ SECTION 2: INSTITUTE GOVERNANCE & BULK CSV INTAKE (0:45 - 1:30)
+**Screen to Show:** Tab 1 ("🏛️ Institute & Branch Governance") & Tab 2 Roster Mode B  
 **Voiceover Script:**
-> "Let's look at Tab 1: Center Operations. Here, institute administrators manage multiple training centers like Nangloi and Yamuna Vihar.  
-> Admins can dynamically adjust placement score thresholds — currently set to 70% — and set interview attempt caps.  
-> We can enroll individual candidates or upload bulk CSV student rosters in a single click."
+> "In our Mission Control HUD, institute administrators manage multi-tenant centers like Nangloi and Yamuna Vihar with strict data isolation.  
+> Admins configure exact MCQ assessment counts — like 10 questions — and placement thresholds.  
+> In Mode B, admins can import entire student rosters via CSV in a single click with zero ID collisions."
 
 ---
 
-### ⏱️ SECTION 3: INTERACTIVE EXAM & DUAL-AI DYNAMIC GRADING (1:30 - 2:45)
-**Screen to Show:** Tab 2 ("🎓 Student Interactive Assessment Workspace")  
+### ⏱️ SECTION 3: TWO-STAGE EXAM & DUAL-AI EVALUATION (1:30 - 2:45)
+**Screen to Show:** Universal Exam Portal (`/?view=exam&branch=nangloi_center`)  
 **Voiceover Script:**
-> "Now let's switch to Tab 2 as student Alex Mercer. Notice the explicit consent authorization checkbox — candidates must grant permission before job dispatches execute.  
-> When we click 'Synthesize Fresh 5-MCQ Exam', Gemini 3.5 Pro generates a structured 5-MCQ assessment and practical challenge.  
-> MCQs are completely unselected. Let's test our Sidebar 'One-Click Demo Mode' Preset A for a Top Performer.  
-> When we click Submit, the continuous action engine executes:  
-> 1. **Gemma Fast Pre-Screener**: Sub-millisecond keyword check (+0.2 Bonus Track).  
-> 2. **Gemini 3.5 Multimodal Engine**: Grades practical diagnostic logs and hardware photos out of 70 points.  
-> Combined Score: 90%! The system immediately issues an official downloadable Verified Skill Certificate with an immutable SHA-256 cryptographic hash."
+> "Let's log into the Student Exam Workspace. Notice the clean two-stage sequential workflow: Stage 1 renders full-width stepper MCQs matching the institute's exact count setting.  
+> Stage 2 unlocks the Practical Capstone workspace. When the candidate submits:  
+> 1. **Gemma Fast Screener**: Validates syntax structure in under 50ms (+0.2 Hackathon Bonus).  
+> 2. **Gemini 3.5 Multimodal Engine**: Evaluates diagnostic logs out of 50 points and issues a SHA-256 integrity hash seal.  
+> The student is automatically redirected to their Student 360° Dashboard in 2 seconds."
 
 ---
 
-### ⏱️ SECTION 4: REMEDIAL FLOW & AUTONOMOUS RECRUITER OUTBOX (2:45 - 3:30)
-**Screen to Show:** Tab 2 (Preset B) & Tab 3 ("🚀 Autonomous Placement & Recruiter Outbox")  
+### ⏱️ SECTION 4: LIVE JOB GROUNDING & RECRUITER OUTBOX (2:45 - 3:30)
+**Screen to Show:** Student 360° Dashboard & Tab 3 ("🚀 Recruiter Outbox")  
 **Voiceover Script:**
-> "What happens if a student scores below 70%? Let's trigger Preset B for a remedial student.  
-> Dynamic evaluation calculates 31%. Instead of rejecting the candidate, the agent automatically synthesizes a personalized 7-day remedial study schedule!  
-> Switching to Tab 3, the Recruiter Outbox Ledger provides an immutable audit log of auto-dispatched job applications sent to partners like Tata Motors and Infosys, along with candidate SHA-256 metric hashes."
+> "On the Student 360° Dashboard, candidates view their official marksheet alongside a continuous pool of 20+ live job requisitions discovered via Google Search Grounding.  
+> Candidates can click 'View Original Job Post' to inspect real employer links or 'Apply with AI Dossier'.  
+> In Tab 3, the Recruiter Outbox Ledger provides an immutable audit log of auto-dispatched applications sent to partners like Tata Motors and Bosch."
 
 ---
 
-### ⏱️ SECTION 5: CLOUD DEPLOYMENT & WRAP-UP (3:30 - 4:00)
-**Screen to Show:** Terminal / Cloud Run Console Logs & Tab 4 Architecture Inspector  
+### ⏱️ SECTION 5: ONE-CLICK JUDGE CONTROLS & WRAP-UP (3:30 - 4:00)
+**Screen to Show:** Top Header Fast-Forward Judge Controls & Cloud Run Console  
 **Voiceover Script:**
-> "SkillForge Autonomous is containerized with Docker and deployed serverless on Google Cloud Run with SQLite WAL persistence.  
-> It is a 100% zero-chatbot continuous action engine transforming vocational education across India. Thank you!"
+> "Judges can test the entire pipeline instantly using our 1-Click Fast-Forward Simulation buttons.  
+> SkillForge Autonomous is containerized with Docker and ready for Cloud Run deployment. Thank you!"
