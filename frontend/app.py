@@ -99,12 +99,17 @@ st.markdown("""
 
     /* Layout Padding & Container Reset */
     .block-container {
-        padding-top: 2rem !important;
+        padding-top: 1.8rem !important;
         padding-bottom: 3rem !important;
         max-width: 95% !important;
     }
-    div[data-testid="stVerticalBlock"] > div:empty {
+    div[data-testid="stVerticalBlock"] > div:empty,
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(> div:empty) {
         display: none !important;
+        height: 0px !important;
+        margin: 0px !important;
+        padding: 0px !important;
+        border: none !important;
     }
 
     /* Hide Streamlit branding clutter */
@@ -781,19 +786,19 @@ def main_app_layout():
                     """)
 
         # --- SLEEK MINIMALIST NAVIGATION & GOVERNANCE HEADER ---
-        col_sb1, col_sb2 = st.columns([2, 1])
-        with col_sb1:
-            st.markdown('<div class="main-header">⚡ SkillForge Autonomous</div>', unsafe_allow_html=True)
-            st.markdown('<div class="sub-header">Institutional AI Operations & Placement Copilot | Taskmaster Engine v7.3.0</div>', unsafe_allow_html=True)
-        with col_sb2:
-            st.markdown("""
-            <div style="text-align:right; padding-top:6px;">
-                <span class="badge-emerald">🟢 Engine: Active</span> &nbsp;
-                <span class="badge-blue">🔒 Multi-Tenant Guard</span>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("💡 Interactive Guide & Agent Tour", type="primary", use_container_width=True):
-                modal_feature_guide()
+        col_title, col_actions = st.columns([6, 4], vertical_alignment="center")
+        with col_title:
+            st.markdown('<div class="main-header" style="margin-bottom:0;">⚡ SkillForge Autonomous</div>', unsafe_allow_html=True)
+            st.markdown('<div class="sub-header" style="margin-bottom:0;">Institutional AI Operations & Placement Copilot | Taskmaster Engine v7.3.0</div>', unsafe_allow_html=True)
+        with col_actions:
+            sub_c1, sub_c2, sub_c3 = st.columns([1, 1, 1.8], vertical_alignment="center")
+            with sub_c1:
+                st.markdown('<div style="text-align:center;"><span style="background: rgba(16, 185, 129, 0.2); color: #10B981; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #10B981; display:inline-block;">🟢 Active</span></div>', unsafe_allow_html=True)
+            with sub_c2:
+                st.markdown('<div style="text-align:center;"><span style="background: rgba(37, 99, 235, 0.2); color: #38BDF8; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #38BDF8; display:inline-block;">🔒 Guard</span></div>', unsafe_allow_html=True)
+            with sub_c3:
+                if st.button("💡 Guide & FAQ", key="btn_open_guide", type="primary", use_container_width=True):
+                    modal_feature_guide()
 
         with st.sidebar:
             st.image("https://img.icons8.com/color/96/google-logo.png", width=40)
