@@ -74,6 +74,10 @@ class CourseCreateReq(BaseModel):
     branch_id: str
     course_name: str
     curriculum_summary: str = ""
+    course_description: str = ""
+    curriculum_sections: str = ""
+    core_skills: str = ""
+    default_mcq_count: int = 10
 
 class StudentCreateReq(BaseModel):
     institute_id: str
@@ -237,7 +241,10 @@ def api_get_courses(branch_id: str):
 
 @app.post("/api/courses/create")
 def api_create_course(req: CourseCreateReq):
-    course = create_course(req.institute_id, req.branch_id, req.course_name, req.curriculum_summary)
+    course = create_course(
+        req.institute_id, req.branch_id, req.course_name, req.curriculum_summary,
+        req.course_description, req.curriculum_sections, req.core_skills, req.default_mcq_count
+    )
     return {"success": True, "data": course}
 
 # 2. Student Enrollment & CSV Bulk Upload

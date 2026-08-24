@@ -72,13 +72,17 @@ def get_genai_client() -> genai.Client:
 
 # --- Core Pipeline 1: Real Gemini 3.5 5-MCQ Assessment Synthesizer ---
 
-def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_id: str = "INST-GLOBAL-01", num_questions: int = 10) -> dict:
+def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_id: str = "INST-GLOBAL-01", num_questions: int = 10, curriculum_sections: str = "", core_skills: str = "", course_description: str = "") -> dict:
     client = get_genai_client()
     
     prompt = (
-        f"Generate a professional vocational training assessment on topic: '{topic}' with difficulty level: '{difficulty}'. "
-        f"Include exactly {num_questions} multiple-choice questions (each with 4 options and the correct 0-indexed option integer), "
-        f"a hands-on practical project challenge, and 3 specific grading parameters for the rubric."
+        f"Generate a professional vocational training assessment for course: '{topic}' with difficulty: '{difficulty}'.\n"
+        f"Course Description: {course_description if course_description else topic}\n"
+        f"Curriculum Modules / Sections: {curriculum_sections if curriculum_sections else 'Core Modules'}\n"
+        f"Configured Core Skills: {core_skills if core_skills else 'Practical Engineering'}\n"
+        f"Generate exactly {num_questions} multiple-choice questions evenly distributed across the defined curriculum sections and testing the core skills.\n"
+        f"Each MCQ must have 4 options and the correct 0-indexed integer option.\n"
+        f"Also generate a practical capstone project challenge and 3 specific grading rubric parameters."
     )
     
     model_name = "gemini-2.5-pro"

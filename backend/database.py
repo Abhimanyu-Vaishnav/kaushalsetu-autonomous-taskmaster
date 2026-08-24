@@ -48,7 +48,11 @@ def init_db():
             institute_id TEXT NOT NULL,
             branch_id TEXT NOT NULL,
             course_name TEXT NOT NULL,
+            course_description TEXT DEFAULT '',
             curriculum_summary TEXT DEFAULT '',
+            curriculum_sections TEXT DEFAULT '',
+            core_skills TEXT DEFAULT '',
+            default_mcq_count INTEGER DEFAULT 10,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(institute_id) REFERENCES institutes(id),
             FOREIGN KEY(branch_id) REFERENCES branches(id)
@@ -298,16 +302,35 @@ def get_courses_by_branch(branch_id: str) -> List[Dict[str, Any]]:
         cursor.execute("SELECT * FROM courses WHERE branch_id = ? ORDER BY created_at DESC", (branch_id,))
         return [dict(r) for r in cursor.fetchall()]
 
-def create_course(institute_id: str, branch_id: str, course_name: str, curriculum_summary: str = "") -> Dict[str, Any]:
+def create_course(
+    institute_id: str,
+    branch_id: str,
+    course_name: str,
+    curriculum_summary: str = "",
+    course_description: str = "",
+    curriculum_sections: str = "",
+    core_skills: str = "",
+    default_mcq_count: int = 10
+) -> Dict[str, Any]:
     course_id = f"CRS-{uuid.uuid4().hex[:6].upper()}"
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO courses (id, institute_id, branch_id, course_name, curriculum_summary)
-            VALUES (?, ?, ?, ?, ?)
-        """, (course_id, institute_id, branch_id, course_name, curriculum_summary))
+            INSERT INTO courses (id, institute_id, branch_id, course_name, curriculum_summary, course_description, curriculum_sections, core_skills, default_mcq_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (course_id, institute_id, branch_id, course_name, curriculum_summary, course_description, curriculum_sections, core_skills, default_mcq_count))
         conn.commit()
-    return {"id": course_id, "institute_id": institute_id, "branch_id": branch_id, "course_name": course_name, "curriculum_summary": curriculum_summary}
+    return {
+        "id": course_id,
+        "institute_id": institute_id,
+        "branch_id": branch_id,
+        "course_name": course_name,
+        "curriculum_summary": curriculum_summary,
+        "course_description": course_description,
+        "curriculum_sections": curriculum_sections,
+        "core_skills": core_skills,
+        "default_mcq_count": default_mcq_count
+    }
 
 def get_all_students(institute_id: Optional[str] = None, branch_id: Optional[str] = None) -> List[Dict[str, Any]]:
     with get_db_connection() as conn:

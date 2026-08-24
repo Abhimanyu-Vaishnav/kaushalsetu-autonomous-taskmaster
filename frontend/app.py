@@ -680,454 +680,279 @@ else:
                         st.warning("⚠️ Remedial Student Loop Simulated! Score: 54% (Assigned 7-Day Personal Micro-Curriculum)")
                         st.rerun()
 
-    # --- GLOBAL CASCADING GOVERNANCE HEADER ---
-    st.markdown("### 🏢 Cascading Multi-Tenant Governance Selector & Copilot Trigger")
-    col_g1, col_g2, col_g3 = st.columns([2.5, 2.5, 2])
-
-    inst_map = {f"{i['name']} ({i['code']})": i for i in institutes}
-    sel_inst_label = col_g1.selectbox("🏢 Select Vocational Institute", list(inst_map.keys()))
-    sel_inst = inst_map[sel_inst_label]
-
-    # Fetch Branches for selected Institute
-    branches = []
-    try:
-        bres = requests.get(f"{BACKEND_URL}/api/branches?institute_id={sel_inst['id']}", timeout=2)
-        if bres.status_code == 200:
-            branches = bres.json()["data"]
-    except Exception:
-        pass
-
-    if not branches:
-        st.warning("No branches registered under this institute yet. Create one in Page 1!")
-        sel_branch = None
-    else:
-        branch_map = {f"{b['branch_name']} ({b['city']})": b for b in branches}
-        sel_branch_label = col_g2.selectbox("📍 Select Center Branch Node", list(branch_map.keys()))
-        sel_branch = branch_map[sel_branch_label]
-
-    with col_g3:
-        st.write("")
-        st.write("")
-        if st.button("🚀 Activate Autonomous Institute Copilot Loop", type="primary", use_container_width=True):
-            if sel_branch:
-                # Trigger autonomous evaluation and dispatch loop for branch students
-                try:
-                    st_res = requests.get(f"{BACKEND_URL}/api/students?institute_id={sel_inst['id']}&branch_id={sel_branch['id']}", timeout=2)
-                    if st_res.status_code == 200:
-                        branch_stus = st_res.json()["data"]
-                        for b_stu in branch_stus:
-                            if not b_stu.get("exam_completed"):
-                                requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
-                                    "student_id": b_stu['student_id'],
-                                    "assessment_id": "ASS-AUTONOMOUS",
-                                    "mcq_answers": [0] * sel_inst.get("num_mcqs_config", 10),
-                                    "mcq_key": [0] * sel_inst.get("num_mcqs_config", 10),
-                                    "practical_task": f"Autonomous diagnostic execution for {b_stu['course_name']}",
-                                    "grading_rubric": ["Procedure safety lockout", "Diagnostic measurement", "Documentation"],
-                                    "submission_text": "Autonomous end-to-end execution procedure completed adhering to safety lockout standards."
-                                }, timeout=15)
-                    st.success("✅ Autonomous Institute Copilot Loop Executed Successfully!")
-                    st.balloons()
+    # --- MODAL DIALOGS FOR GOVERNANCE ---
+    @st.dialog("🏢 Create New Institute & Initial Branch Node")
+    def modal_create_institute():
+        st.markdown("Enter details to establish a new vocational training institute network.")
+        with st.form("modal_inst_form"):
+            mi_name = st.text_input("Institute Name", value="SkillForge Vocational Foundation")
+            mi_code = st.text_input("Unique Institute Code", value=f"INST-{int(time.time())%10000}")
+            mi_bname = st.text_input("Initial Branch Center Name", value="Nangloi Center Node")
+            mi_city = st.text_input("Branch City", value="New Delhi")
+            mi_thresh = st.slider("Minimum Placement Score % Threshold", 50, 95, 70)
+            sub_mi = st.form_submit_button("🚀 Create Institute & Branch", type="primary", use_container_width=True)
+            if sub_mi:
+                r_mi = requests.post(f"{BACKEND_URL}/api/institutes/create", json={
+                    "name": mi_name,
+                    "code": mi_code,
+                    "initial_branch_name": mi_bname,
+                    "initial_city": mi_city,
+                    "placement_threshold": mi_thresh
+                })
+                if r_mi.status_code == 200:
+                    st.success("✅ Institute Network Created Successfully!")
                     st.rerun()
-                except Exception as ex:
-                    st.error(f"Copilot loop error: {ex}")
 
-    if sel_branch:
-        st.info(f"🔒 **Strict Isolation Active:** Managing **{sel_inst['name']}** $\\rightarrow$ **{sel_branch['branch_name']}** (`MCQs/Exam: {sel_inst.get('num_mcqs_config', 10)}` | `Placement Threshold: {sel_inst['placement_threshold']}%`)")
+    @st.dialog("📍 Add New Branch Node to Institute")
+    def modal_create_branch(target_inst_id, target_inst_name):
+        st.markdown(f"Adding isolated branch node under **{target_inst_name}**.")
+        with st.form("modal_branch_form"):
+            mb_name = st.text_input("New Branch Center Name", value="Dwarka Skill Center")
+            mb_city = st.text_input("City Location", value="Delhi NCR")
+            sub_mb = st.form_submit_button("➕ Save Branch Node", type="primary", use_container_width=True)
+            if sub_mb:
+                r_mb = requests.post(f"{BACKEND_URL}/api/branches/create", json={
+                    "institute_id": target_inst_id,
+                    "branch_name": mb_name,
+                    "city": mb_city
+                })
+                if r_mb.status_code == 200:
+                    st.success(f"✅ Branch Added to {target_inst_name}!")
+                    st.rerun()
+
+    @st.dialog("📚 ⚡ Context-Rich Course Synthesizer & Curriculum Builder")
+    def modal_create_course(target_inst_id, target_branch_id, target_branch_name):
+        st.markdown(f"Synthesize custom curriculum & skills for **{target_branch_name}**.")
+        with st.form("modal_course_form"):
+            mc_title = st.text_input("Course Title", value="Full Stack Web Development")
+            mc_desc = st.text_area("Course Description & Objective", value="Comprehensive full stack engineering covering modern frontend frameworks, REST APIs, database design, and cloud deployments.", height=70)
+            mc_sections = st.text_area("Curriculum Modules Breakdown (Comma or Line Separated)", value="Module 1: React & UI Architecture, Module 2: Python FastAPI & Async REST, Module 3: PostgreSQL & Docker Deployment", height=80)
+            mc_skills = st.text_input("Core Practical Skills Acquired (Comma Separated)", value="React, FastAPI, PostgreSQL, Docker, REST, Git")
+            mc_mcqs = st.select_slider("Default MCQ Exam Count", options=[5, 10, 15, 25, 50], value=10)
+            sub_mc = st.form_submit_button("⚡ AI Synthesize & Create Course", type="primary", use_container_width=True)
+            if sub_mc:
+                with st.spinner("Synthesizing curriculum structure..."):
+                    r_mc = requests.post(f"{BACKEND_URL}/api/courses/create", json={
+                        "institute_id": target_inst_id,
+                        "branch_id": target_branch_id,
+                        "course_name": mc_title,
+                        "course_description": mc_desc,
+                        "curriculum_summary": mc_desc,
+                        "curriculum_sections": mc_sections,
+                        "core_skills": mc_skills,
+                        "default_mcq_count": mc_mcqs
+                    })
+                    if r_mc.status_code == 200:
+                        st.success(f"✅ Course '{mc_title}' Created for {target_branch_name}!")
+                        st.rerun()
+
+    @st.dialog("👤 Enroll New Candidate")
+    def modal_add_student(target_inst_id, target_branch_id, target_branch_name, course_options_dict):
+        st.markdown(f"Direct Candidate Enrollment for **{target_branch_name}**")
+        with st.form("modal_add_student_form"):
+            ms_name = st.text_input("Full Name", value="Alex Mercer")
+            ms_dob = st.date_input("Date of Birth", value=datetime.date(2001, 5, 15))
+            ms_email = st.text_input("Email Address", value="alex.m@skillforge-edu.org")
+            ms_phone = st.text_input("Phone Number", value="+91 9876543210")
+            ms_cname = st.selectbox("Assign Course", list(course_options_dict.keys()))
+            ms_bio = st.text_area("Candidate Bio & Skill Summary", value="Trained in full stack engineering and circuit diagnostics.")
+            sub_ms = st.form_submit_button("Enroll Candidate", type="primary", use_container_width=True)
+            if sub_ms:
+                c_id = course_options_dict.get(ms_cname, "CRS-GENERIC")
+                r_ms = requests.post(f"{BACKEND_URL}/api/students/add", json={
+                    "institute_id": target_inst_id,
+                    "branch_id": target_branch_id,
+                    "course_id": c_id,
+                    "branch_name": target_branch_name,
+                    "course_name": ms_cname,
+                    "full_name": ms_name,
+                    "dob": str(ms_dob),
+                    "email": ms_email,
+                    "phone": ms_phone,
+                    "bio": ms_bio,
+                    "fees_status": "PAID",
+                    "consent": 1
+                })
+                if r_ms.status_code == 200:
+                    st.success(f"✅ Candidate {ms_name} Enrolled!")
+                    st.rerun()
+
+    # --- GLOBAL MODAL-BASED GOVERNANCE HEADER BAR ---
+    st.markdown("### 🏢 Multi-Tenant Governance Command Center")
+    col_hdr1, col_hdr2, col_hdr3, col_hdr4 = st.columns([3, 1, 3, 1])
+
+    inst_opts = ["Select Institute Network..."] + [f"{i['name']} ({i['code']})" for i in institutes]
+    inst_map = {f"{i['name']} ({i['code']})": i for i in institutes}
+    
+    sel_inst_label = col_hdr1.selectbox("🏢 Institute Network", inst_opts, label_visibility="collapsed")
+    
+    with col_hdr2:
+        if st.button("➕ New Inst", use_container_width=True):
+            modal_create_institute()
+
+    sel_inst = inst_map.get(sel_inst_label)
+    sel_branch = None
+
+    if sel_inst:
+        branches = []
+        try:
+            bres = requests.get(f"{BACKEND_URL}/api/branches?institute_id={sel_inst['id']}", timeout=2)
+            if bres.status_code == 200:
+                branches = bres.json()["data"]
+        except Exception:
+            pass
+
+        branch_opts = ["Select Center Branch..."] + [f"{b['branch_name']} ({b['city']})" for b in branches]
+        branch_map = {f"{b['branch_name']} ({b['city']})": b for b in branches}
+        
+        sel_branch_label = col_hdr3.selectbox("📍 Center Branch Node", branch_opts, label_visibility="collapsed")
+        with col_hdr4:
+            if st.button("➕ New Branch", use_container_width=True):
+                modal_create_branch(sel_inst['id'], sel_inst['name'])
+        sel_branch = branch_map.get(sel_branch_label)
+    else:
+        col_hdr3.selectbox("📍 Center Branch Node", ["Select Institute First..."], disabled=True, label_visibility="collapsed")
+        with col_hdr4:
+            st.button("➕ New Branch", disabled=True, use_container_width=True)
 
     st.divider()
 
-    # 5 Main Administrative Pages / Tabs
-    pages = st.tabs([
-        "🏛️ Institute & Branch Governance",
-        "👥 Branch Student Roster & Exam Dispatch",
-        "🚀 Recruiter Outbox & Interview Ledger",
-        "🤖 Operational Audit Log & Activity Ledger",
-        "⚡ Live Autonomous Telemetry"
+    # --- STRICT DASHBOARD GATE (IF NO BRANCH SELECTED) ---
+    if not sel_inst or not sel_branch:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%); border: 2px dashed #6366F1; padding: 48px; border-radius: 16px; text-align: center; margin: 40px 0;">
+            <h2 style="color: #38BDF8; margin-bottom: 12px;">🛡️ Autonomous Mission Control Locked</h2>
+            <p style="color: #94A3B8; font-size: 1.1rem; max-width: 600px; margin: 0 auto 24px auto;">
+                Please select an active <b>Institute Network</b> and <b>Branch Center Node</b> from the top governance header bar above, or click <b>➕ New Institute</b> to launch Mission Control.
+            </p>
+            <div style="font-size: 0.9rem; color: #818CF8; font-weight: 600;">
+                🔒 Strict Multi-Tenant Data Isolation Active | Taskmaster Track v6.3.0
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+
+    # --- UNLOCKED DASHBOARD (INSTITUTE & BRANCH ACTIVE) ---
+    st.markdown(f"🟢 **Active Center Node:** **{sel_inst['name']}** $\\rightarrow$ **{sel_branch['branch_name']}** (`City: {sel_branch['city']}` | `Placement Threshold: {sel_inst['placement_threshold']}%`)")
+
+    # 3 CLEAN MISSION CONTROL TABS
+    tabs = st.tabs([
+        "📋 Course & Curriculum Hub",
+        "👥 Student Roster & AI Exam Link Dispatch",
+        "🤖 Autonomous Placement & Live Ledger"
     ])
 
-    # --- PAGE 1: INSTITUTE & BRANCH GOVERNANCE ---
-    with pages[0]:
-        st.subheader("🏛️ Cascading Governance & Creation Logic")
-        st.markdown("Create Institutes (with mandatory Initial Branch), register isolated Branches, and add Branch-specific Courses.")
-        
-        col_m1, col_m2, col_m3 = st.columns(3)
-        
-        with col_m1:
-            st.markdown("#### 1️⃣ Create Institute (Requires Initial Branch)")
-            with st.form("create_inst_branch_form"):
-                ci_name = st.text_input("Institute Name", value="SkillForge Foundation")
-                ci_code = st.text_input("Unique Code", value=f"SKILL-{int(time.time())%10000}")
-                ci_bname = st.text_input("Initial Branch Name", value="Main Campus Center")
-                ci_city = st.text_input("Branch City", value="New Delhi")
-                ci_thresh = st.slider("Placement Threshold %", 50, 95, 70)
-                sub_ci = st.form_submit_button("Save Institute & Initial Branch", type="primary")
-                if sub_ci:
-                    r_ci = requests.post(f"{BACKEND_URL}/api/institutes/create", json={
-                        "name": ci_name,
-                        "code": ci_code,
-                        "initial_branch_name": ci_bname,
-                        "initial_city": ci_city,
-                        "placement_threshold": ci_thresh
-                    })
-                    if r_ci.status_code == 200:
-                        st.success("✅ Institute & Initial Branch Created!")
-                        st.rerun()
-                        
-        with col_m2:
-            st.markdown("#### 2️⃣ Add Additional Branch")
-            with st.form("create_extra_branch_form"):
-                st.caption(f"Parent Institute: **{sel_inst['name']}**")
-                eb_name = st.text_input("New Branch Name", value="Dwarka Skill Hub")
-                eb_city = st.text_input("City", value="Delhi")
-                sub_eb = st.form_submit_button("Save Branch", type="primary")
-                if sub_eb:
-                    r_eb = requests.post(f"{BACKEND_URL}/api/branches/create", json={
-                        "institute_id": sel_inst["id"],
-                        "branch_name": eb_name,
-                        "city": eb_city
-                    })
-                    if r_eb.status_code == 200:
-                        st.success(f"✅ Branch Added to {sel_inst['name']}!")
-                        st.rerun()
-                        
-        with col_m3:
-            st.markdown("#### 3️⃣ ⚡ AI Course Synthesizer (Zero-Friction)")
-            if not sel_branch:
-                st.caption("Please select a branch above.")
-            else:
-                with st.form("ai_course_synthesizer_form"):
-                    st.caption(f"Parent Branch: **{sel_branch['branch_name']}**")
-                    cs_input = st.text_area("Course Title or Syllabus Topic", value="EV Diagnostics & Solar Inverter Maintenance", height=80)
-                    sub_cs = st.form_submit_button("⚡ AI Synthesize & Isolate Course", type="primary", use_container_width=True)
-                    if sub_cs:
-                        with st.spinner("Gemini 3.5 is synthesizing curriculum, skill tags & rubric..."):
-                            r_cs = requests.post(f"{BACKEND_URL}/api/courses/synthesize", json={
-                                "institute_id": sel_inst["id"],
-                                "branch_id": sel_branch["id"],
-                                "course_input": cs_input
-                            })
-                            if r_cs.status_code == 200:
-                                res_d = r_cs.json()
-                                st.success(f"✅ Course Synthesized: **{res_d['synthesis']['course_name']}**!")
-                                st.caption("Skills: " + ", ".join(res_d['synthesis'].get('skills_list', [])))
-                                st.rerun()
+    # --- TAB 1: COURSE & CURRICULUM HUB ---
+    with tabs[0]:
+        col_ch1, col_ch2 = st.columns([3, 1])
+        with col_ch1:
+            st.subheader(f"📚 Curriculum & Course Hub ({sel_branch['branch_name']})")
+            st.caption("Manage branch-specific vocational courses, curriculum module breakdowns, and core skills.")
+        with col_ch2:
+            if st.button("➕ Create New Course", type="primary", use_container_width=True):
+                modal_create_course(sel_inst['id'], sel_branch['id'], sel_branch['branch_name'])
 
-        st.divider()
-        with st.expander("⚙️ Institute Configurable Exam Parameters & Policy Settings", expanded=True):
-            with st.form("institute_config_form"):
-                col_ic1, col_ic2, col_ic3 = st.columns(3)
-                with col_ic1:
-                    cur_num_mcqs = sel_inst.get("num_mcqs_config", 10)
-                    new_num_mcqs = st.select_slider("Number of MCQs per Assessment", options=[5, 10, 15, 25, 50], value=cur_num_mcqs)
-                with col_ic2:
-                    cur_thresh = sel_inst.get("placement_threshold", 70)
-                    new_thresh = st.slider("Minimum Placement Score %", 50, 95, cur_thresh)
-                with col_ic3:
-                    cur_cap = sel_inst.get("max_interviews_cap", 3)
-                    new_cap = st.slider("Max Interview Cap per Candidate", 1, 5, cur_cap)
-                    
-                sub_ic = st.form_submit_button("💾 Save Institute Policy Settings", type="primary", use_container_width=True)
-                if sub_ic:
-                    r_ic = requests.post(f"{BACKEND_URL}/api/institute/config", json={
-                        "institute_id": sel_inst["id"],
-                        "num_mcqs_config": new_num_mcqs,
-                        "placement_threshold": new_thresh,
-                        "max_interviews_cap": new_cap
-                    })
-                    if r_ic.status_code == 200:
-                        st.success("✅ Institute Policy Settings Saved!")
-                        st.rerun()
-
-    # --- PAGE 2: BRANCH STUDENT ROSTER & EXAM DISPATCH ---
-    with pages[1]:
-        if not sel_branch:
-            st.warning("Please select a branch above.")
-        else:
-            st.subheader(f"👥 Candidate Roster for {sel_branch['branch_name']}")
-            st.markdown("Enroll candidates, dispatch AI Exam URLs, and track student status badges.")
-            
-            branch_courses = []
-            try:
-                cres = requests.get(f"{BACKEND_URL}/api/courses?branch_id={sel_branch['id']}", timeout=2)
-                if cres.status_code == 200:
-                    branch_courses = cres.json()["data"]
-            except Exception:
-                pass
-                
-            course_opts = {c['course_name']: c['id'] for c in branch_courses} if branch_courses else {"Automotive & Hardware Diagnostics": "CRS-AUTO-01"}
-            
-            tab_intake1, tab_intake2, tab_intake3 = st.tabs(["📝 Mode A: Manual Intake", "📁 Mode B: Bulk CSV Upload", "📄 Mode C: Smart AI Resume Ingestion"])
-            
-            with tab_intake1:
-                with st.form("enroll_student_isolated_form"):
-                    sc1, sc2 = st.columns(2)
-                    with sc1:
-                        s_name = st.text_input("Full Name", value="Rohan Mehta")
-                        s_dob = st.date_input(
-                            "Date of Birth",
-                            value=datetime.date(2000, 1, 1),
-                            min_value=datetime.date(1970, 1, 1),
-                            max_value=datetime.date(2015, 12, 31)
-                        )
-                        s_email = st.text_input("Email Address", value="rohan.m@skillforge-edu.org")
-                    with sc2:
-                        s_phone = st.text_input("Phone Number", value="+91 9876543210")
-                        s_cname = st.selectbox("Assign Course", list(course_opts.keys()))
-                        s_bio = st.text_area("Candidate Bio", value="Trained in hardware circuit diagnostic isolation.")
-                        
-                    sub_en = st.form_submit_button("Enroll Candidate", type="primary")
-                    if sub_en:
-                        dob_str = str(s_dob) if s_dob else "2002-01-01"
-                        c_id = course_opts.get(s_cname, "CRS-GENERIC")
-                        r_en = requests.post(f"{BACKEND_URL}/api/students/add", json={
-                            "institute_id": sel_inst["id"],
-                            "branch_id": sel_branch["id"],
-                            "course_id": c_id,
-                            "branch_name": sel_branch["branch_name"],
-                            "course_name": s_cname,
-                            "full_name": s_name,
-                            "dob": dob_str,
-                            "email": s_email,
-                            "phone": s_phone,
-                            "bio": s_bio,
-                            "fees_status": "PAID",
-                            "consent": 1
-                        })
-                        if r_en.status_code == 200:
-                            st.success(f"✅ Candidate Enrolled! ID: `{r_en.json()['data']['student_id']}`")
-                            st.rerun()
-
-            with tab_intake2:
-                st.caption("Upload a `.csv` or `.xlsx` file with headers: `FullName`, `DOB`, `Email`, `Phone`, `CourseName`.")
-                
-                # Sample CSV generator
-                sample_csv = "FullName,DOB,Email,Phone,CourseName\nPriya Sharma,2001-05-14,priya.s@skillforge-edu.org,+91 9811223344,Automotive & Hardware Diagnostics\nKaran Verma,1999-11-20,karan.v@skillforge-edu.org,+91 9877665544,EV & Solar Maintenance\n"
-                st.download_button("📥 Download Sample Excel/CSV Template", sample_csv, "skillforge_student_import_template.csv", "text/csv")
-                
-                bulk_file = st.file_uploader("Upload CSV / Excel Roster", type=["csv"])
-                if bulk_file is not None:
-                    import pandas as pd
-                    try:
-                        df = pd.read_csv(bulk_file)
-                        st.markdown("#### 📊 Roster Preview:")
-                        st.dataframe(df, use_container_width=True)
-                        
-                        if st.button("🚀 Import All Students to Branch", type="primary"):
-                            imported_count = 0
-                            for _, row in df.iterrows():
-                                c_name_row = str(row.get("CourseName", list(course_opts.keys())[0]))
-                                c_id = course_opts.get(c_name_row, "CRS-GENERIC")
-                                r_b = requests.post(f"{BACKEND_URL}/api/students/add", json={
-                                    "institute_id": sel_inst["id"],
-                                    "branch_id": sel_branch["id"],
-                                    "course_id": c_id,
-                                    "branch_name": sel_branch["branch_name"],
-                                    "course_name": c_name_row,
-                                    "full_name": str(row.get("FullName", "Student")),
-                                    "dob": str(row.get("DOB", "2000-01-01")),
-                                    "email": str(row.get("Email", "bulk@skillforge-edu.org")),
-                                    "phone": str(row.get("Phone", "+91 9876543210")),
-                                    "bio": "Bulk imported roster candidate",
-                                    "fees_status": "PAID",
-                                    "consent": 1
-                                })
-                                if r_b.status_code == 200:
-                                    imported_count += 1
-                            st.success(f"🎉 Successfully imported {imported_count} candidates to {sel_branch['branch_name']}!")
-                            st.rerun()
-                    except Exception as ex:
-                        st.error(f"Error parsing bulk file: {ex}")
-
-            with tab_intake3:
-                st.caption("Paste Resume Text, Bio, or GitHub/LinkedIn URL for 1-Click AI Extraction.")
-                with st.form("smart_resume_ingest_form"):
-                    sm_cname = st.selectbox("Assign Course", list(course_opts.keys()), key="smart_course_sel")
-                    sm_text = st.text_area("Paste Resume Text / GitHub URL / Bio", value="Alex Mercer - Certified Automotive ECU Diagnostic Specialist with 2 years experience at Bosch Labs. Skills: ECU Flashing, Oscilloscope, Multimeter, Fault Logging.", height=100)
-                    sub_sm = st.form_submit_button("⚡ Smart AI Auto-Ingest Student Profile", type="primary", use_container_width=True)
-                    if sub_sm:
-                        c_id = course_opts.get(sm_cname, "CRS-GENERIC")
-                        with st.spinner("Gemma + Gemini 3.5 extracting profile details..."):
-                            r_sm = requests.post(f"{BACKEND_URL}/api/students/smart-ingest", json={
-                                "institute_id": sel_inst["id"],
-                                "branch_id": sel_branch["id"],
-                                "course_id": c_id,
-                                "branch_name": sel_branch["branch_name"],
-                                "course_name": sm_cname,
-                                "raw_text_or_url": sm_text
-                            })
-                            if r_sm.status_code == 200:
-                                res_sm = r_sm.json()
-                                st.success(f"🎉 Student Smart-Ingested: **{res_sm['data']['full_name']}** (`{res_sm['data']['student_id']}`)!")
-                                st.rerun()
-
-            st.divider()
-            
-            students = []
-            try:
-                st_res = requests.get(f"{BACKEND_URL}/api/students?institute_id={sel_inst['id']}&branch_id={sel_branch['id']}", timeout=2)
-                if st_res.status_code == 200:
-                    students = st_res.json()["data"]
-            except Exception as e:
-                st.error(f"Error loading students: {e}")
-                
-            if not students:
-                st.warning("No candidates enrolled in this branch yet.")
-            else:
-                for s in students:
-                    with st.container():
-                        col_r1, col_r2, col_r3, col_r4 = st.columns([2.2, 3.2, 2.2, 1.8])
-                        with col_r1:
-                            st.write(f"**{s['full_name']}** (`{s['student_id']}`)")
-                            st.caption(f"DOB: {s.get('dob', '2002-01-01')} | {s['course_name']}")
-                        with col_r2:
-                            clean_exam_link = f"http://localhost:8501/?page=exam&sid={s['student_id']}"
-                            if st.button(f"🚀 Dispatch AI Exam Link for {s['full_name'].split()[0]}", key=f"btn_dispatch_{s['student_id']}"):
-                                st.session_state[f"dispatched_link_{s['student_id']}"] = clean_exam_link
-                                st.success("✅ AI Exam Link Dispatched!")
-                            
-                            show_link = st.session_state.get(f"dispatched_link_{s['student_id']}", clean_exam_link)
-                            st.code(show_link, language="text")
-                        with col_r3:
-                            if s.get("interview_count", 0) > 0:
-                                st.markdown('<span class="badge-interview">📅 INTERVIEW_SCHEDULED</span>', unsafe_allow_html=True)
-                            elif s.get("portfolio_generated") or s.get("portfolio_url"):
-                                st.markdown('<span class="badge-live">🌐 PORTFOLIO_LIVE</span>', unsafe_allow_html=True)
-                                st.markdown('<span class="badge-interview" style="background:#E0E7FF; color:#3730A3;">🚀 JOB_HUNTING</span>', unsafe_allow_html=True)
-                            elif s.get("exam_completed"):
-                                st.markdown('<span class="badge-pending" style="background:#FDE68A; color:#78350F;">⚡ EVALUATING</span>', unsafe_allow_html=True)
-                            else:
-                                st.markdown('<span class="badge-pending">⏳ PENDING_EXAM</span>', unsafe_allow_html=True)
-                        with col_r4:
-                            col_act1, col_act2 = st.columns(2)
-                            with col_act1:
-                                with st.popover("✏️ Edit"):
-                                    with st.form(key=f"edit_student_form_{s['student_id']}"):
-                                        st.subheader(f"Edit Profile: {s['full_name']}")
-                                        ed_name = st.text_input("Full Name", value=s['full_name'])
-                                        ed_email = st.text_input("Email", value=s['email'])
-                                        ed_phone = st.text_input("Phone", value=s.get('phone', ''))
-                                        ed_bio = st.text_area("Bio", value=s.get('bio', ''))
-                                        ed_exp = st.number_input("Work Experience (Years)", min_value=0, max_value=30, value=int(s.get('work_experience_years', 0)))
-                                        ed_roles = st.text_input("Target Role Preference", value=s.get('target_role_preference', ''))
-                                        ed_skills = st.text_input("Skills (comma-separated)", value=s.get('skills_list', ''))
-                                        
-                                        sub_ed = st.form_submit_button("Save Changes", type="primary")
-                                        if sub_ed:
-                                            requests.post(f"{BACKEND_URL}/api/student/update-profile", json={
-                                                "student_id": s['student_id'],
-                                                "full_name": ed_name,
-                                                "email": ed_email,
-                                                "phone": ed_phone,
-                                                "bio": ed_bio,
-                                                "github_url": s.get('github_url', ''),
-                                                "skills_list": ed_skills,
-                                                "target_role_preference": ed_roles,
-                                                "past_companies_text": s.get('past_companies_text', ''),
-                                                "work_experience_years": ed_exp
-                                            })
-                                            st.success("✅ Profile Updated!")
-                                            st.rerun()
-                            with col_act2:
-                                if st.button("🗑️", key=f"btn_del_{s['student_id']}", help="Delete Student"):
-                                    requests.delete(f"{BACKEND_URL}/api/student/{s['student_id']}")
-                                    st.success(f"Deleted {s['full_name']}")
-                                    st.rerun()
-                                    
-                            if s.get("retest_requested") and not s.get("retest_approved"):
-                                if st.button(f"✅ Approve Re-test for {s['full_name'].split()[0]}", key=f"btn_app_retest_{s['student_id']}", type="primary"):
-                                    requests.post(f"{BACKEND_URL}/api/students/approve-retest", json={"student_id": s['student_id']})
-                                    st.success("✅ Re-test Approved!")
-                                    st.rerun()
-                            elif s.get("portfolio_generated") or s.get("portfolio_url"):
-                                port_url = s.get("portfolio_url") or f"http://localhost:8000/portfolio/{s['student_id']}"
-                                st.markdown(f"🌐 [View Portfolio]({port_url})")
-                                st.markdown(f"💼 [Match Hub](http://localhost:8501/?page=student_dashboard&sid={s['student_id']})")
-                            else:
-                                st.caption("No Portfolio Yet")
-                    st.divider()
-
-    # --- PAGE 3: RECRUITER OUTBOX & INTERVIEW LEDGER ---
-    with pages[2]:
-        st.subheader("🚀 Recruiter Outbox & Human-in-the-Loop Ledger")
-        st.markdown("Track candidate application dispatches, auto-scheduled interview slots, and human intervention flags.")
-        
-        if not sel_branch:
-            st.warning("Please select a branch above.")
-        else:
-            try:
-                l_res = requests.get(f"{BACKEND_URL}/api/placements/ledger?branch_id={sel_branch['id']}", timeout=2)
-                if l_res.status_code == 200:
-                    ledger = l_res.json()["data"]
-                    if ledger:
-                        for job in ledger:
-                            with st.container():
-                                col_j1, col_j2, col_j3, col_j4 = st.columns([2.5, 3, 2, 2.5])
-                                with col_j1:
-                                    st.write(f"**{job['student_name']}** (`{job['student_id']}`)")
-                                    st.caption(f"Target Role: {job['role_title']}")
-                                with col_j2:
-                                    st.write(f"Employer: **{job['company_name']}**")
-                                    st.caption(f"Match Score: {job['match_percentage']}%")
-                                with col_j3:
-                                    status = job['status']
-                                    if status == "NEEDS_HUMAN_INTERVENTION":
-                                        st.markdown('<span class="badge-intervention">⚠️ HUMAN INTERVENTION REQUIRED</span>', unsafe_allow_html=True)
-                                    elif status in ["INTERVIEW_SCHEDULED", "APPLIED_AND_DISPATCHED"]:
-                                        st.markdown('<span class="badge-live">📅 INTERVIEW SCHEDULED</span>', unsafe_allow_html=True)
-                                    else:
-                                        st.markdown('<span class="badge-pending">🔄 REMEDIAL ASSIGNED</span>', unsafe_allow_html=True)
-                                with col_j4:
-                                    st.write(f"Details: `{job.get('interview_details', 'Dispatched')}`")
-                                    if job.get('dossier_sent_url'):
-                                        st.markdown(f"🌐 [Sent Portfolio Dossier]({job['dossier_sent_url']})")
-                            st.divider()
-                    else:
-                        st.info("No applications dispatched for this branch yet.")
-            except Exception as e:
-                st.error(f"Error loading ledger: {e}")
-
-    # --- PAGE 4: OPERATIONAL AUDIT LOG & ACTIVITY LEDGER ---
-    with pages[3]:
-        st.subheader("🤖 AI Agent Operational Log & Activity Ledger")
-        st.markdown("Immutable, chronological audit ledger tracking all autonomous background executions across assessments, evaluations, and job dispatches.")
-        
-        agent_logs = []
+        branch_courses = []
         try:
-            al_res = requests.get(f"{BACKEND_URL}/api/agent/logs", timeout=2)
-            if al_res.status_code == 200:
-                agent_logs = al_res.json()["data"]
+            cres = requests.get(f"{BACKEND_URL}/api/courses?branch_id={sel_branch['id']}", timeout=2)
+            if cres.status_code == 200:
+                branch_courses = cres.json()["data"]
         except Exception:
             pass
-            
-        if not agent_logs:
-            st.info("No background activity logged yet.")
-        else:
-            for alog in agent_logs:
-                with st.container():
-                    c_l1, c_l2, c_l3 = st.columns([1.5, 3.5, 2])
-                    with c_l1:
-                        st.caption(f"⏱️ `{alog.get('timestamp', 'Recent')}`")
-                    with c_l2:
-                        st.markdown(f"**[{alog.get('action_type', 'ACTION')}]** {alog.get('description', '')}")
-                    with c_l3:
-                        if alog.get('student_id'):
-                            st.caption(f"Student: `{alog['student_id']}`")
-                st.divider()
 
-    # --- PAGE 5: LIVE AUTONOMOUS TELEMETRY ---
-    with pages[4]:
-        st.subheader("⚡ Live Autonomous Agent Terminal & Streaming Telemetry")
-        st.markdown("Real-time execution logs showing the continuous background action engine discovering jobs, generating portfolios, and scheduling interviews.")
+        if not branch_courses:
+            st.info("No custom courses registered for this branch node yet. Click **➕ Create New Course** to synthesize one!")
+        else:
+            for c in branch_courses:
+                with st.expander(f"📖 **{c['course_name']}** (`ID: {c['id']}`)", expanded=True):
+                    col_cd1, col_cd2 = st.columns([3, 1])
+                    with col_cd1:
+                        st.markdown(f"**Course Description:** {c.get('course_description') or c.get('curriculum_summary', 'N/A')}")
+                        if c.get('curriculum_sections'):
+                            st.markdown("**Curriculum Breakdown / Modules:**")
+                            sec_list = [s.strip() for s in c['curriculum_sections'].split(',') if s.strip()]
+                            for sec in sec_list:
+                                st.markdown(f"- 🔹 `{sec}`")
+                        if c.get('core_skills'):
+                            st.markdown("**Core Practical Skills:**")
+                            skills = [sk.strip() for sk in c['core_skills'].split(',') if sk.strip()]
+                            st.markdown(" ".join([f'<span class="badge-pending" style="background:#E0F2FE; color:#0369A1; font-weight:600;">{s}</span>' for s in skills]), unsafe_allow_html=True)
+                    with col_cd2:
+                        st.metric("Default MCQ Count", f"{c.get('default_mcq_count', 10)} Questions")
+                        st.caption(f"Created: {c.get('created_at', '')[:10]}")
+
+    # --- TAB 2: STUDENT ROSTER & AI EXAM DISPATCH ---
+    with tabs[1]:
+        col_sr1, col_sr2, col_sr3 = st.columns([2.5, 1, 1])
+        with col_sr1:
+            st.subheader(f"👥 Student Candidate Roster ({sel_branch['branch_name']})")
+            st.caption("Enroll candidates, upload bulk rosters, and generate direct standalone exam links.")
         
-        telemetry_logs = st.session_state.get("last_telemetry", [
-            {"timestamp": "09:30:01.002", "step": "START", "message": "Autonomous Agent initialized for Candidate STU-1001"},
-            {"timestamp": "09:30:01.045", "step": "GEMMA_PRECHECK", "message": "Gemma sub-millisecond syntax check passed (Structure Score: 85/100)"},
-            {"timestamp": "09:30:02.112", "step": "DOSSIER_GEN", "message": "Synthesized standalone HTML portfolio dossier at /portfolio/STU-1001"},
-            {"timestamp": "09:30:02.250", "step": "LIVE_WEB_JOB_SEARCH", "message": "Grounded search via Gemini 3.5 for live openings: Found Tata Motors, Infosys"},
-            {"timestamp": "09:30:02.340", "step": "ACTION_DISPATCHED", "message": "Auto-dispatched job application to Tata Motors for Automotive Systems Specialist (92% Match)"},
-            {"timestamp": "09:30:02.510", "step": "ALERTS_SENT", "message": "Dispatched interview notification alerts to Candidate & Branch Node."}
-        ])
+        course_opts = {c['course_name']: c['id'] for c in branch_courses} if branch_courses else {"Automotive & Hardware Diagnostics": "CRS-AUTO-01"}
+
+        with col_sr2:
+            if st.button("👤 Enroll Student", type="primary", use_container_width=True):
+                modal_add_student(sel_inst['id'], sel_branch['id'], sel_branch['branch_name'], course_opts)
+
+        st.divider()
+
+        students = []
+        try:
+            sres = requests.get(f"{BACKEND_URL}/api/students?institute_id={sel_inst['id']}&branch_id={sel_branch['id']}", timeout=2)
+            if sres.status_code == 200:
+                students = sres.json()["data"]
+        except Exception:
+            pass
+
+        if not students:
+            st.info(f"No candidates enrolled under {sel_branch['branch_name']} yet. Use **👤 Enroll Student** to add one.")
+        else:
+            st.markdown(f"#### Enrolled Candidates ({len(students)} Total)")
+            for stu in students:
+                with st.container():
+                    col_st1, col_st2, col_st3 = st.columns([3, 2, 2.5])
+                    with col_st1:
+                        st.markdown(f"##### **{stu['full_name']}** (`{stu['student_id']}`)")
+                        st.caption(f"Course: **{stu['course_name']}** | Email: `{stu['email']}`")
+                        if stu.get("github_url"):
+                            st.caption(f"GitHub: [{stu['github_url']}]({stu['github_url']})")
+                    with col_st2:
+                        if stu.get("exam_completed"):
+                            st.markdown('<span class="badge-live">✅ EXAM COMPLETED</span>', unsafe_allow_html=True)
+                            st.caption(f"Portfolio: [{stu.get('portfolio_url') or 'View'}]({stu.get('portfolio_url')})")
+                        else:
+                            st.markdown('<span class="badge-pending">⏳ PENDING EXAM</span>', unsafe_allow_html=True)
+                    with col_st3:
+                        exam_url = f"http://localhost:8501/?page=exam&sid={stu['student_id']}&branch={sel_branch['id']}"
+                        st.markdown(f'<a href="{exam_url}" target="_blank" style="text-decoration:none;"><button style="background:#4F46E5; color:white; border:none; border-radius:6px; padding:6px 12px; font-weight:600; cursor:pointer; width:100%;">🎓 Launch Exam Workspace</button></a>', unsafe_allow_html=True)
+                    st.divider()
+
+    # --- TAB 3: AUTONOMOUS PLACEMENT & LIVE LEDGER ---
+    with tabs[2]:
+        st.subheader(f"🤖 Autonomous Placement Ledger & Interview Outbox ({sel_branch['branch_name']})")
+        st.caption("Real-time tracking of AI-applied job vacancies, recruiter interview alerts, and candidate dossiers.")
         
-        log_text = "\n".join([f"[{t['timestamp']}] [{t['step']}] {t['message']}" for t in telemetry_logs])
-        st.markdown(f'<div class="terminal-window"><pre>{log_text}</pre></div>', unsafe_allow_html=True)
+        try:
+            lres = requests.get(f"{BACKEND_URL}/api/placements/ledger?branch_id={sel_branch['id']}", timeout=2)
+            if lres.status_code == 200:
+                ledger = lres.json()["data"]
+                if not ledger:
+                    st.info("No active placement applications recorded for this branch yet.")
+                else:
+                    for entry in ledger:
+                        with st.container():
+                            col_lg1, col_lg2, col_lg3 = st.columns([3, 2, 2])
+                            with col_lg1:
+                                st.markdown(f"#### **{entry['company_name']}**")
+                                st.markdown(f"Role: **{entry['role_title']}** | Student: `{entry['student_id']}`")
+                            with col_lg2:
+                                st.markdown(f"🎯 Match Score: `{entry.get('match_percentage', 90)}%`")
+                                st.markdown('<span class="badge-interview">💼 APPLICATION DISPATCHED</span>', unsafe_allow_html=True)
+                            with col_lg3:
+                                dossier_link = entry.get('dossier_sent_url') or f"http://localhost:8000/portfolio/{entry['student_id']}"
+                                st.markdown(f'<a href="{dossier_link}" target="_blank" style="text-decoration:none;"><button style="background:#0F172A; color:#38BDF8; border:1px solid #0284C7; border-radius:6px; padding:6px 10px; font-size:0.8rem; font-weight:600; cursor:pointer; width:100%;">🌐 View Portfolio Dossier</button></a>', unsafe_allow_html=True)
+                            st.divider()
+        except Exception as ex:
+            st.error(f"Error loading placement ledger: {ex}")
+
+
