@@ -52,10 +52,38 @@ query_params = st.query_params
 if query_params.get("view") == "portfolio" and ("sid" in query_params or "id" in query_params or "portfolio" in query_params):
     target_sid = query_params.get("sid") or query_params.get("id") or query_params.get("portfolio")
     if target_sid:
+        st.markdown("""
+            <style>
+                /* Remove default Streamlit page margins & paddings */
+                .block-container {
+                    padding-top: 0rem !important;
+                    padding-bottom: 0rem !important;
+                    padding-left: 0rem !important;
+                    padding-right: 0rem !important;
+                    max-width: 100vw !important;
+                }
+                header, footer, #MainMenu {
+                    visibility: hidden !important;
+                    height: 0px !important;
+                    display: none !important;
+                }
+                iframe {
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    border: none !important;
+                    display: block !important;
+                }
+                body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    overflow-x: hidden !important;
+                }
+            </style>
+        """, unsafe_allow_html=True)
         try:
             res = requests.get(f"{BACKEND_API_BASE}/portfolio/{target_sid}", timeout=5)
             if res.status_code == 200 and res.text:
-                components.html(res.text, height=1000, scrolling=True)
+                components.html(res.text, height=1400, scrolling=True)
                 st.stop()
             else:
                 st.info("Portfolio dossier is currently being generated...")
