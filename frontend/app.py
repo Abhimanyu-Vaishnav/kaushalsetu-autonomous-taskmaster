@@ -84,8 +84,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Clean URL Parameter Routing
+# --- BIDIRECTIONAL STATE PERSISTENCE ENGINE ---
 query_params = st.query_params
+
+if "selected_inst_id" not in st.session_state:
+    st.session_state["selected_inst_id"] = query_params.get("inst", None)
+if "selected_branch_id" not in st.session_state:
+    st.session_state["selected_branch_id"] = query_params.get("branch", None)
+if "authenticated_student" not in st.session_state:
+    st.session_state["authenticated_student"] = None
+if "student_logged_in" not in st.session_state:
+    st.session_state["student_logged_in"] = False
+
 current_page = query_params.get("page") or query_params.get("view") or "admin"
 
 # ROUTE 1: STANDALONE STUDENT EXAM PORTAL (?page=exam or ?view=exam)
@@ -99,12 +109,8 @@ if current_page in ["exam", "student_portal"]:
     # Universal Branch Context Display
     if param_branch:
         st.info(f"📍 **Branch Exam Portal Context:** `{param_branch.replace('_', ' ').title()}`")
-
-    # Check if student is authenticated in session state or attempting login
-    if "authenticated_student" not in st.session_state:
-        st.session_state["authenticated_student"] = None
         
-    if not st.session_state["authenticated_student"]:
+    if not st.session_state.get("authenticated_student"):
         with st.container():
             st.markdown("""
             <div style="background:#0F172A; border:1px solid #334155; padding:24px; border-radius:12px; max-width:600px; margin:20px auto;">
@@ -925,18 +931,32 @@ else:
     col_hdr1, col_hdr2, col_hdr3, col_hdr4 = st.columns([3, 1, 3, 1])
 
     inst_opts = ["Select Institute Network..."] + [f"{i['name']} ({i['code']})" for i in institutes]
-    inst_map = {f"{i['name']} ({i['code']})": i for i in institutes}
+    inst_id_map = {i['id']: f"{i['name']} ({i['code']})" for i in institutes}
+    label_inst_map = {f"{i['name']} ({i['code']})": i for i in institutes}
     
-    sel_inst_label = col_hdr1.selectbox("🏢 Institute Network", inst_opts, label_visibility="collapsed")
+    # Calculate active institute index
+    default_inst_idx = 0
+    cur_saved_inst = st.session_state.get("selected_inst_id")
+    if cur_saved_inst and cur_saved_inst in inst_id_map:
+        target_label = inst_id_map[cur_saved_inst]
+        if target_label in inst_opts:
+            default_inst_idx = inst_opts.index(target_label)
+            
+    sel_inst_label = col_hdr1.selectbox("🏢 Institute Network", inst_opts, index=default_inst_idx, label_visibility="collapsed")
     
     with col_hdr2:
         if st.button("➕ New Inst", use_container_width=True):
             modal_create_institute()
 
-    sel_inst = inst_map.get(sel_inst_label)
+    sel_inst = label_inst_map.get(sel_inst_label)
     sel_branch = None
 
     if sel_inst:
+        # Update persistent query params & session state
+        if st.session_state.get("selected_inst_id") != sel_inst['id']:
+            st.session_state["selected_inst_id"] = sel_inst['id']
+            st.query_params["inst"] = sel_inst['id']
+            
         branches = []
         try:
             bres = requests.get(f"{BACKEND_URL}/api/branches?institute_id={sel_inst['id']}", timeout=2)
@@ -946,13 +966,26 @@ else:
             pass
 
         branch_opts = ["Select Center Branch..."] + [f"{b['branch_name']} ({b['city']})" for b in branches]
-        branch_map = {f"{b['branch_name']} ({b['city']})": b for b in branches}
+        branch_id_map = {b['id']: f"{b['branch_name']} ({b['city']})" for b in branches}
+        label_branch_map = {f"{b['branch_name']} ({b['city']})": b for b in branches}
         
-        sel_branch_label = col_hdr3.selectbox("📍 Center Branch Node", branch_opts, label_visibility="collapsed")
+        default_branch_idx = 0
+        cur_saved_branch = st.session_state.get("selected_branch_id")
+        if cur_saved_branch and cur_saved_branch in branch_id_map:
+            target_b_label = branch_id_map[cur_saved_branch]
+            if target_b_label in branch_opts:
+                default_branch_idx = branch_opts.index(target_b_label)
+                
+        sel_branch_label = col_hdr3.selectbox("📍 Center Branch Node", branch_opts, index=default_branch_idx, label_visibility="collapsed")
         with col_hdr4:
             if st.button("➕ New Branch", use_container_width=True):
                 modal_create_branch(sel_inst['id'], sel_inst['name'])
-        sel_branch = branch_map.get(sel_branch_label)
+                
+        sel_branch = label_branch_map.get(sel_branch_label)
+        if sel_branch:
+            if st.session_state.get("selected_branch_id") != sel_branch['id']:
+                st.session_state["selected_branch_id"] = sel_branch['id']
+                st.query_params["branch"] = sel_branch['id']
     else:
         col_hdr3.selectbox("📍 Center Branch Node", ["Select Institute First..."], disabled=True, label_visibility="collapsed")
         with col_hdr4:
