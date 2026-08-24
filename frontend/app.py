@@ -529,6 +529,32 @@ else:
                             st.success(f"✅ Course Isolated to {sel_branch['branch_name']}!")
                             st.rerun()
 
+        st.divider()
+        with st.expander("⚙️ Institute Configurable Exam Parameters & Policy Settings", expanded=True):
+            with st.form("institute_config_form"):
+                col_ic1, col_ic2, col_ic3 = st.columns(3)
+                with col_ic1:
+                    cur_num_mcqs = sel_inst.get("num_mcqs_config", 10)
+                    new_num_mcqs = st.select_slider("Number of MCQs per Assessment", options=[5, 10, 15, 25, 50], value=cur_num_mcqs)
+                with col_ic2:
+                    cur_thresh = sel_inst.get("placement_threshold", 70)
+                    new_thresh = st.slider("Minimum Placement Score %", 50, 95, cur_thresh)
+                with col_ic3:
+                    cur_cap = sel_inst.get("max_interviews_cap", 3)
+                    new_cap = st.slider("Max Interview Cap per Candidate", 1, 5, cur_cap)
+                    
+                sub_ic = st.form_submit_button("💾 Save Institute Policy Settings", type="primary", use_container_width=True)
+                if sub_ic:
+                    r_ic = requests.post(f"{BACKEND_URL}/api/institute/config", json={
+                        "institute_id": sel_inst["id"],
+                        "num_mcqs_config": new_num_mcqs,
+                        "placement_threshold": new_thresh,
+                        "max_interviews_cap": new_cap
+                    })
+                    if r_ic.status_code == 200:
+                        st.success("✅ Institute Policy Settings Saved!")
+                        st.rerun()
+
     # --- PAGE 2: BRANCH STUDENT ROSTER & EXAM DISPATCH ---
     with pages[1]:
         if not sel_branch:

@@ -54,6 +54,13 @@ class InstituteCreateReq(BaseModel):
     code: str
     initial_branch_name: str = "Main Center"
     initial_city: str = "Delhi"
+    num_mcqs_config: int = 10
+    placement_threshold: int = 70
+    max_interviews_cap: int = 3
+
+class InstituteConfigReq(BaseModel):
+    institute_id: str
+    num_mcqs_config: int = 10
     placement_threshold: int = 70
     max_interviews_cap: int = 3
 
@@ -141,7 +148,13 @@ def api_get_all_institutes():
 
 @app.post("/api/institutes/create")
 def api_create_institute(req: InstituteCreateReq):
-    inst = create_institute(req.name, req.code, req.initial_branch_name, req.initial_city, req.placement_threshold, req.max_interviews_cap)
+    inst = create_institute(req.name, req.code, req.initial_branch_name, req.initial_city, req.num_mcqs_config, req.placement_threshold, req.max_interviews_cap)
+    return {"success": True, "data": inst}
+
+@app.post("/api/institute/config")
+def api_update_institute_config(req: InstituteConfigReq):
+    from database import update_institute_config, get_institute_by_id
+    inst = update_institute_config(req.institute_id, req.num_mcqs_config, req.placement_threshold, req.max_interviews_cap)
     return {"success": True, "data": inst}
 
 @app.get("/api/branches")

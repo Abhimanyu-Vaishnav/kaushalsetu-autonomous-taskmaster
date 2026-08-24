@@ -22,6 +22,7 @@ def init_db():
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             code TEXT UNIQUE NOT NULL,
+            num_mcqs_config INTEGER DEFAULT 10,
             placement_threshold INTEGER DEFAULT 70,
             max_interviews_cap INTEGER DEFAULT 3,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -224,14 +225,14 @@ def get_institute_by_code(code: str) -> Optional[Dict[str, Any]]:
         row = cursor.fetchone()
         return dict(row) if row else None
 
-def create_institute(name: str, code: str, initial_branch_name: str = "Main Center", initial_city: str = "Delhi", threshold: int = 70, cap: int = 3) -> Dict[str, Any]:
+def create_institute(name: str, code: str, initial_branch_name: str = "Main Center", initial_city: str = "Delhi", num_mcqs: int = 10, threshold: int = 70, cap: int = 3) -> Dict[str, Any]:
     inst_id = f"INST-{uuid.uuid4().hex[:6].upper()}"
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO institutes (id, name, code, placement_threshold, max_interviews_cap)
-            VALUES (?, ?, ?, ?, ?)
-        """, (inst_id, name, code, threshold, cap))
+            INSERT INTO institutes (id, name, code, num_mcqs_config, placement_threshold, max_interviews_cap)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (inst_id, name, code, num_mcqs, threshold, cap))
         
         # Create mandatory initial branch
         branch_id = f"BR-{uuid.uuid4().hex[:6].upper()}"
@@ -241,6 +242,17 @@ def create_institute(name: str, code: str, initial_branch_name: str = "Main Cent
         """, (branch_id, inst_id, initial_branch_name, initial_city))
         conn.commit()
     return get_institute_by_id(inst_id)
+
+def update_institute_config(institute_id: str, num_mcqs: int, threshold: int, cap: int) -> Dict[str, Any]:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE institutes
+            SET num_mcqs_config = ?, placement_threshold = ?, max_interviews_cap = ?
+            WHERE id = ?
+        """, (num_mcqs, threshold, cap, institute_id))
+        conn.commit()
+    return get_institute_by_id(institute_id)
 
 def get_branches_by_institute(institute_id: str) -> List[Dict[str, Any]]:
     with get_db_connection() as conn:
