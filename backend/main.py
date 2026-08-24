@@ -136,6 +136,17 @@ class CertificateReq(BaseModel):
 
 # --- REST API Endpoints ---
 
+@app.get("/")
+def root():
+    return {
+        "status": "healthy",
+        "service": "SkillForge Autonomous Multi-Tenant Architecture Engine",
+        "version": "4.1.0",
+        "docs_url": "http://localhost:8000/docs",
+        "health_url": "http://localhost:8000/health",
+        "message": "Welcome to SkillForge Autonomous Backend API. Open /docs for Interactive Swagger Documentation."
+    }
+
 @app.get("/health")
 def health_check():
     return {
