@@ -2,12 +2,14 @@ import subprocess
 import sys
 import time
 import os
+import signal
 
 def run_app():
     print("=" * 60)
     print("[KaushalSetu Taskmaster] Starting Engine & Dashboard")
     print("=" * 60)
     
+    port = os.environ.get("PORT", "8080")
     root_dir = os.path.dirname(os.path.abspath(__file__))
     
     # 1. Start FastAPI backend server
@@ -21,19 +23,42 @@ def run_app():
     time.sleep(3)
     
     # 2. Start Streamlit frontend server
-    print("2. Launching Streamlit Dashboard on http://localhost:8501 ...")
+    print(f"2. Launching Streamlit Dashboard on http://0.0.0.0:{port} ...")
     frontend_process = subprocess.Popen(
-        [sys.executable, "-m", "streamlit", "run", "frontend/app.py", "--server.port", "8501"],
+        [
+            sys.executable, "-m", "streamlit", "run", "frontend/app.py",
+            f"--server.port={port}",
+            "--server.address=0.0.0.0",
+            "--server.enableCORS=false",
+            "--server.enableXsrfProtection=false"
+        ],
         cwd=root_dir
     )
     
-    try:
-        backend_process.wait()
-        frontend_process.wait()
-    except KeyboardInterrupt:
+    def shutdown_handler(signum=None, frame=None):
         print("\nShutting down KaushalSetu processes...")
-        backend_process.terminate()
-        frontend_process.terminate()
+        for p in [backend_process, frontend_process]:
+            if p.poll() is None:
+                p.terminate()
+        sys.exit(0)
+
+    try:
+        signal.signal(signal.SIGINT, shutdown_handler)
+        signal.signal(signal.SIGTERM, shutdown_handler)
+    except (ValueError, AttributeError):
+        pass
+    
+    try:
+        while True:
+            b_poll = backend_process.poll()
+            f_poll = frontend_process.poll()
+            if b_poll is not None or f_poll is not None:
+                print(f"Process exited - Backend code: {b_poll}, Frontend code: {f_poll}")
+                shutdown_handler()
+            time.sleep(1)
+    except KeyboardInterrupt:
+        shutdown_handler()
 
 if __name__ == "__main__":
     run_app()
+

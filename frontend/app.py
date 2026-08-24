@@ -8,33 +8,36 @@ import base64
 import io
 import datetime
 
-def resolve_base_urls():
-    """Dynamically resolves backend, frontend, and active APP_HOST base URLs, avoiding hardcoded localhost in Cloud Run/prod."""
-    app_host = os.environ.get("APP_BASE_URL", "").rstrip("/")
-    if not app_host:
-        try:
-            if hasattr(st, "context") and hasattr(st.context, "headers"):
-                headers = st.context.headers
-                host = headers.get("x-forwarded-host") or headers.get("host")
-                proto = headers.get("x-forwarded-proto") or ("https" if "https" in str(host) else "http")
-                if host:
-                    app_host = f"{proto}://{host}".rstrip("/")
-        except Exception:
-            pass
+# 1. Internal API Communication (Streamlit -> FastAPI inside container)
+BACKEND_API_BASE = os.environ.get("BACKEND_INTERNAL_URL", "http://127.0.0.1:8000").rstrip("/")
+BACKEND_URL = BACKEND_API_BASE
 
-    frontend_base = app_host or os.environ.get("FRONTEND_URL") or "http://localhost:8501"
-    backend_base = os.environ.get("BACKEND_URL") or app_host or "http://localhost:8000"
-    
-    return app_host, backend_base.rstrip("/"), frontend_base.rstrip("/")
+# 2. Public Shareable / Display Links (User-Facing Portfolio Dossier Links & Recruiter Email URLs)
+def get_public_base_url():
+    """Resolves public shareable base URL for external viewing links (dossiers, marksheets, recruiter emails)."""
+    env_pub = os.environ.get("APP_BASE_URL", "").rstrip("/")
+    if env_pub:
+        return env_pub
+    try:
+        if hasattr(st, "context") and hasattr(st.context, "headers"):
+            headers = st.context.headers
+            host = headers.get("x-forwarded-host") or headers.get("host")
+            proto = headers.get("x-forwarded-proto") or ("https" if "https" in str(host) else "http")
+            if host:
+                return f"{proto}://{host}".rstrip("/")
+    except Exception:
+        pass
+    return os.environ.get("PUBLIC_URL", "http://localhost:8000").rstrip("/")
 
-APP_HOST, BACKEND_URL, FRONTEND_URL = resolve_base_urls()
+PUBLIC_BASE_URL = get_public_base_url()
+APP_HOST = PUBLIC_BASE_URL
+FRONTEND_URL = PUBLIC_BASE_URL if PUBLIC_BASE_URL not in [BACKEND_API_BASE, "http://localhost:8000"] else "http://localhost:8501"
 
 def build_portfolio_dossier_url(student_id: str, existing_url: str = "") -> str:
     """Constructs absolute portfolio dossier URL relative to active deployment domain."""
-    if existing_url and not existing_url.startswith("http://localhost"):
+    if existing_url and not ("http://localhost" in existing_url or "127.0.0.1" in existing_url):
         return existing_url
-    base = APP_HOST or BACKEND_URL
-    return f"{base}/portfolio/{student_id}"
+    return f"{PUBLIC_BASE_URL}/portfolio/{student_id}"
 
 st.set_page_config(
     page_title="KaushalSetu | Autonomous Vocational Taskmaster",
