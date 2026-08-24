@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -144,16 +144,31 @@ class CertificateReq(BaseModel):
     metric_hash: str
 
 
+# --- Dynamic Base URL Resolution ---
+
+def get_base_url(request: Request = None) -> str:
+    env_base = os.environ.get("APP_BASE_URL")
+    if env_base:
+        return env_base.rstrip("/")
+    if request:
+        proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+        host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+        if proto and host:
+            return f"{proto}://{host}".rstrip("/")
+        return str(request.base_url).rstrip("/")
+    return "http://localhost:8000"
+
 # --- REST API Endpoints ---
 
 @app.get("/")
-def root():
+def root(request: Request = None):
+    base_url = get_base_url(request)
     return {
         "status": "healthy",
         "service": "KaushalSetu: Autonomous Vocational Taskmaster Engine",
         "version": "4.1.0",
-        "docs_url": "http://localhost:8000/docs",
-        "health_url": "http://localhost:8000/health",
+        "docs_url": f"{base_url}/docs",
+        "health_url": f"{base_url}/health",
         "message": "Welcome to KaushalSetu Backend API. Open /docs for Interactive Swagger Documentation."
     }
 
@@ -362,10 +377,10 @@ def api_get_students(institute_id: Optional[str] = None, branch_id: Optional[str
     return {"success": True, "data": get_all_students(institute_id, branch_id)}
 
 @app.post("/api/students")
-async def register_single_student(payload: dict):
+async def register_single_student(payload: dict, request: Request = None):
     try:
         print("[DEBUG] Incoming Student Registration Payload:", payload)
-        
+        base = get_base_url(request)
         student_id = payload.get("student_id") or f"STU-{uuid.uuid4().hex[:6].upper()}"
         inst_id = str(payload.get("institute_id", "")).strip()
         branch_id = str(payload.get("branch_id", "")).strip()
@@ -378,7 +393,7 @@ async def register_single_student(payload: dict):
         phone = str(payload.get("phone", "+91 9876543210")).strip()
         bio = str(payload.get("bio", "Enrolled vocational candidate specializing in practical diagnostics.")).strip()
         github_url = str(payload.get("github_url", "https://github.com")).strip()
-        portfolio_url = str(payload.get("portfolio_url", f"http://localhost:8000/portfolio/{student_id}")).strip()
+        portfolio_url = str(payload.get("portfolio_url") or f"{base}/portfolio/{student_id}").strip()
         target_role = str(payload.get("target_role_preference", "Specialist Engineer")).strip()
         
         skills_raw = payload.get("skills_list", "")
@@ -546,8 +561,9 @@ def api_generate_exam(req: AssessmentGenReq):
 
 # 4. Student Submission & Autonomous Background Dispatcher
 @app.post("/api/student/evaluate-and-dispatch")
-def api_student_pipeline(req: FullEvaluationReq):
+def api_student_pipeline(req: FullEvaluationReq, request: Request = None):
     try:
+        base = get_base_url(request)
         agent = AutonomousRecruiterAgent()
         res = agent.execute_autonomous_pipeline(
             student_id=req.student_id,
@@ -559,7 +575,8 @@ def api_student_pipeline(req: FullEvaluationReq):
             rubric=req.grading_rubric,
             github_url=req.github_url,
             live_url=req.live_url,
-            image_base64=req.image_base64
+            image_base64=req.image_base64,
+            base_url=base
         )
         return {"success": True, "data": res}
     except Exception as e:
@@ -585,8 +602,9 @@ class JobApplyReq(BaseModel):
     dossier_sent_url: Optional[str] = ''
 
 @app.post("/api/jobs/apply")
-def api_apply_job(req: JobApplyReq):
+def api_apply_job(req: JobApplyReq, request: Request = None):
     from database import record_job_application, log_agent_activity, get_student_by_id
+    base = get_base_url(request)
     stu = get_student_by_id(req.student_id)
     b_id = stu['branch_id'] if stu else None
     app_id = record_job_application(
@@ -594,12 +612,19 @@ def api_apply_job(req: JobApplyReq):
         company_name=req.company_name,
         role_title=req.role_title,
         match_percentage=req.match_percentage,
-        dossier_sent_url=req.dossier_sent_url or f"http://localhost:8000/portfolio/{req.student_id}",
+        dossier_sent_url=req.dossier_sent_url or f"{base}/portfolio/{req.student_id}",
         status="APPLIED_AND_DISPATCHED",
         interview_details="Application Dispatched via AI Career Agent"
     )
     log_agent_activity("JOB_APPLICATION_DISPATCHED", f"Application submitted for {req.company_name} ({req.role_title})", branch_id=b_id, student_id=req.student_id)
     return {"success": True, "data": {"application_id": app_id, "status": "APPLIED_AND_DISPATCHED"}}
+
+# Admin Reset Database Endpoint
+@app.post("/api/admin/reset-database")
+def reset_database():
+    from database import reset_db
+    reset_db()
+    return {"status": "success", "message": "Database wiped and reinitialized."}
 
 # 6. Live Job Discovery & Retest Governance Endpoints
 @app.get("/api/jobs/discover")

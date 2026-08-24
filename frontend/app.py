@@ -8,7 +8,26 @@ import base64
 import io
 import datetime
 
-BACKEND_URL = "http://localhost:8000"
+def resolve_base_urls():
+    """Dynamically resolves backend and frontend base URLs, avoiding hardcoded localhost in Cloud Run/prod."""
+    frontend_base = os.environ.get("APP_BASE_URL") or os.environ.get("FRONTEND_URL")
+    try:
+        if hasattr(st, "context") and hasattr(st.context, "headers"):
+            headers = st.context.headers
+            host = headers.get("x-forwarded-host") or headers.get("host")
+            proto = headers.get("x-forwarded-proto") or ("https" if "https" in str(host) else "http")
+            if host:
+                frontend_base = f"{proto}://{host}".rstrip("/")
+    except Exception:
+        pass
+
+    if not frontend_base:
+        frontend_base = "http://localhost:8501"
+
+    backend_base = os.environ.get("BACKEND_URL") or os.environ.get("APP_BASE_URL") or "http://localhost:8000"
+    return backend_base.rstrip("/"), frontend_base.rstrip("/")
+
+BACKEND_URL, FRONTEND_URL = resolve_base_urls()
 
 st.set_page_config(
     page_title="KaushalSetu | Autonomous Vocational Taskmaster",
@@ -120,6 +139,26 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def main_app_layout():
+    # --- SIDEBAR ADMIN UTILITIES ---
+    with st.sidebar:
+        st.markdown("### ⚙️ System Admin Utilities")
+        st.caption("KaushalSetu Autonomous Taskmaster Engine Governance Controls")
+        
+        if st.button("🧹 Purge All Data & Reset DB", type="primary", use_container_width=True):
+            with st.spinner("Wiping database and resetting seed data..."):
+                try:
+                    res = requests.post(f"{BACKEND_URL}/api/admin/reset-database", timeout=10)
+                    if res.status_code == 200:
+                        st.session_state.clear()
+                        st.toast("Database wiped & reinitialized with clean slate!", icon="🧹")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(f"Reset failed: {res.text}")
+                except Exception as ex:
+                    st.error(f"Error resetting database: {ex}")
+        st.divider()
+
     # --- BIDIRECTIONAL STATE PERSISTENCE ENGINE ---
     query_params = st.query_params
 
@@ -201,7 +240,7 @@ def main_app_layout():
             
         # Check retest lock status
         if student_data.get("exam_completed") and not student_data.get("retest_approved"):
-            target_dash = f"http://localhost:8501/?page=student_dashboard&sid={student_data['student_id']}"
+            target_dash = f"{FRONTEND_URL}/?page=student_dashboard&sid={student_data['student_id']}"
             st.markdown(f"""
             <div style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%); border:2px solid #6366F1; padding:28px; border-radius:16px; text-align:center; color:white; margin:20px 0;">
                 <h2 style="color:#F43F5E; margin-top:0;">🔒 Assessment Already Completed!</h2>
@@ -325,7 +364,7 @@ def main_app_layout():
                         if pipe_res.status_code == 200:
                             st.success("🎉 Assessment Successfully Graded & SHA-256 Hasher Sealed!")
                             st.balloons()
-                            target_dash = f"http://localhost:8501/?page=student_dashboard&sid={student_data['student_id']}"
+                            target_dash = f"{FRONTEND_URL}/?page=student_dashboard&sid={student_data['student_id']}"
                             st.markdown(f'<meta http-equiv="refresh" content="0;url={target_dash}">', unsafe_allow_html=True)
                         else:
                             st.error(f"Pipeline error: {pipe_res.text}")
@@ -596,7 +635,7 @@ def main_app_layout():
 
             with s_tab3:
                 st.markdown("### 🌐 Live Generated Domain-Adaptive Portfolio Preview")
-                dossier_url = student_data.get("portfolio_url") or f"http://localhost:8000/portfolio/{param_sid}"
+                dossier_url = student_data.get("portfolio_url") or f"{BACKEND_URL}/portfolio/{param_sid}"
                 cache_busting_url = f"{dossier_url}?t={int(time.time())}"
                 st.caption(f"Direct Portfolio URL: [{dossier_url}]({dossier_url})")
                 st.components.v1.iframe(cache_busting_url, height=600, scrolling=True)
@@ -644,7 +683,7 @@ def main_app_layout():
                                                 "company_name": tr['company_name'],
                                                 "role_title": tr['role_title'],
                                                 "match_percentage": tr['match_percentage'],
-                                                "dossier_sent_url": student_data.get("portfolio_url") or f"http://localhost:8000/portfolio/{param_sid}"
+                                                "dossier_sent_url": student_data.get("portfolio_url") or f"{BACKEND_URL}/portfolio/{param_sid}"
                                             })
                                             st.success(f"✅ AI Dossier Dispatched to {tr['company_name']}!")
                                             st.balloons()
@@ -731,7 +770,7 @@ def main_app_layout():
                                             "company_name": job['company_name'],
                                             "role_title": job['role_title'],
                                             "match_percentage": job['match_percentage'],
-                                            "dossier_sent_url": student_data.get("portfolio_url") or f"http://localhost:8000/portfolio/{param_sid}"
+                                            "dossier_sent_url": student_data.get("portfolio_url") or f"{BACKEND_URL}/portfolio/{param_sid}"
                                         })
                                         st.success(f"✅ AI Dossier Dispatched to {job['company_name']}!")
                                         st.balloons()
@@ -1069,7 +1108,7 @@ def main_app_layout():
                         "grading_rubric": ["Safety lockout", "Diagnostic accuracy", "Documentation"],
                         "submission_text": "Completed full safety lockout and oscilloscope differential signal inspection. Cleaned ground terminals and replaced splice.",
                         "github_url": "https://github.com/skillforge/top-candidate-spec",
-                        "live_url": "http://localhost:8000/portfolio/STU-1001"
+                        "live_url": f"{BACKEND_URL}/portfolio/STU-1001"
                     }, timeout=15)
                     if r_sim.status_code == 200:
                         st.session_state["inst_active_tab_idx"] = 2
@@ -1117,18 +1156,18 @@ def main_app_layout():
                 """, unsafe_allow_html=True)
                 col_act1, col_act2, col_act3 = st.columns(3)
                 with col_act1:
-                    st.link_button("🌐 Open Generated Portfolio Dossier", "http://localhost:8000/portfolio/STU-1001", use_container_width=True)
+                    st.link_button("🌐 Open Generated Portfolio Dossier", f"{BACKEND_URL}/portfolio/STU-1001", use_container_width=True)
                 with col_act2:
-                    st.link_button("📜 View Official Student Marksheet", "http://localhost:8501/?page=student_dashboard&sid=STU-1001", use_container_width=True)
+                    st.link_button("📜 View Official Student Marksheet", f"{FRONTEND_URL}/?page=student_dashboard&sid=STU-1001", use_container_width=True)
                 with col_act3:
-                    st.link_button("💼 Inspect Live Web Job Hub", "http://localhost:8501/?page=student_dashboard&sid=STU-1001", use_container_width=True)
+                    st.link_button("💼 Inspect Live Web Job Hub", f"{FRONTEND_URL}/?page=student_dashboard&sid=STU-1001", use_container_width=True)
             else:
                 st.warning(sb_info["text"])
                 col_act1, col_act2 = st.columns(2)
                 with col_act1:
-                    st.link_button("📜 View Student Marksheet & Remedial Plan", "http://localhost:8501/?page=student_dashboard&sid=STU-1002", use_container_width=True)
+                    st.link_button("📜 View Student Marksheet & Remedial Plan", f"{FRONTEND_URL}/?page=student_dashboard&sid=STU-1002", use_container_width=True)
                 with col_act2:
-                    st.link_button("🎓 Open Retest Portal", "http://localhost:8501/?page=exam&sid=STU-1002", use_container_width=True)
+                    st.link_button("🎓 Open Retest Portal", f"{FRONTEND_URL}/?page=exam&sid=STU-1002", use_container_width=True)
                     
             if st.button("✕ Dismiss Guidance Banner"):
                 st.session_state["simulation_banner"] = None
@@ -1410,7 +1449,7 @@ def main_app_layout():
                             else:
                                 st.markdown('<span class="badge-amber">⏳ PENDING EXAM</span>', unsafe_allow_html=True)
                         with col_st3:
-                            exam_url = f"http://localhost:8501/?page=exam&sid={stu['student_id']}&branch={sel_branch['id']}"
+                            exam_url = f"{FRONTEND_URL}/?page=exam&sid={stu['student_id']}&branch={sel_branch['id']}"
                             st.markdown(f'<a href="{exam_url}" target="_blank" style="text-decoration:none;"><button style="background:#2563EB; color:white; border:none; border-radius:6px; padding:6px 12px; font-weight:600; cursor:pointer; width:100%;">🎓 Launch Exam</button></a>', unsafe_allow_html=True)
                         with col_st4:
                             with st.popover("⚙️ Manage"):
@@ -1476,7 +1515,7 @@ def main_app_layout():
                                     st.markdown(f"🎯 Match Score: `{entry.get('match_percentage', 90)}%`")
                                     st.markdown('<span class="badge-blue">💼 APPLICATION DISPATCHED</span>', unsafe_allow_html=True)
                                 with col_lg3:
-                                    dossier_link = entry.get('dossier_sent_url') or f"http://localhost:8000/portfolio/{entry['student_id']}"
+                                    dossier_link = entry.get('dossier_sent_url') or f"{BACKEND_URL}/portfolio/{entry['student_id']}"
                                     st.markdown(f'<a href="{dossier_link}" target="_blank" style="text-decoration:none;"><button style="background:#0F172A; color:#38BDF8; border:1px solid #0284C7; border-radius:6px; padding:6px 10px; font-size:0.8rem; font-weight:600; cursor:pointer; width:100%;">🌐 View Portfolio Dossier</button></a>', unsafe_allow_html=True)
                                 st.divider()
             except Exception as ex:

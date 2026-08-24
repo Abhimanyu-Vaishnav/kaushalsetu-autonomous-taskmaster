@@ -46,10 +46,13 @@ class AutonomousRecruiterAgent:
         rubric: List[str],
         github_url: Optional[str] = None,
         live_url: Optional[str] = None,
-        image_base64: Optional[str] = None
+        image_base64: Optional[str] = None,
+        base_url: Optional[str] = None
     ) -> Dict[str, Any]:
         self.telemetry_logs = []
         self.log_telemetry("START", f"Autonomous Agent triggered for Student ID: {student_id}")
+
+        resolved_base = (base_url or os.environ.get("APP_BASE_URL") or "http://localhost:8000").rstrip("/")
 
         # 1. Fetch Student & Institute Context
         student = get_student_by_id(student_id)
@@ -120,7 +123,7 @@ class AutonomousRecruiterAgent:
             project_title=f"{student['course_name']} Practical Capstone",
             project_description=submission_text,
             github_url=github_url or "https://github.com/skillforge/student-submission",
-            live_url=live_url or f"http://localhost:8000/portfolio/{student_id}",
+            live_url=live_url or f"{resolved_base}/portfolio/{student_id}",
             metric_hash=metric_hash,
             resume_data={
                 "target_role_preference": student.get("target_role_preference", ""),
@@ -130,7 +133,7 @@ class AutonomousRecruiterAgent:
             }
         )
         file_path = save_student_dossier(student_id, dossier_html)
-        portfolio_url = f"http://localhost:8000/portfolio/{student_id}"
+        portfolio_url = f"{resolved_base}/portfolio/{student_id}"
         
         # Mark student record exam & portfolio completed
         from database import mark_student_exam_complete, log_agent_activity

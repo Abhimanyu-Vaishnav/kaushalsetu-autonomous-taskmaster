@@ -246,6 +246,45 @@ def seed_initial_data(conn: sqlite3.Connection):
     
     conn.commit()
 
+def reset_db():
+    """Wipes all database tables, deletes legacy SQLite files, and reinitializes clean minimal seed data."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 1. Delete legacy SQLite files if present
+    for legacy_file in ["skillforge.db", "skillforge.db-shm", "skillforge.db-wal"]:
+        legacy_path = os.path.join(base_dir, legacy_file)
+        if os.path.exists(legacy_path):
+            try:
+                os.remove(legacy_path)
+                print(f"[RESET DB] Deleted legacy file '{legacy_path}'")
+            except Exception as e:
+                print(f"[RESET DB WARNING] Could not delete '{legacy_path}': {e}")
+
+    # 2. Wipe all tables from active SQLite database
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        tables = ["job_applications", "student_submissions", "assessments", "agent_activity_logs", "students", "courses", "branches", "institutes"]
+        for t in tables:
+            cursor.execute(f"DROP TABLE IF EXISTS {t};")
+        conn.commit()
+
+    # 3. Re-initialize database schema and seed minimal initial dataset
+    init_db()
+    with get_db_connection() as conn:
+        seed_initial_data(conn)
+
+    # 4. Clean up generated static portfolio HTML files
+    portfolio_dir = os.path.join(base_dir, "static", "portfolios")
+    if os.path.exists(portfolio_dir):
+        for f in os.listdir(portfolio_dir):
+            if f.endswith(".html"):
+                try:
+                    os.remove(os.path.join(portfolio_dir, f))
+                except Exception:
+                    pass
+
+    return True
+
 # --- Relational CRUD Helper Functions ---
 
 def get_all_institutes() -> List[Dict[str, Any]]:
