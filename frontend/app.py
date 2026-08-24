@@ -247,9 +247,10 @@ def main_app_layout():
         exam_data = st.session_state.get("current_exam", {})
         mcqs = exam_data.get("mcqs", [])
         
-        if mcqs:
-            cur_idx = st.session_state.get("mcq_step", 0)
-            st.progress((cur_idx + 1) / len(mcqs), text=f"Question {cur_idx + 1} of {len(mcqs)}")
+        if mcqs and st.session_state.get("mcq_step", 0) < len(mcqs):
+            cur_idx = min(st.session_state.get("mcq_step", 0), len(mcqs) - 1)
+            prog_val = min(1.0, max(0.0, float(cur_idx + 1) / float(len(mcqs))))
+            st.progress(prog_val, text=f"Question {cur_idx + 1} of {len(mcqs)}")
             
             q_item = mcqs[cur_idx]
             st.markdown(f"#### Q{cur_idx + 1}: {q_item['question']}")
@@ -260,7 +261,7 @@ def main_app_layout():
             col_nb1, col_nb2 = st.columns(2)
             with col_nb1:
                 if st.button("⬅️ Previous Question", disabled=(cur_idx == 0)):
-                    st.session_state["mcq_step"] = cur_idx - 1
+                    st.session_state["mcq_step"] = max(0, cur_idx - 1)
                     st.rerun()
             with col_nb2:
                 if cur_idx < len(mcqs) - 1:
