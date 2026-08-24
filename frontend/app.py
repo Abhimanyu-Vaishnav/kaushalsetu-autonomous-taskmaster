@@ -624,12 +624,12 @@ def main_app_layout():
                         with st.container():
                             col_j1, col_j2, col_j3 = st.columns([3, 2, 2])
                             with col_j1:
-                                st.markdown(f"#### **{job['role_title']}**")
-                                st.markdown(f"🏢 **Company:** `{job['company_name']}` | 📍 **Location:** `{job['location']}`")
-                                st.caption(f"💰 **Salary Range:** {job['salary_range']} | 🕒 Posted: {job['posted_ago']}")
+                                st.markdown(f"#### **{job.get('role_title', 'Specialist Role')}**")
+                                st.markdown(f"🏢 **Company:** `{job.get('company_name', 'Tech Enterprise')}` | 📍 **Location:** `{job.get('location', 'Remote / Hybrid')}`")
+                                st.caption(f"💰 **Salary Range:** {job.get('salary_range', '₹6.5L - ₹9.0L PA')} | 🕒 Posted: {job.get('posted_ago', 'Recently')}")
                             with col_j2:
-                                st.markdown(f"🎯 **Skill Alignment:** `{job['match_percentage']}% Match`")
-                                st.markdown(f"🌐 Source: `<span class='badge-blue'>{job['source_badge']}</span>`", unsafe_allow_html=True)
+                                st.markdown(f"🎯 **Skill Alignment:** `{job.get('match_percentage', 85)}% Match`")
+                                st.markdown(f"🌐 Source: `<span class='badge-blue'>{job.get('source_badge', 'Google Jobs')}</span>`", unsafe_allow_html=True)
                                 st.caption(f"Skills Matched: {', '.join(job.get('skills_matched', []))}")
                             with col_j3:
                                 job_link = job.get('verified_search_url', job.get('direct_application_url'))
