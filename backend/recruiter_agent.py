@@ -121,7 +121,13 @@ class AutonomousRecruiterAgent:
             project_description=submission_text,
             github_url=github_url or "https://github.com/skillforge/student-submission",
             live_url=live_url or f"http://localhost:8000/portfolio/{student_id}",
-            metric_hash=metric_hash
+            metric_hash=metric_hash,
+            resume_data={
+                "target_role_preference": student.get("target_role_preference", ""),
+                "work_experience_years": student.get("work_experience_years", 0),
+                "past_companies_text": student.get("past_companies_text", ""),
+                "skills_list": student.get("skills_list", "")
+            }
         )
         file_path = save_student_dossier(student_id, dossier_html)
         portfolio_url = f"http://localhost:8000/portfolio/{student_id}"

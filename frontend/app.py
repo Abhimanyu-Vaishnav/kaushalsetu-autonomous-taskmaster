@@ -222,37 +222,51 @@ if current_page in ["exam", "student_portal"]:
     mcqs = exam.get("mcqs", [])
     total_q_count = len(mcqs) if mcqs else 10
     
-    mcq_step = st.session_state.get("mcq_step", 0)
-    answers_dict = st.session_state.get("mcq_answers_dict", {})
+    if "exam_stage" not in st.session_state:
+        st.session_state["exam_stage"] = "MCQ"
+        
+    exam_stage = st.session_state.get("exam_stage", "MCQ")
     
-    # Stepper Header & Progress Bar
-    st.progress((mcq_step + 1) / float(total_q_count), text=f"Question {mcq_step + 1} of {total_q_count}")
-    
-    cur_q = mcqs[mcq_step] if mcq_step < len(mcqs) else {"question": f"Diagnostic Question {mcq_step+1}", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_option": 0}
-    st.markdown(f"#### **Q{mcq_step + 1}: {cur_q['question']}**")
-    
-    selected_option = st.radio(
-        "Choose answer:",
-        cur_q['options'],
-        index=answers_dict.get(mcq_step, None),
-        key=f"stepper_q_{mcq_step}_{student_data['student_id']}"
-    )
-    if selected_option in cur_q['options']:
-        answers_dict[mcq_step] = cur_q['options'].index(selected_option)
-        st.session_state["mcq_answers_dict"] = answers_dict
+    if exam_stage == "MCQ":
+        st.subheader("Stage 1: Objective MCQ Assessment")
+        # Stepper Header & Progress Bar
+        st.progress((mcq_step + 1) / float(total_q_count), text=f"Question {mcq_step + 1} of {total_q_count}")
+        
+        cur_q = mcqs[mcq_step] if mcq_step < len(mcqs) else {"question": f"Diagnostic Question {mcq_step+1}", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_option": 0}
+        st.markdown(f"#### **Q{mcq_step + 1}: {cur_q['question']}**")
+        
+        selected_option = st.radio(
+            "Choose answer:",
+            cur_q['options'],
+            index=answers_dict.get(mcq_step, None),
+            key=f"stepper_q_{mcq_step}_{student_data['student_id']}"
+        )
+        if selected_option in cur_q['options']:
+            answers_dict[mcq_step] = cur_q['options'].index(selected_option)
+            st.session_state["mcq_answers_dict"] = answers_dict
 
-    col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
-    with col_nav1:
-        if st.button("⬅️ Previous Question", disabled=(mcq_step == 0)):
-            st.session_state["mcq_step"] = mcq_step - 1
+        col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
+        with col_nav1:
+            if st.button("⬅️ Previous Question", disabled=(mcq_step == 0)):
+                st.session_state["mcq_step"] = mcq_step - 1
+                st.rerun()
+        with col_nav2:
+            st.caption(f"Answered: {len(answers_dict)} of {total_q_count} questions")
+        with col_nav3:
+            if mcq_step < total_q_count - 1:
+                if st.button("Next Question ➡️"):
+                    st.session_state["mcq_step"] = mcq_step + 1
+                    st.rerun()
+            else:
+                if st.button("Proceed to Practical Capstone ➡️", type="primary"):
+                    st.session_state["exam_stage"] = "PRACTICAL"
+                    st.rerun()
+    else:
+        st.subheader("Stage 2: Full-Width Practical Capstone Workspace")
+        if st.button("⬅️ Back to MCQ Assessment"):
+            st.session_state["exam_stage"] = "MCQ"
             st.rerun()
-    with col_nav2:
-        st.caption(f"Answered: {len(answers_dict)} of {total_q_count} questions")
-    with col_nav3:
-        if st.button("Next Question ➡️", disabled=(mcq_step >= total_q_count - 1)):
-            st.session_state["mcq_step"] = mcq_step + 1
-            st.rerun()
-
+            
         st.divider()
         st.markdown("##### **Part 2: Multimodal Practical Project Submission (50 Points Max)**")
         
@@ -484,7 +498,7 @@ elif current_page == "student_dashboard":
             
             for job in page_jobs:
                 with st.container():
-                    col_j1, col_j2, col_j3 = st.columns([3, 2, 1.5])
+                    col_j1, col_j2, col_j3 = st.columns([3, 2, 2.2])
                     with col_j1:
                         st.markdown(f"#### **{job['role_title']}**")
                         st.markdown(f"🏢 **{job['company_name']}** | 📍 `{job['location']}`")
@@ -494,11 +508,12 @@ elif current_page == "student_dashboard":
                         st.markdown(f"🎯 **Match Score:** `{job['match_percentage']}% Match`")
                         st.caption(f"Experience: {job['experience_required']}")
                     with col_j3:
-                        st.write("")
+                        target_url = job.get('direct_application_url', f"https://careers.google.com/jobs")
+                        st.markdown(f'<a href="{target_url}" target="_blank" style="text-decoration:none;"><button style="background:#1E293B; color:#38BDF8; border:1px solid #0284C7; border-radius:6px; padding:6px 12px; font-size:0.8rem; cursor:pointer; width:100%; margin-bottom:6px;">🔗 View Original Job Post</button></a>', unsafe_allow_html=True)
                         if new_mode:
-                            st.markdown('<span class="badge-live">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
+                            st.markdown('<span class="badge-live" style="display:block; text-align:center;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
                         else:
-                            if st.button("🚀 1-Click Apply", key=f"btn_apply_{job['job_id']}", type="primary"):
+                            if st.button("🚀 Apply with AI Dossier", key=f"btn_apply_{job['job_id']}", type="primary", use_container_width=True):
                                 st.success(f"✅ AI Dossier Dispatched to {job['company_name']}!")
                                 st.balloons()
                     st.divider()

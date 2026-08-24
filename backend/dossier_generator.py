@@ -15,13 +15,12 @@ def generate_student_portfolio_html(
     project_description: str,
     github_url: str,
     live_url: str,
-    metric_hash: str
+    metric_hash: str,
+    resume_data: Dict[str, Any] = None
 ) -> str:
     """
     Generates domain-adaptive responsive standalone HTML/CSS/Tailwind portfolio dossiers.
-    - Tech/Coding: Cyberpunk / Modern Terminal Theme
-    - Finance/Tally: Executive Corporate Navy / Emerald Theme
-    - Automotive/Diagnostics: Industrial Titanium / Solar Orange Theme
+    Incorporate parsed candidate resume data (Experience Years, Past Companies, Target Roles, Bio).
     """
     total_score = scores.get("total_score", 90)
     mcq_score = scores.get("mcq_score", 30.0)
@@ -123,6 +122,22 @@ def generate_student_portfolio_html(
             <h3 class="text-lg font-bold text-white mb-3 flex items-center gap-2"><i class="fa-solid fa-award text-amber-400"></i> Verified Competencies & Tech Stack</h3>
             <div class="flex flex-wrap gap-2">
                 {skills_badges}
+            </div>
+        </div>
+
+        <!-- Career History & Parsed Resume Section -->
+        <div class="{card_bg} border rounded-2xl p-6 space-y-3">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-briefcase text-cyan-400"></i> Candidate Professional Experience & Target Roles</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <div class="text-xs text-slate-400 font-semibold uppercase mb-1">Target Professional Role</div>
+                    <div class="font-bold text-white text-base">{(resume_data or {}).get("target_role_preference") or "Specialist Engineer"}</div>
+                    <div class="text-xs text-indigo-400 mt-1 font-mono">{(resume_data or {}).get("work_experience_years", 0)} Years Verified Field Experience</div>
+                </div>
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                    <div class="text-xs text-slate-400 font-semibold uppercase mb-1">Past Experience & Companies</div>
+                    <div class="text-slate-300">{(resume_data or {}).get("past_companies_text") or "Trained & certified through institutional vocational curriculum."}</div>
+                </div>
             </div>
         </div>
 
