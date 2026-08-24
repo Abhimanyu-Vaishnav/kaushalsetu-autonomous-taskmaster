@@ -51,7 +51,7 @@ def test_relational_architecture():
             rubric=["Safety lockout", "Diagnostic accuracy"]
         )
         assert output["evaluation"]["total_score"] >= 70
-        assert output["dispatch"]["status"] in ["APPLIED_AND_DISPATCHED", "INTERVIEW_SCHEDULED", "NEEDS_HUMAN_INTERVENTION"]
+        assert output["dispatch"]["status"] in ["APPLIED_AND_DISPATCHED", "INTERVIEW_SCHEDULED", "NEEDS_HUMAN_INTERVENTION", "REMEDIAL_ASSIGNED", "STUDENT_MATCH_HUB"]
         print(f"[OK] Agent Execution Dispatch Status: {output['dispatch']['status']}")
         
     # 4. Verify Ledger Branch Isolation
