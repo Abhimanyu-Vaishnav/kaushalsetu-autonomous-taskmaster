@@ -239,6 +239,51 @@ def api_smart_ingest_student(req: SmartIngestReq):
 def api_get_courses(branch_id: str):
     return {"success": True, "data": get_courses_by_branch(branch_id)}
 
+@app.post("/api/courses")
+async def create_course_endpoint(payload: dict):
+    try:
+        course_id = payload.get("id") or f"CRS-{uuid.uuid4().hex[:6].upper()}"
+        inst_id = payload.get("institute_id")
+        branch_id = payload.get("branch_id")
+        course_name = payload.get("course_name") or "New Vocational Course"
+        course_description = payload.get("course_description") or payload.get("curriculum_summary") or ""
+        default_mcq_count = int(payload.get("default_mcq_count", 10))
+
+        # Ensure curriculum_sections and core_skills are converted safely to TEXT/JSON strings for SQLite
+        curriculum_sections = payload.get("curriculum_sections", [])
+        if isinstance(curriculum_sections, (list, dict)):
+            curriculum_sections_str = json.dumps(curriculum_sections)
+        else:
+            curriculum_sections_str = str(curriculum_sections)
+
+        core_skills = payload.get("core_skills", [])
+        if isinstance(core_skills, (list, dict)):
+            core_skills_str = json.dumps(core_skills)
+        else:
+            core_skills_str = str(core_skills)
+
+        # Execute database insert safely
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO courses (
+                    id, institute_id, branch_id, course_name, curriculum_summary, course_description,
+                    curriculum_sections, core_skills, default_mcq_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                course_id, inst_id, branch_id, course_name, course_description, course_description,
+                curriculum_sections_str, core_skills_str, default_mcq_count
+            ))
+            conn.commit()
+
+        from database import log_agent_activity
+        log_agent_activity("COURSE_CREATED", f"Created course '{course_name}' ({course_id})", institute_id=inst_id, branch_id=branch_id)
+        return {"status": "success", "success": True, "course_id": course_id, "data": {"id": course_id, "course_name": course_name}}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Database Insert Failed: {str(e)}")
+
 @app.post("/api/courses/create")
 def api_create_course(req: CourseCreateReq):
     from agent_engine import enrich_and_synthesize_course_input
@@ -251,15 +296,15 @@ def api_create_course(req: CourseCreateReq):
     
     final_title = enriched.get("course_title", req.course_name)
     final_desc = enriched.get("course_description", req.course_description or req.curriculum_summary)
-    final_sections = ", ".join(enriched.get("curriculum_sections", [])) if isinstance(enriched.get("curriculum_sections"), list) else enriched.get("curriculum_sections", req.curriculum_sections)
-    final_skills = ", ".join(enriched.get("core_skills", [])) if isinstance(enriched.get("core_skills"), list) else enriched.get("core_skills", req.core_skills)
+    final_sections = json.dumps(enriched.get("curriculum_sections", [])) if isinstance(enriched.get("curriculum_sections"), list) else str(enriched.get("curriculum_sections", req.curriculum_sections))
+    final_skills = json.dumps(enriched.get("core_skills", [])) if isinstance(enriched.get("core_skills"), list) else str(enriched.get("core_skills", req.core_skills))
     
     course = create_course(
         req.institute_id, req.branch_id, final_title, final_desc,
         final_desc, final_sections, final_skills, req.default_mcq_count
     )
     log_agent_activity("COURSE_AI_SYNTHESIZED", f"Gemini 3.5 Auto-Corrected & Synthesized course '{final_title}'", institute_id=req.institute_id, branch_id=req.branch_id)
-    return {"success": True, "data": course, "enriched": enriched}
+    return {"success": True, "status": "success", "data": course, "enriched": enriched}
 
 # 2. Student Enrollment & CSV Bulk Upload
 @app.get("/api/students")

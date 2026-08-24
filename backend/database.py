@@ -165,11 +165,18 @@ def init_db():
         )
         """)
         
-        # Ensure course_description column exists if database was created in earlier schema
-        try:
-            cursor.execute("ALTER TABLE courses ADD COLUMN course_description TEXT DEFAULT ''")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
+        # Ensure all required course columns exist if database was created in earlier schema
+        for col_def in [
+            ("course_description", "TEXT DEFAULT ''"),
+            ("curriculum_summary", "TEXT DEFAULT ''"),
+            ("curriculum_sections", "TEXT DEFAULT ''"),
+            ("core_skills", "TEXT DEFAULT ''"),
+            ("default_mcq_count", "INTEGER DEFAULT 10")
+        ]:
+            try:
+                cursor.execute(f"ALTER TABLE courses ADD COLUMN {col_def[0]} {col_def[1]}")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
 
         conn.commit()
         
