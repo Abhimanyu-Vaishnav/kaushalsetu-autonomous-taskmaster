@@ -909,7 +909,8 @@ else:
     tabs = st.tabs([
         "📚 Course & Curriculum Management",
         "👥 Student Roster & Assessment Hub",
-        "🤖 Autonomous Placement & Agent Action Ledger"
+        "🤖 Autonomous Placement & Agent Action Ledger",
+        "📜 Real-Time Agent Operational Audit Log"
     ])
 
     # --- TAB 1: COURSE & CURRICULUM HUB ---
