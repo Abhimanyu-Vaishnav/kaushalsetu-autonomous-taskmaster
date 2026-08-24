@@ -512,13 +512,17 @@ def main_app_layout():
                         st.rerun()
                 with col_sd3:
                     import hashlib
-                    computed_hash = "0x" + hashlib.sha256(f"{student_data['student_id']}:{student_data['branch_name']}:87.0%:VERIFIED".encode()).hexdigest()[:16]
+                    candidate_score_val = student_data.get("aggregate_percentage", 87.0)
+                    candidate_score_str = f"{candidate_score_val:.1f}%" if isinstance(candidate_score_val, (int, float)) else str(candidate_score_val)
+                    raw_hash_payload = f"{student_data['student_id']}|{student_data.get('branch_name', 'MAIN')}|{candidate_score_str}|VERIFIED"
+                    computed_hash = "0x" + hashlib.sha256(raw_hash_payload.encode()).hexdigest()[:16]
                     with st.popover("🛡️ Verify Cryptographic Integrity"):
                         st.markdown("#### 🛡️ Cryptographic Verification Ledger")
                         st.markdown(f"**Candidate ID:** `{student_data['student_id']}`")
-                        st.markdown(f"**Branch Node:** `{student_data['branch_name']}`")
+                        st.markdown(f"**Branch Node:** `{student_data.get('branch_name', 'Nangloi Center Node')}`")
                         st.markdown(f"**Issued Timestamp:** `{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC`")
-                        st.markdown(f"**Raw Hashing Payload:** `{student_data['student_id']}|{student_data['branch_name']}|87.0%|VERIFIED`")
+                        st.markdown(f"**Raw Hashing Payload:**")
+                        st.code(raw_hash_payload, language="text")
                         st.markdown(f"**Computed SHA-256 Digest:**")
                         st.code(computed_hash, language="text")
                         st.success("🟢 100% Tamper-Proof & Mathematically Verified")
@@ -950,6 +954,8 @@ def main_app_layout():
                         "live_url": "http://localhost:8000/portfolio/STU-1001"
                     }, timeout=15)
                     if r_sim.status_code == 200:
+                        st.session_state["inst_active_tab_idx"] = 2
+                        st.query_params["tab"] = "placements"
                         st.session_state["simulation_banner"] = {
                             "type": "top",
                             "text": "🎉 **Top Performer Autonomous Pipeline Executed Successfully!**\n"
@@ -971,6 +977,8 @@ def main_app_layout():
                         "submission_text": "Incomplete diagnostic check. Skipped safety lockout step due to time constraint.",
                     }, timeout=15)
                     if r_sim2.status_code == 200:
+                        st.session_state["inst_active_tab_idx"] = 2
+                        st.query_params["tab"] = "placements"
                         st.session_state["simulation_banner"] = {
                             "type": "remedial",
                             "text": "⚠️ **Remedial Candidate Evaluation Completed!**\n"
