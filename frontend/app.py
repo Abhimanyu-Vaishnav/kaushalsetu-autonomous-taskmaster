@@ -441,19 +441,27 @@ else:
             else:
                 for s in students:
                     with st.container():
-                        col_r1, col_r2, col_r3, col_r4 = st.columns([2.5, 3, 2, 2])
+                        col_r1, col_r2, col_r3, col_r4 = st.columns([2.2, 3.2, 2.2, 1.8])
                         with col_r1:
                             st.write(f"**{s['full_name']}** (`{s['student_id']}`)")
                             st.caption(f"DOB: {s.get('dob', '2002-01-01')} | {s['course_name']}")
                         with col_r2:
-                            exam_link = f"http://localhost:8501/?page=exam&sid={s['student_id']}&dob={s.get('dob', '2002-01-01')}"
-                            st.code(exam_link, language="text")
+                            clean_exam_link = f"http://localhost:8501/?page=exam&sid={s['student_id']}"
+                            if st.button(f"🚀 Dispatch AI Exam Link for {s['full_name'].split()[0]}", key=f"btn_dispatch_{s['student_id']}"):
+                                st.session_state[f"dispatched_link_{s['student_id']}"] = clean_exam_link
+                                st.success("✅ AI Exam Link Dispatched!")
+                            
+                            show_link = st.session_state.get(f"dispatched_link_{s['student_id']}", clean_exam_link)
+                            st.code(show_link, language="text")
                         with col_r3:
-                            # Status Badge Calculation
+                            # Complete Status Badges: PENDING_EXAM -> EVALUATING -> PORTFOLIO_LIVE -> JOB_HUNTING -> INTERVIEW_SCHEDULED
                             if s.get("interview_count", 0) > 0:
                                 st.markdown('<span class="badge-interview">📅 INTERVIEW_SCHEDULED</span>', unsafe_allow_html=True)
                             elif s.get("portfolio_generated") or s.get("portfolio_url"):
                                 st.markdown('<span class="badge-live">🌐 PORTFOLIO_LIVE</span>', unsafe_allow_html=True)
+                                st.markdown('<span class="badge-interview" style="background:#E0E7FF; color:#3730A3;">🚀 JOB_HUNTING</span>', unsafe_allow_html=True)
+                            elif s.get("exam_completed"):
+                                st.markdown('<span class="badge-pending" style="background:#FDE68A; color:#78350F;">⚡ EVALUATING</span>', unsafe_allow_html=True)
                             else:
                                 st.markdown('<span class="badge-pending">⏳ PENDING_EXAM</span>', unsafe_allow_html=True)
                         with col_r4:
