@@ -498,7 +498,7 @@ elif current_page == "student_dashboard":
             
             for job in page_jobs:
                 with st.container():
-                    col_j1, col_j2, col_j3 = st.columns([3, 2, 2.2])
+                    col_j1, col_j2, col_j3 = st.columns([3, 2, 2.4])
                     with col_j1:
                         st.markdown(f"#### **{job['role_title']}**")
                         st.markdown(f"🏢 **{job['company_name']}** | 📍 `{job['location']}`")
@@ -508,12 +508,16 @@ elif current_page == "student_dashboard":
                         st.markdown(f"🎯 **Match Score:** `{job['match_percentage']}% Match`")
                         st.caption(f"Experience: {job['experience_required']}")
                     with col_j3:
-                        target_url = job.get('direct_application_url', f"https://careers.google.com/jobs")
-                        st.markdown(f'<a href="{target_url}" target="_blank" style="text-decoration:none;"><button style="background:#1E293B; color:#38BDF8; border:1px solid #0284C7; border-radius:6px; padding:6px 12px; font-size:0.8rem; cursor:pointer; width:100%; margin-bottom:6px;">🔗 View Original Job Post</button></a>', unsafe_allow_html=True)
+                        linkedin_url = job.get('verified_search_url', job.get('direct_application_url'))
+                        portal_url = job.get('company_career_url', 'https://careers.google.com/jobs')
+                        
+                        st.markdown(f'<a href="{linkedin_url}" target="_blank" style="text-decoration:none;"><button style="background:#0F172A; color:#38BDF8; border:1px solid #0284C7; border-radius:6px; padding:6px 10px; font-size:0.78rem; font-weight:600; cursor:pointer; width:100%; margin-bottom:4px;">🔗 View Live Jobs on LinkedIn</button></a>', unsafe_allow_html=True)
+                        st.markdown(f'<a href="{portal_url}" target="_blank" style="text-decoration:none;"><button style="background:#1E1B4B; color:#A5B4FC; border:1px solid #6366F1; border-radius:6px; padding:6px 10px; font-size:0.78rem; font-weight:600; cursor:pointer; width:100%; margin-bottom:6px;">🏢 Visit Official Career Portal</button></a>', unsafe_allow_html=True)
+                        
                         if new_mode:
                             st.markdown('<span class="badge-live" style="display:block; text-align:center;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
                         else:
-                            if st.button("🚀 Apply with AI Dossier", key=f"btn_apply_{job['job_id']}", type="primary", use_container_width=True):
+                            if st.button("🚀 1-Click Apply with AI Dossier", key=f"btn_apply_{job['job_id']}", type="primary", use_container_width=True):
                                 st.success(f"✅ AI Dossier Dispatched to {job['company_name']}!")
                                 st.balloons()
                     st.divider()
