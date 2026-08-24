@@ -617,8 +617,8 @@ def main_app_layout():
                 st.divider()
                 col_sd1, col_sd2, col_sd3 = st.columns([2, 1, 1])
                 with col_sd1:
-                    if student_data.get("portfolio_url"):
-                        st.info(f"🌐 **Domain-Adaptive Verified Portfolio Dossier:** [{student_data['portfolio_url']}]({student_data['portfolio_url']})")
+                    dossier_display_url = build_portfolio_dossier_url(param_sid, student_data.get("portfolio_url", ""))
+                    st.info(f"🌐 **Domain-Adaptive Verified Portfolio Dossier:** [{dossier_display_url}]({dossier_display_url})")
                 with col_sd2:
                     cur_mode = bool(student_data.get("auto_apply_mode", 0))
                     new_mode = st.toggle("🤖 Autonomous Auto-Apply Engine", value=cur_mode)
@@ -645,10 +645,16 @@ def main_app_layout():
 
             with s_tab3:
                 st.markdown("### 🌐 Live Generated Domain-Adaptive Portfolio Preview")
-                dossier_url = student_data.get("portfolio_url") or f"{BACKEND_URL}/portfolio/{param_sid}"
-                cache_busting_url = f"{dossier_url}?t={int(time.time())}"
-                st.caption(f"Direct Portfolio URL: [{dossier_url}]({dossier_url})")
-                st.components.v1.iframe(cache_busting_url, height=600, scrolling=True)
+                dossier_display_url = build_portfolio_dossier_url(param_sid, student_data.get("portfolio_url", ""))
+                st.caption(f"Direct Portfolio URL: [{dossier_display_url}]({dossier_display_url})")
+                try:
+                    res = requests.get(f"{INTERNAL_BACKEND_URL}/portfolio/{param_sid}", timeout=5)
+                    if res.status_code == 200:
+                        components.html(res.text, height=850, scrolling=True)
+                    else:
+                        st.info("Portfolio dossier is currently being generated...")
+                except Exception:
+                    st.warning("Preview temporarily unavailable.")
 
             with s_tab4:
                 col_hdr1, col_hdr2 = st.columns([3, 1])
@@ -1455,7 +1461,8 @@ def main_app_layout():
                         with col_st2:
                             if stu.get("exam_completed"):
                                 st.markdown('<span class="badge-emerald">✅ EXAM COMPLETED</span>', unsafe_allow_html=True)
-                                st.caption(f"Portfolio: [{stu.get('portfolio_url') or 'View Dossier'}]({stu.get('portfolio_url')})")
+                                p_url = build_portfolio_dossier_url(stu['student_id'], stu.get('portfolio_url', ''))
+                                st.caption(f"Portfolio: [{p_url}]({p_url})")
                             else:
                                 st.markdown('<span class="badge-amber">⏳ PENDING EXAM</span>', unsafe_allow_html=True)
                         with col_st3:

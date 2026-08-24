@@ -144,19 +144,22 @@ class CertificateReq(BaseModel):
     metric_hash: str
 
 
-# --- Dynamic Base URL Resolution ---
+# --- Dynamic Public Base URL Resolution ---
 
-def get_base_url(request: Request = None) -> str:
-    env_base = os.environ.get("APP_BASE_URL")
+def get_public_base_url(request: Request = None) -> str:
+    env_base = os.environ.get("APP_BASE_URL", "").rstrip("/")
     if env_base:
-        return env_base.rstrip("/")
+        return env_base
     if request:
-        proto = request.headers.get("x-forwarded-proto") or request.url.scheme
-        host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
-        if proto and host:
+        proto = request.headers.get("x-forwarded-proto", "http")
+        host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+        if host:
             return f"{proto}://{host}".rstrip("/")
-        return str(request.base_url).rstrip("/")
+        if hasattr(request, "base_url") and request.base_url:
+            return str(request.base_url).rstrip("/")
     return "http://localhost:8000"
+
+get_base_url = get_public_base_url
 
 # --- REST API Endpoints ---
 
