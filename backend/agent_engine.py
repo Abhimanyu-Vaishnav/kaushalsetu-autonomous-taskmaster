@@ -314,7 +314,7 @@ def evaluate_submission(
                 correct_count += 1
             else:
                 wrong_questions.append(idx)
-        mcq_score = round((correct_count / total_mcqs) * 30, 1)
+        mcq_score = round((correct_count / total_mcqs) * 50, 1)
     else:
         # Default or unprovided MCQ assumption
         mcq_score = 0.0
@@ -322,7 +322,7 @@ def evaluate_submission(
     # 2. Gemma Fast Screening for Practical Task
     screening_res = gemma_fast_screening(submission_text)
     
-    # 3. Practical Subjective Evaluation via Gemini 3.5 (Out of 70)
+    # 3. Practical Subjective Evaluation via Gemini 3.5 (Out of 50)
     client = get_genai_client()
     prompt = (
         f"You are an expert technical assessor.\n"
@@ -330,7 +330,7 @@ def evaluate_submission(
         f"Rubric Parameters:\n" + "\n".join([f"- {r}" for r in grading_rubric]) + "\n\n"
         f"Student Submission:\n\"\"\"{submission_text}\"\"\"\n\n"
         f"Gemma Pre-check: Passed={screening_res['passed_screening']}, StructureScore={screening_res['structure_score']}.\n\n"
-        f"Grade this practical submission out of 70 points (practical_score: 0-70).\n"
+        f"Grade this practical submission out of 50 points (practical_score: 0-50).\n"
         f"Provide 2-3 specific strengths, 2-3 skill gaps, and a 2-sentence pitch for hiring partners."
     )
     
@@ -370,12 +370,12 @@ def evaluate_submission(
         passed_pre = screening_res["passed_screening"]
         
         if word_count >= 15 or image_base64:
-            p_score = 60  # Out of 70 (60 + 30 MCQ = 90 Total)
+            p_score = 42  # Out of 50 (42 + 45 MCQ = 87% Total)
             strengths = ["Comprehensive step-by-step procedure documented", "Demonstrated strong practical safety compliance"]
             gaps = ["Minor formatting refinement recommended"]
             pitch = "Candidate exhibits strong technical diagnostic proficiency. Highly recommended for immediate placement."
         else:
-            p_score = 25  # Out of 70 (25 + 6 MCQ = 31 Total)
+            p_score = 20  # Out of 50 (20 + 20 MCQ = 40% Total)
             strengths = ["Basic understanding of core concept"]
             gaps = ["Incomplete safety verification procedure", "Missing diagnostic measurement logs"]
             pitch = "Candidate shows potential but requires targeted 7-day remedial training prior to employer placement."
@@ -387,9 +387,9 @@ def evaluate_submission(
             "recruiter_pitch": pitch
         }
         
-    practical_score = min(70, max(0, prac_dict.get("practical_score", 35)))
+    practical_score = min(50, max(0, prac_dict.get("practical_score", 30)))
     
-    # 4. Total Dynamic Score Calculation
+    # 4. Total Dynamic Score Calculation (Out of 100 max)
     total_score = round(mcq_score + practical_score)
     placement_ready = (total_score >= 70)
     

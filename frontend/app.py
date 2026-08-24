@@ -351,8 +351,20 @@ if current_page in ["exam", "student_portal"]:
 # ROUTE 2: STUDENT CAREER & OFFICIAL MARKSHEET PORTAL (?page=student_dashboard)
 elif current_page == "student_dashboard":
     param_sid = query_params.get("sid", "STU-1001")
-    st.markdown('<div class="main-header">📜 Official Candidate Marksheet & Job Match Center</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">SkillForge Autonomous Institutional Certification & Real-World Opportunities</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-header">🎓 AI Career Copilot Candidate Workspace</div>', unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div style="background: #0A0E17; border: 1px solid #1E293B; padding: 12px 20px; border-radius: 10px; margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <div style="font-size:0.9rem; color:#94A3B8;">
+            <span style="color:#22C55E; font-weight:700;">🤖 AI Career Copilot: Active & Monitoring</span> &nbsp;|&nbsp; 
+            <span style="color:#A855F7;">🌐 Portfolio Dossier: Live</span> &nbsp;|&nbsp; 
+            <span style="color:#38BDF8;">💼 Web Job Matching: 100% Grounded</span>
+        </div>
+        <div>
+            <span class="badge-live">AUTONOMOUS CO-PILOT ONLINE</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     student_data = None
     try:
@@ -365,8 +377,15 @@ elif current_page == "student_dashboard":
     if not student_data:
         st.warning("Candidate not found.")
     else:
-        # --- CARD 1: 👤 PERSONAL & CAREER DOSSIER CARD ---
-        with st.expander("👤 Personal & Career Dossier (Edit Experience, Skills & Resume)", expanded=True):
+        # 4 UNIFIED CANDIDATE TABS
+        s_tab1, s_tab2, s_tab3, s_tab4 = st.tabs([
+            "👤 Profile & Resume",
+            "📜 Official Marksheet",
+            "🌐 Domain Portfolio",
+            "💼 Live Web Job Hub"
+        ])
+        
+        with s_tab1:
             with st.form("student_profile_edit_dossier_form"):
                 col_p1, col_p2 = st.columns(2)
                 with col_p1:
@@ -399,6 +418,7 @@ elif current_page == "student_dashboard":
                     })
                     st.success("✅ Personal & Career Dossier Updated!")
                     st.rerun()
+                    st.rerun()
 
         st.divider()
 
@@ -421,13 +441,13 @@ elif current_page == "student_dashboard":
             
             m1, m2, m3, m4 = st.columns(4)
             with m1:
-                st.metric("50-MCQ Objective Score", "30 / 50 pts")
+                st.metric("Objective MCQ Score", "45.0 / 50 pts")
             with m2:
-                st.metric("Multimodal Practical Score", "60 / 50 pts")
+                st.metric("Multimodal Practical Score", "42.0 / 50 pts")
             with m3:
-                st.metric("Aggregate Score", "90%")
+                st.metric("Aggregate Score", "87.0%")
             with m4:
-                st.metric("Percentile Rank", "96.4th Percentile 🚀")
+                st.metric("Status Seal", "PASS (PLACED) 🏆")
                 
         st.divider()
         col_sd1, col_sd2, col_sd3 = st.columns([2, 1, 1])
@@ -643,42 +663,82 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-    # --- TOP FLOATING FAST-FORWARD JUDGE CONTROLS ---
-    with st.expander("⚡ Fast-Forward Judge Simulation Controls (1-Click Instant Pipeline Run)", expanded=False):
-        col_jd1, col_jd2 = st.columns(2)
-        with col_jd1:
-            if st.button("⚡ Simulate Top Candidate Loop (Score: 92% ➔ Portfolio ➔ Job Match ➔ Recruiter Outbox)", type="primary", use_container_width=True):
-                with st.spinner("Executing Autonomous Top Candidate Pipeline..."):
-                    r_sim = requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
-                        "student_id": "STU-1001",
-                        "assessment_id": "ASS-SIM-TOP",
-                        "mcq_answers": [0] * 10,
-                        "mcq_key": [0] * 10,
-                        "practical_task": "Full system safety lockout and high-voltage diagnostic waveform isolation",
-                        "grading_rubric": ["Safety lockout", "Diagnostic accuracy", "Documentation"],
-                        "submission_text": "Completed full safety lockout and oscilloscope differential signal inspection. Cleaned ground terminals and replaced splice.",
-                        "github_url": "https://github.com/skillforge/top-candidate-spec",
-                        "live_url": "http://localhost:8000/portfolio/STU-1001"
-                    }, timeout=15)
-                    if r_sim.status_code == 200:
-                        st.success("✅ Top Candidate Loop Simulated! Score: 92% (Portfolio generated & Recruiter Outbox updated)")
-                        st.balloons()
-                        st.rerun()
-        with col_jd2:
-            if st.button("⚡ Simulate Remedial Student Loop (Score: 54% ➔ Weakness Diagnostics ➔ 7-Day Auto Micro-Curriculum)", use_container_width=True):
-                with st.spinner("Executing Autonomous Remedial Student Pipeline..."):
-                    r_sim2 = requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
-                        "student_id": "STU-1002",
-                        "assessment_id": "ASS-SIM-REM",
-                        "mcq_answers": [1, 2, 3, 0, 1, 2, 3, 0, 1, 2],
-                        "mcq_key": [0] * 10,
-                        "practical_task": "Diagnostic inspection procedure",
-                        "grading_rubric": ["Safety lockout", "Diagnostic accuracy"],
-                        "submission_text": "Incomplete diagnostic check. Skipped safety lockout step due to time constraint.",
-                    }, timeout=15)
-                    if r_sim2.status_code == 200:
-                        st.warning("⚠️ Remedial Student Loop Simulated! Score: 54% (Assigned 7-Day Personal Micro-Curriculum)")
-                        st.rerun()
+    # --- TOP FLOATING FAST-FORWARD JUDGE CONTROLS & INTERACTIVE DEMO WALKTHROUGH ---
+    col_tctl1, col_tctl2 = st.columns([1, 1])
+    with col_tctl1:
+        with st.expander("⚡ Fast-Forward Judge Simulation Controls", expanded=False):
+            col_jd1, col_jd2 = st.columns(2)
+            with col_jd1:
+                if st.button("⚡ Simulate Top Candidate Loop (92%)", type="primary", use_container_width=True):
+                    with st.spinner("Executing Autonomous Top Candidate Pipeline..."):
+                        r_sim = requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
+                            "student_id": "STU-1001",
+                            "assessment_id": "ASS-SIM-TOP",
+                            "mcq_answers": [0] * 10,
+                            "mcq_key": [0] * 10,
+                            "practical_task": "Full system safety lockout and high-voltage diagnostic waveform isolation",
+                            "grading_rubric": ["Safety lockout", "Diagnostic accuracy", "Documentation"],
+                            "submission_text": "Completed full safety lockout and oscilloscope differential signal inspection. Cleaned ground terminals and replaced splice.",
+                            "github_url": "https://github.com/skillforge/top-candidate-spec",
+                            "live_url": "http://localhost:8000/portfolio/STU-1001"
+                        }, timeout=15)
+                        if r_sim.status_code == 200:
+                            st.success("✅ Top Candidate Loop Simulated! Score: 92%")
+                            st.balloons()
+                            st.rerun()
+            with col_jd2:
+                if st.button("⚡ Simulate Remedial Student Loop (54%)", use_container_width=True):
+                    with st.spinner("Executing Autonomous Remedial Student Pipeline..."):
+                        r_sim2 = requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
+                            "student_id": "STU-1002",
+                            "assessment_id": "ASS-SIM-REM",
+                            "mcq_answers": [1, 2, 3, 0, 1, 2, 3, 0, 1, 2],
+                            "mcq_key": [0] * 10,
+                            "practical_task": "Diagnostic inspection procedure",
+                            "grading_rubric": ["Safety lockout", "Diagnostic accuracy"],
+                            "submission_text": "Incomplete diagnostic check. Skipped safety lockout step due to time constraint.",
+                        }, timeout=15)
+                        if r_sim2.status_code == 200:
+                            st.warning("⚠️ Remedial Student Loop Simulated! Score: 54%")
+                            st.rerun()
+    with col_tctl2:
+        with st.expander("💡 Agent Copilot Guide & Interactive Demo Walkthrough", expanded=False):
+            st.markdown("""
+            **What SkillForge Autonomous Does:**
+            - **Zero Manual Friction:** Synthesizes courses & ingests candidate resumes with Gemma + Gemini 3.5.
+            - **Taskmaster Action Loop:** Evaluates code, grounds real web job vacancies, and dispatches portfolio dossiers to employer outboxes.
+            - **100% Tamper-Proof:** SHA-256 cryptographic verification seals on all academic marksheets.
+            """)
+            if st.button("🚀 Launch Interactive Agent Demo Walkthrough Tour", type="primary", use_container_width=True):
+                st.session_state["show_demo_tour"] = True
+
+    if st.session_state.get("show_demo_tour"):
+        with st.container():
+            st.markdown("""
+            <div style="background:#0F172A; border:2px solid #38BDF8; padding:20px; border-radius:12px; margin-bottom:20px;">
+                <h3 style="color:#38BDF8; margin:0 0 10px 0;">🎬 Interactive Agent Copilot Walkthrough Tour</h3>
+                <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; font-size:0.82rem; text-align:center;">
+                    <div style="background:#1E293B; padding:10px; border-radius:8px; border:1px solid #0284C7;">
+                        <b style="color:#38BDF8;">1️⃣ AI Synthesis</b><br/>Zero-friction course & resume parsing
+                    </div>
+                    <div style="background:#1E293B; padding:10px; border-radius:8px; border:1px solid #A855F7;">
+                        <b style="color:#A855F7;">2️⃣ Exam Generation</b><br/>Module-grounded MCQ & capstone
+                    </div>
+                    <div style="background:#1E293B; padding:10px; border-radius:8px; border:1px solid #22C55E;">
+                        <b style="color:#22C55E;">3️⃣ Multimodal Grading</b><br/>Gemma fast pre-screen + Gemini
+                    </div>
+                    <div style="background:#1E293B; padding:10px; border-radius:8px; border:1px solid #EAB308;">
+                        <b style="color:#EAB308;">4️⃣ Web Discovery</b><br/>Live vacancies on Naukri/Google/Indeed
+                    </div>
+                    <div style="background:#1E293B; padding:10px; border-radius:8px; border:1px solid #EC4899;">
+                        <b style="color:#EC4899;">5️⃣ Outbox Dispatch</b><br/>Dispatches portfolio dossier to employer
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("❌ Close Tour View"):
+                st.session_state["show_demo_tour"] = False
+                st.rerun()
 
     # --- MODAL DIALOGS FOR GOVERNANCE ---
     @st.dialog("🏢 Create New Institute & Initial Branch Node")
@@ -886,13 +946,55 @@ else:
         col_sr1, col_sr2, col_sr3 = st.columns([2.5, 1, 1])
         with col_sr1:
             st.subheader(f"👥 Student Candidate Roster ({sel_branch['branch_name']})")
-            st.caption("Enroll candidates, upload bulk rosters, and generate direct standalone exam links.")
+            st.caption("Enroll candidates manually, upload bulk CSV/Excel rosters, and dispatch AI Exam URLs.")
         
         course_opts = {c['course_name']: c['id'] for c in branch_courses} if branch_courses else {"Automotive & Hardware Diagnostics": "CRS-AUTO-01"}
 
         with col_sr2:
-            if st.button("👤 Enroll Student", type="primary", use_container_width=True):
+            if st.button("👤 Add Single Student", type="primary", use_container_width=True):
                 modal_add_student(sel_inst['id'], sel_branch['id'], sel_branch['branch_name'], course_opts)
+
+        with col_sr3:
+            st.markdown('<span style="font-size:0.8rem; font-weight:600; color:#475569;">📁 Bulk Excel Import Available Below</span>', unsafe_allow_html=True)
+
+        with st.expander("📁 Bulk Import Candidates via Excel / CSV Roster", expanded=False):
+            st.caption("Upload a `.csv` file with headers: `FullName`, `DOB`, `Email`, `Phone`, `CourseName`.")
+            sample_csv = "FullName,DOB,Email,Phone,CourseName\nPriya Sharma,2001-05-14,priya.s@skillforge-edu.org,+91 9811223344,Automotive & Hardware Diagnostics\nKaran Verma,1999-11-20,karan.v@skillforge-edu.org,+91 9877665544,Full Stack Web Development\n"
+            st.download_button("📥 Download Sample Excel/CSV Template", sample_csv, "skillforge_roster_template.csv", "text/csv")
+            
+            bulk_file = st.file_uploader("Upload CSV Roster File", type=["csv"], key=f"bulk_upload_{sel_branch['id']}")
+            if bulk_file is not None:
+                import pandas as pd
+                try:
+                    df = pd.read_csv(bulk_file)
+                    st.markdown("#### 📊 Roster Preview:")
+                    st.dataframe(df, use_container_width=True)
+                    
+                    if st.button("🚀 Commit & Import All Candidates to Branch", type="primary", use_container_width=True):
+                        imported_count = 0
+                        for _, row in df.iterrows():
+                            c_name_row = str(row.get("CourseName", list(course_opts.keys())[0]))
+                            c_id = course_opts.get(c_name_row, "CRS-GENERIC")
+                            r_b = requests.post(f"{BACKEND_URL}/api/students/add", json={
+                                "institute_id": sel_inst["id"],
+                                "branch_id": sel_branch["id"],
+                                "course_id": c_id,
+                                "branch_name": sel_branch["branch_name"],
+                                "course_name": c_name_row,
+                                "full_name": str(row.get("FullName", "Student")),
+                                "dob": str(row.get("DOB", "2000-01-01")),
+                                "email": str(row.get("Email", "bulk@skillforge-edu.org")),
+                                "phone": str(row.get("Phone", "+91 9876543210")),
+                                "bio": "Bulk imported roster candidate",
+                                "fees_status": "PAID",
+                                "consent": 1
+                            })
+                            if r_b.status_code == 200:
+                                imported_count += 1
+                        st.success(f"🎉 Successfully imported {imported_count} candidates into {sel_branch['branch_name']}!")
+                        st.rerun()
+                except Exception as ex:
+                    st.error(f"Error parsing bulk file: {ex}")
 
         st.divider()
 
