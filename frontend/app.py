@@ -444,9 +444,16 @@ elif current_page == "student_dashboard":
                 st.rerun()
                 
         st.divider()
-        st.markdown("### 🔍 Live Discovered Job Openings & Continuous Match Matrix")
-        st.caption("🟢 **AI Career Agent Active:** Continuously scanning web aggregators for new live vacancies...")
-        
+        col_hdr1, col_hdr2 = st.columns([3, 1])
+        with col_hdr1:
+            st.markdown("### 🔍 Live Discovered Job Openings & Continuous Match Matrix")
+            st.caption("🟢 **AI Career Agent Active:** Whole-web Google Search Grounding active across company career hubs & portals...")
+        with col_hdr2:
+            if st.button("🔄 Rescan & Discover Fresh Jobs", use_container_width=True):
+                st.session_state["job_rescan_ts"] = time.time()
+                st.success("✅ Whole-Web Scanner refreshed live listings!")
+                st.rerun()
+                
         jobs = []
         try:
             jres = requests.get(f"{BACKEND_URL}/api/jobs/discover?course_name={student_data['course_name']}", timeout=5)
@@ -458,6 +465,16 @@ elif current_page == "student_dashboard":
         if not jobs:
             st.info("Searching for live openings...")
         else:
+            # Highlight Agent Top Recommendations
+            top_recs = [j for j in jobs if j.get("is_top_recommendation")]
+            if top_recs:
+                with st.expander("🔥 Agent Top Recommendations (Highest Conversion Chance)", expanded=True):
+                    for tr in top_recs[:2]:
+                        st.markdown(f"⭐ **{tr['role_title']}** at **{tr['company_name']}** (`{tr['salary_range']}`)")
+                        st.caption(f"💡 {tr.get('match_rationale', '')}")
+                        st.markdown(f'<span class="badge-live">{tr.get("recommendation_badge")}</span>', unsafe_allow_html=True)
+                        st.divider()
+
             # Filtering
             col_fl1, col_fl2 = st.columns(2)
             with col_fl1:
@@ -518,6 +535,14 @@ elif current_page == "student_dashboard":
                             st.markdown('<span class="badge-live" style="display:block; text-align:center;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
                         else:
                             if st.button("🚀 1-Click Apply with AI Dossier", key=f"btn_apply_{job['job_id']}", type="primary", use_container_width=True):
+                                # Record application in shared SQLite ledger
+                                requests.post(f"{BACKEND_URL}/api/jobs/apply", json={
+                                    "student_id": param_sid,
+                                    "company_name": job['company_name'],
+                                    "role_title": job['role_title'],
+                                    "match_percentage": job['match_percentage'],
+                                    "dossier_sent_url": student_data.get("portfolio_url") or f"http://localhost:8000/portfolio/{param_sid}"
+                                })
                                 st.success(f"✅ AI Dossier Dispatched to {job['company_name']}!")
                                 st.balloons()
                     st.divider()

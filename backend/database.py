@@ -473,6 +473,17 @@ def save_assessment(institute_id: str, course_name: str, difficulty: str, genera
         conn.commit()
     return ass_id
 
+def record_job_application(student_id: str, company_name: str, role_title: str, match_percentage: int, dossier_sent_url: str = '', status: str = 'APPLIED_AND_DISPATCHED', interview_details: str = 'Dispatched via AI Career Agent', metric_hash: str = '0xDEFAULT') -> str:
+    app_id = f"APP-{uuid.uuid4().hex[:8].upper()}"
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO job_applications (id, student_id, company_name, role_title, match_percentage, dossier_sent_url, status, interview_details, metric_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (app_id, student_id, company_name, role_title, match_percentage, dossier_sent_url, status, interview_details, metric_hash))
+        conn.commit()
+    return app_id
+
 def get_job_applications(branch_id: Optional[str] = None) -> List[Dict[str, Any]]:
     with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row

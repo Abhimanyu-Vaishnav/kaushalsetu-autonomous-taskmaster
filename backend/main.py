@@ -315,6 +315,30 @@ class StudentAutoApplyReq(BaseModel):
 class StudentRetestReq(BaseModel):
     student_id: str
 
+class JobApplyReq(BaseModel):
+    student_id: str
+    company_name: str
+    role_title: str
+    match_percentage: int
+    dossier_sent_url: Optional[str] = ''
+
+@app.post("/api/jobs/apply")
+def api_apply_job(req: JobApplyReq):
+    from database import record_job_application, log_agent_activity, get_student_by_id
+    stu = get_student_by_id(req.student_id)
+    b_id = stu['branch_id'] if stu else None
+    app_id = record_job_application(
+        student_id=req.student_id,
+        company_name=req.company_name,
+        role_title=req.role_title,
+        match_percentage=req.match_percentage,
+        dossier_sent_url=req.dossier_sent_url or f"http://localhost:8000/portfolio/{req.student_id}",
+        status="APPLIED_AND_DISPATCHED",
+        interview_details="Application Dispatched via AI Career Agent"
+    )
+    log_agent_activity("JOB_APPLICATION_DISPATCHED", f"Application submitted for {req.company_name} ({req.role_title})", branch_id=b_id, student_id=req.student_id)
+    return {"success": True, "data": {"application_id": app_id, "status": "APPLIED_AND_DISPATCHED"}}
+
 # 6. Live Job Discovery & Retest Governance Endpoints
 @app.get("/api/jobs/discover")
 def api_discover_jobs(course_name: str = "Automotive & Hardware Diagnostics", skills: str = "ECU,Multimeter,Oscilloscope"):
