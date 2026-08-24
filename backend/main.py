@@ -12,6 +12,7 @@ import sqlite3
 import uuid
 
 from database import (
+    get_db_connection,
     get_all_institutes,
     get_institute_by_id,
     get_institute_by_code,
