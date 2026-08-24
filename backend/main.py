@@ -182,7 +182,7 @@ def health_check():
 
 # Standalone Portfolio HTML Route - Autonomous Gemini 3.5 AI Dossier Synthesizer
 @app.get("/portfolio/{student_id}", response_class=HTMLResponse)
-def get_student_portfolio(student_id: str):
+def get_student_portfolio(student_id: str, request: Request = None):
     from database import get_student_by_id
     from dossier_generator import generate_candidate_dossier_html
 
@@ -190,7 +190,8 @@ def get_student_portfolio(student_id: str):
     if not student:
         raise HTTPException(status_code=404, detail=f"Student record '{student_id}' not found.")
 
-    html_content = generate_candidate_dossier_html(student)
+    base_url = get_base_url(request)
+    html_content = generate_candidate_dossier_html(student, base_url=base_url)
     return HTMLResponse(content=html_content)
 
 # 1. Relational Governance Endpoints (Institutes -> Branches -> Courses)

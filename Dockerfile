@@ -2,6 +2,8 @@ FROM python:3.11-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
+ENV APP_BASE_URL=""
+ENV BACKEND_URL=""
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential curl \
     && rm -rf /var/lib/apt/lists/*

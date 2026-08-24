@@ -19,6 +19,7 @@ gcloud run deploy %SERVICE_NAME% ^
     --platform managed ^
     --region %REGION% ^
     --allow-unauthenticated ^
+    --set-env-vars APP_BASE_URL=%APP_BASE_URL% ^
     --port 8501
 
 echo ==========================================================

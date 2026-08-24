@@ -85,10 +85,13 @@ def fetch_real_github_dossier(github_url: str) -> dict:
         "profile_url": f"https://github.com/{username}"
     }
 
-def generate_candidate_dossier_html(student_dict: dict) -> str:
+from typing import Dict, Any, List, Optional
+
+def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] = None) -> str:
     """
     Generates a world-class, dynamic, graphics-heavy, and GitHub/Resume-grounded Autonomous Agent Portfolio Dossier.
     """
+    resolved_base = (base_url or os.environ.get("APP_BASE_URL") or "http://localhost:8000").rstrip("/")
     student_id = student_dict.get("student_id") or "STU-1001"
     candidate_name = student_dict.get("full_name") or "Certified Specialist"
     course_name = student_dict.get("course_name") or "Vocational Specialty"
@@ -423,8 +426,9 @@ def save_student_dossier(student_id: str, html_content: str) -> str:
 
 def generate_student_portfolio_html(*args, **kwargs) -> str:
     """Compatibility wrapper redirecting legacy callers to generate_candidate_dossier_html."""
+    base_url = kwargs.get("base_url")
     if args and isinstance(args[0], dict):
-        return generate_candidate_dossier_html(args[0])
+        return generate_candidate_dossier_html(args[0], base_url=base_url)
     
     candidate_name = kwargs.get("candidate_name") or (args[0] if len(args) > 0 else "Candidate")
     student_id = kwargs.get("student_id") or (args[1] if len(args) > 1 else "STU-1001")
@@ -448,4 +452,4 @@ def generate_student_portfolio_html(*args, **kwargs) -> str:
         "past_companies_text": resume_data.get("past_companies_text") if isinstance(resume_data, dict) else "",
         "work_experience_years": resume_data.get("work_experience_years", 0) if isinstance(resume_data, dict) else 0,
     }
-    return generate_candidate_dossier_html(student_dict)
+    return generate_candidate_dossier_html(student_dict, base_url=base_url)

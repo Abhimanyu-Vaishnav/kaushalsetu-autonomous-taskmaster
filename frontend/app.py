@@ -9,25 +9,32 @@ import io
 import datetime
 
 def resolve_base_urls():
-    """Dynamically resolves backend and frontend base URLs, avoiding hardcoded localhost in Cloud Run/prod."""
-    frontend_base = os.environ.get("APP_BASE_URL") or os.environ.get("FRONTEND_URL")
-    try:
-        if hasattr(st, "context") and hasattr(st.context, "headers"):
-            headers = st.context.headers
-            host = headers.get("x-forwarded-host") or headers.get("host")
-            proto = headers.get("x-forwarded-proto") or ("https" if "https" in str(host) else "http")
-            if host:
-                frontend_base = f"{proto}://{host}".rstrip("/")
-    except Exception:
-        pass
+    """Dynamically resolves backend, frontend, and active APP_HOST base URLs, avoiding hardcoded localhost in Cloud Run/prod."""
+    app_host = os.environ.get("APP_BASE_URL", "").rstrip("/")
+    if not app_host:
+        try:
+            if hasattr(st, "context") and hasattr(st.context, "headers"):
+                headers = st.context.headers
+                host = headers.get("x-forwarded-host") or headers.get("host")
+                proto = headers.get("x-forwarded-proto") or ("https" if "https" in str(host) else "http")
+                if host:
+                    app_host = f"{proto}://{host}".rstrip("/")
+        except Exception:
+            pass
 
-    if not frontend_base:
-        frontend_base = "http://localhost:8501"
+    frontend_base = app_host or os.environ.get("FRONTEND_URL") or "http://localhost:8501"
+    backend_base = os.environ.get("BACKEND_URL") or app_host or "http://localhost:8000"
+    
+    return app_host, backend_base.rstrip("/"), frontend_base.rstrip("/")
 
-    backend_base = os.environ.get("BACKEND_URL") or os.environ.get("APP_BASE_URL") or "http://localhost:8000"
-    return backend_base.rstrip("/"), frontend_base.rstrip("/")
+APP_HOST, BACKEND_URL, FRONTEND_URL = resolve_base_urls()
 
-BACKEND_URL, FRONTEND_URL = resolve_base_urls()
+def build_portfolio_dossier_url(student_id: str, existing_url: str = "") -> str:
+    """Constructs absolute portfolio dossier URL relative to active deployment domain."""
+    if existing_url and not existing_url.startswith("http://localhost"):
+        return existing_url
+    base = APP_HOST or BACKEND_URL
+    return f"{base}/portfolio/{student_id}"
 
 st.set_page_config(
     page_title="KaushalSetu | Autonomous Vocational Taskmaster",

@@ -29,7 +29,7 @@ gcloud run deploy ${SERVICE_NAME} \
     --platform managed \
     --region ${REGION} \
     --allow-unauthenticated \
-    --set-env-vars GEMINI_API_KEY=${GEMINI_API_KEY} \
+    --set-env-vars GEMINI_API_KEY=${GEMINI_API_KEY},APP_BASE_URL=${APP_BASE_URL} \
     --port 8501
 
 echo "=========================================================="
