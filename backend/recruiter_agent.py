@@ -123,7 +123,7 @@ class AutonomousRecruiterAgent:
             project_title=f"{student['course_name']} Practical Capstone",
             project_description=submission_text,
             github_url=github_url or "https://github.com/skillforge/student-submission",
-            live_url=live_url or f"{resolved_base}/?view=portfolio&id={student_id}",
+            live_url=live_url or f"{resolved_base}/?page=student_dashboard&view=portfolio&sid={student_id}",
             metric_hash=metric_hash,
             resume_data={
                 "target_role_preference": student.get("target_role_preference", ""),
@@ -133,7 +133,7 @@ class AutonomousRecruiterAgent:
             }
         )
         file_path = save_student_dossier(student_id, dossier_html)
-        portfolio_url = f"{resolved_base}/?view=portfolio&id={student_id}"
+        portfolio_url = f"{resolved_base}/?page=student_dashboard&view=portfolio&sid={student_id}"
         
         # Mark student record exam & portfolio completed
         from database import mark_student_exam_complete, log_agent_activity

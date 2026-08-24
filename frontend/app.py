@@ -15,7 +15,7 @@ BACKEND_URL = BACKEND_API_BASE
 # 2. Public Shareable / Display Links (User-Facing Portfolio Dossier Links & Recruiter Email URLs)
 def get_public_base_url():
     """Resolves public shareable base URL for external viewing links (dossiers, marksheets, recruiter emails)."""
-    env_pub = os.environ.get("APP_BASE_URL", "").rstrip("/")
+    env_pub = os.environ.get("APP_BASE_URL", "").strip().rstrip("/")
     if env_pub:
         return env_pub
     try:
@@ -27,7 +27,7 @@ def get_public_base_url():
                 return f"{proto}://{host}".rstrip("/")
     except Exception:
         pass
-    return os.environ.get("PUBLIC_URL", "http://localhost:8000").rstrip("/")
+    return "https://kaushalsetu-taskmaster-879567142511.us-central1.run.app"
 
 PUBLIC_BASE_URL = get_public_base_url()
 APP_HOST = PUBLIC_BASE_URL
@@ -38,7 +38,7 @@ def build_portfolio_dossier_url(student_id: str, existing_url: str = "") -> str:
     if existing_url and "?view=portfolio" in existing_url:
         return existing_url
     base = PUBLIC_BASE_URL.rstrip("/")
-    return f"{base}/?view=portfolio&id={student_id}"
+    return f"{base}/?page=student_dashboard&view=portfolio&sid={student_id}"
 
 st.set_page_config(
     page_title="KaushalSetu | Autonomous Vocational Taskmaster",
@@ -49,19 +49,19 @@ st.set_page_config(
 
 # --- Direct Public Portfolio View Routing via Query Parameters ---
 query_params = st.query_params
-if (query_params.get("view") == "portfolio" and "id" in query_params) or "portfolio" in query_params:
-    student_id = query_params.get("id") or query_params.get("portfolio")
-    if student_id:
+if query_params.get("view") == "portfolio" and ("sid" in query_params or "id" in query_params or "portfolio" in query_params):
+    target_sid = query_params.get("sid") or query_params.get("id") or query_params.get("portfolio")
+    if target_sid:
         try:
-            res = requests.get(f"{BACKEND_API_BASE}/portfolio/{student_id}", timeout=10)
+            res = requests.get(f"{BACKEND_API_BASE}/portfolio/{target_sid}", timeout=5)
             if res.status_code == 200 and res.text:
-                components.html(res.text, height=1200, scrolling=True)
+                components.html(res.text, height=1000, scrolling=True)
                 st.stop()
             else:
                 st.info("Portfolio dossier is currently being generated...")
                 st.stop()
         except Exception as e:
-            st.error(f"Error loading candidate portfolio dossier: {e}")
+            st.error(f"Failed to load portfolio: {e}")
             st.stop()
 
 # Custom CSS for Modern UI & Visual Architecture Reset (Sanitized)
@@ -635,8 +635,8 @@ def main_app_layout():
                 st.divider()
                 col_sd1, col_sd2, col_sd3 = st.columns([2, 1, 1])
                 with col_sd1:
-                    dossier_display_url = build_portfolio_dossier_url(param_sid, student_data.get("portfolio_url", ""))
-                    st.info(f"🌐 **Domain-Adaptive Verified Portfolio Dossier:** [{dossier_display_url}]({dossier_display_url})")
+                    portfolio_public_link = f"{PUBLIC_BASE_URL}/?page=student_dashboard&view=portfolio&sid={param_sid}"
+                    st.markdown(f"🌐 **Domain-Adaptive Verified Portfolio Dossier:** [{portfolio_public_link}]({portfolio_public_link})", unsafe_allow_html=True)
                 with col_sd2:
                     cur_mode = bool(student_data.get("auto_apply_mode", 0))
                     new_mode = st.toggle("🤖 Autonomous Auto-Apply Engine", value=cur_mode)
