@@ -720,7 +720,18 @@ def fetch_github_profile_data(github_url: str) -> dict:
     return {"username": username, "projects": []}
 
 def parse_pdf_resume_with_gemini(pdf_bytes: bytes, filename: str = "resume.pdf") -> dict:
-    """Extracts candidate profile structured JSON from PDF resume bytes using Gemini 3.5 Flash."""
+    """Extracts candidate profile structured JSON from PDF resume bytes using Gemini 3.5 Flash or PyPDF text parser."""
+    parsed_pdf_text = ""
+    try:
+        import pypdf
+        import io
+        reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+        for page in reader.pages:
+            parsed_pdf_text += (page.extract_text() or "") + "\n"
+        print(f"[PYPDF PARSER] Extracted {len(parsed_pdf_text)} chars from {filename}")
+    except Exception as pdf_ex:
+        print(f"[PYPDF PARSER WARNING] {pdf_ex}")
+
     try:
         client = genai.Client()
         prompt = (
@@ -752,13 +763,30 @@ def parse_pdf_resume_with_gemini(pdf_bytes: bytes, filename: str = "resume.pdf")
         return data
     except Exception as ex:
         print(f"[RESUME PARSER] Gemini fallback: {ex}")
+        
+        # Simple heuristic extraction from pypdf text
+        extracted_skills = []
+        possible_skills = ["Python", "JavaScript", "React", "Node", "FastAPI", "SQL", "Docker", "Git", "C++", "Java", "AutoCAD", "CAN-bus", "Tally", "GST", "Diagnostics", "Testing"]
+        for s in possible_skills:
+            if s.lower() in parsed_pdf_text.lower():
+                extracted_skills.append(s)
+        
+        extracted_github = ""
+        import re
+        gh_match = re.search(r"github\.com/([a-zA-Z0-9_-]+)", parsed_pdf_text)
+        if gh_match:
+            extracted_github = f"https://github.com/{gh_match.group(1)}"
+
+        summary_snippet = parsed_pdf_text[:300].strip() if parsed_pdf_text.strip() else "Certified vocational candidate with practical field training."
+
         return {
             "full_name": filename.replace(".pdf", "").replace("_", " ").title(),
             "target_role": "Specialist Technical Engineer",
-            "skills": ["Diagnostics", "System Testing", "Domain Architecture"],
+            "skills": extracted_skills or ["Diagnostics", "System Testing", "Domain Architecture"],
             "experience_years": 1,
-            "past_companies": "Vocational Training Node",
-            "professional_summary": "Practical vocational certified specialist.",
-            "github_url": "https://github.com/skillforge-autonomous",
-            "highlighted_projects": []
+            "past_companies": "Vocational Training Node & Applied Projects",
+            "professional_summary": summary_snippet,
+            "github_url": extracted_github or "https://github.com/skillforge-autonomous",
+            "highlighted_projects": [],
+            "raw_pdf_text": parsed_pdf_text
         }

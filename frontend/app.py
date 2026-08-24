@@ -412,9 +412,23 @@ def main_app_layout():
                 
                 # Multimodal PDF Resume Autonomous Extractor
                 with st.expander("📄 Multimodal PDF Resume Autonomous Extractor", expanded=True):
-                    st.caption("Upload a candidate PDF resume to extract skills, target roles, experience, and professional summary via Gemini 3.5 Flash.")
+                    st.caption("Upload a candidate PDF resume to extract skills, target roles, experience, and professional summary via Gemini 3.5 Flash / PyPDF.")
                     resume_file = st.file_uploader("Upload PDF Resume", type=["pdf"], key=f"resume_uploader_{param_sid}")
                     if resume_file is not None:
+                        # Extract raw text immediately using pypdf
+                        try:
+                            import pypdf
+                            import io
+                            reader = pypdf.PdfReader(io.BytesIO(resume_file.getvalue()))
+                            pdf_text = ""
+                            for page in reader.pages:
+                                pdf_text += (page.extract_text() or "") + "\n"
+                            if pdf_text.strip():
+                                st.session_state["extracted_resume_raw"] = pdf_text
+                                st.info(f"📄 PDF Resume Detected & Extracted by Agent ({len(pdf_text)} characters)!")
+                        except Exception as pdf_ex:
+                            st.warning(f"Could not parse PDF text: {pdf_ex}")
+
                         if st.button("⚡ Extract & Auto-Populate Profile Data", type="secondary", use_container_width=True):
                             with st.spinner("Gemini 3.5 Multimodal Parsing PDF Resume..."):
                                 try:

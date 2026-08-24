@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import uuid
 import hashlib
@@ -7,65 +8,71 @@ import requests
 from typing import Dict, Any, List
 
 def fetch_real_github_dossier(github_url: str) -> dict:
-    """Extracts real public repositories and profile stats from GitHub API with realistic fallbacks."""
-    default_projects = [
-        {
-            "name": "enterprise-fastapi-gateway",
-            "desc": "High-throughput asynchronous microservice gateway with rate-limiting, JWT authentication, and Redis pub/sub caching layer.",
-            "lang": "Python",
-            "stars": 14,
-            "forks": 3,
-            "url": github_url or "https://github.com",
-            "topics": ["FastAPI", "Redis", "Docker", "AsyncIO"]
-        },
-        {
-            "name": "autonomous-taskmaster-agent",
-            "desc": "Dual-AI agent evaluation loop leveraging Gemma edge sanity checking and Gemini multimodal reasoning.",
-            "lang": "TypeScript",
-            "stars": 28,
-            "forks": 6,
-            "url": github_url or "https://github.com",
-            "topics": ["AI-Agents", "Gemini-3.5", "Gemma", "Automation"]
-        },
-        {
-            "name": "distributed-postgres-sync",
-            "desc": "Multi-tenant relational database synchronization engine with atomic SHA-256 state ledger commits.",
-            "lang": "SQL / Python",
-            "stars": 9,
-            "forks": 1,
-            "url": github_url or "https://github.com",
-            "topics": ["PostgreSQL", "Database", "Security"]
-        }
-    ]
-    if not github_url or "github.com" not in github_url:
-        return {"username": "Specialist Candidate", "projects": default_projects, "total_stars": 51, "public_repos": 12}
-    
-    username = github_url.rstrip("/").split("/")[-1]
+    """Bulletproof GitHub API crawler extracting real repositories and profile stats."""
+    clean_url = str(github_url or "").strip()
+    if not clean_url or "github.com" not in clean_url:
+        return {"username": "Candidate", "projects": [], "total_stars": 0, "public_repos": 0, "profile_url": "#"}
+
+    # Extract exact username even with trailing slashes, params, or full URLs
+    match = re.search(r"github\.com/([^/?#]+)", clean_url)
+    if not match:
+        return {"username": "Candidate", "projects": [], "total_stars": 0, "public_repos": 0, "profile_url": clean_url}
+
+    username = match.group(1).strip()
+    print(f"[GITHUB LIVE HARVEST] Crawling GitHub API for user: '{username}'")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
     try:
-        headers = {"User-Agent": "SkillForge-Autonomous-Agent", "Accept": "application/vnd.github.v3+json"}
-        resp = requests.get(f"https://api.github.com/users/{username}/repos?sort=updated&per_page=6", headers=headers, timeout=5)
-        if resp.status_code == 200:
-            raw_repos = resp.json()
-            fetched = []
+        # 1. Fetch user profile stats
+        user_resp = requests.get(f"https://api.github.com/users/{username}", headers=headers, timeout=6)
+        public_repos_count = 0
+        if user_resp.status_code == 200:
+            public_repos_count = user_resp.json().get("public_repos", 0)
+
+        # 2. Fetch active public repositories sorted by updated
+        repo_resp = requests.get(f"https://api.github.com/users/{username}/repos?sort=updated&per_page=10", headers=headers, timeout=6)
+        if repo_resp.status_code == 200:
+            raw_repos = repo_resp.json()
+            projects = []
             total_stars = 0
             for r in raw_repos:
-                if not r.get("fork"):
+                if not r.get("fork"):  # Only show original candidate projects
                     stars = r.get("stargazers_count", 0)
                     total_stars += stars
-                    fetched.append({
+                    projects.append({
                         "name": r.get("name"),
-                        "desc": r.get("description") or "Production-grade repository with automated CI/CD pipeline and verified code coverage.",
-                        "lang": r.get("language") or "Python / JavaScript",
+                        "desc": r.get("description") or f"Public repository in {r.get('language') or 'Software'}. Active commits and implementation.",
+                        "lang": r.get("language") or "Code",
                         "stars": stars,
                         "forks": r.get("forks_count", 0),
                         "url": r.get("html_url"),
-                        "topics": r.get("topics", [])[:3] or [r.get("language") or "FullStack"]
+                        "topics": r.get("topics", []) or [r.get("language") or "Dev"]
                     })
-            if fetched:
-                return {"username": username, "projects": fetched[:4], "total_stars": max(total_stars, 18), "public_repos": len(raw_repos)}
+
+            print(f"[GITHUB LIVE HARVEST] Successfully harvested {len(projects)} real repos for {username}")
+            return {
+                "username": username,
+                "projects": projects[:4],
+                "total_stars": total_stars,
+                "public_repos": public_repos_count or len(projects),
+                "profile_url": f"https://github.com/{username}"
+            }
+        else:
+            print(f"[GITHUB LIVE HARVEST] Error {repo_resp.status_code}: {repo_resp.text}")
     except Exception as e:
-        print(f"[GITHUB AGENT HARVEST ERROR] {e}")
-    return {"username": username, "projects": default_projects, "total_stars": 51, "public_repos": 12}
+        print(f"[GITHUB LIVE HARVEST EXCEPTION] {e}")
+
+    return {
+        "username": username,
+        "projects": [],
+        "total_stars": 0,
+        "public_repos": 0,
+        "profile_url": f"https://github.com/{username}"
+    }
 
 def generate_candidate_dossier_html(student_dict: dict) -> str:
     """
@@ -83,12 +90,13 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
     exp_years = int(student_dict.get("work_experience_years", 0))
     github_url = student_dict.get("github_url") or "https://github.com/skillforge-autonomous"
 
-    # Harvest live GitHub data
+    # Harvest real live GitHub data
     gh_data = fetch_real_github_dossier(github_url)
     projects = gh_data.get("projects", [])
     username = gh_data.get("username", "Candidate")
-    total_stars = gh_data.get("total_stars", 32)
-    public_repos = gh_data.get("public_repos", 8)
+    profile_url = gh_data.get("profile_url", github_url)
+    total_stars = gh_data.get("total_stars", 0)
+    public_repos = gh_data.get("public_repos", 0)
 
     # Parse skills for Chart.js radar graph
     skills_raw = student_dict.get("skills_list", "")
@@ -120,32 +128,41 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
     raw_payload = f"{student_id}|{branch_name}|92.0%|VERIFIED"
     sha256_hash = "0x" + hashlib.sha256(raw_payload.encode('utf-8')).hexdigest()
 
-    # Build Project Cards HTML
+    # Build Project Cards HTML dynamically from real harvested data
     proj_cards_html = ""
-    for p in projects:
-        topics_badges = "".join([f'<span class="text-[10px] bg-slate-900 text-slate-400 px-2 py-0.5 rounded border border-slate-800">#{t}</span>' for t in p.get("topics", [])])
-        proj_cards_html += f"""
-        <div class="bg-slate-900/80 border border-slate-800 hover:border-sky-500/50 p-5 rounded-2xl transition duration-300 flex flex-col justify-between group shadow-lg hover:shadow-sky-500/10">
-            <div>
-                <div class="flex justify-between items-center mb-2">
-                    <a href="{p['url']}" target="_blank" class="text-base font-bold text-sky-400 group-hover:text-sky-300 transition flex items-center gap-2">
-                        <i class="fa-brands fa-github text-lg"></i> {p['name']}
-                    </a>
-                    <span class="text-xs bg-slate-950 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30 font-mono font-bold">
-                        ★ {p['stars']}
-                    </span>
+    if projects:
+        for p in projects:
+            topics_badges = "".join([f'<span class="text-[10px] bg-slate-900 text-slate-400 px-2 py-0.5 rounded border border-slate-800">#{t}</span>' for t in p.get("topics", [])])
+            proj_cards_html += f"""
+            <div class="bg-slate-900/80 border border-slate-800 hover:border-sky-500/50 p-5 rounded-2xl transition duration-300 flex flex-col justify-between group shadow-lg hover:shadow-sky-500/10">
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <a href="{p['url']}" target="_blank" class="text-base font-bold text-sky-400 group-hover:text-sky-300 transition flex items-center gap-2">
+                            <i class="fa-brands fa-github text-lg"></i> {p['name']}
+                        </a>
+                        <span class="text-xs bg-slate-950 text-amber-400 px-2.5 py-1 rounded-full border border-amber-500/30 font-mono font-bold">
+                            ★ {p['stars']}
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-3">{p['desc']}</p>
                 </div>
-                <p class="text-xs text-slate-300 leading-relaxed mb-3">{p['desc']}</p>
-            </div>
-            <div>
-                <div class="flex flex-wrap gap-1.5 mb-3">{topics_badges}</div>
-                <div class="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-                    <span class="text-indigo-400 font-semibold font-mono">● {p['lang']}</span>
-                    <a href="{p['url']}" target="_blank" class="text-sky-400 hover:underline font-semibold flex items-center gap-1">
-                        View Code <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                    </a>
+                <div>
+                    <div class="flex flex-wrap gap-1.5 mb-3">{topics_badges}</div>
+                    <div class="flex justify-between items-center text-xs text-slate-400 pt-2 border-t border-slate-800/80">
+                        <span class="text-indigo-400 font-semibold font-mono">● {p['lang']}</span>
+                        <a href="{p['url']}" target="_blank" class="text-sky-400 hover:underline font-semibold flex items-center gap-1">
+                            View Code <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
+            """
+    else:
+        proj_cards_html = f"""
+        <div class="col-span-2 bg-slate-950/60 p-6 rounded-2xl border border-slate-800 text-center space-y-2">
+            <div class="text-slate-400 text-sm font-semibold">No public repositories found for <code class="text-sky-400">@{username}</code></div>
+            <p class="text-slate-500 text-xs">Verify your GitHub username URL or ensure public repositories exist under your profile.</p>
+            <a href="{profile_url}" target="_blank" class="inline-block text-xs text-sky-400 underline font-mono mt-1">Visit GitHub Profile (@{username})</a>
         </div>
         """
 
@@ -209,8 +226,8 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
                     </p>
                     <div class="mt-3 flex flex-wrap items-center justify-center md:justify-start gap-2">
                         <span class="text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-lg border border-emerald-800">{exp_badge}</span>
-                        <a href="{github_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 px-3 py-1 rounded-lg border border-sky-500/30 transition">
-                            <i class="fa-brands fa-github"></i> GitHub ({public_repos} Repos)
+                        <a href="{profile_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 px-3 py-1 rounded-lg border border-sky-500/30 transition">
+                            <i class="fa-brands fa-github"></i> View GitHub Profile (@{username})
                         </a>
                     </div>
                 </div>
@@ -272,8 +289,8 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
                     <span class="text-xs bg-slate-950 text-amber-400 px-3 py-1.5 rounded-xl border border-amber-500/30 font-mono font-bold">
                         ★ {total_stars} Total Stars
                     </span>
-                    <a href="{github_url}" target="_blank" class="text-xs bg-sky-600 hover:bg-sky-500 text-white font-semibold px-4 py-2 rounded-xl transition">
-                        View GitHub Profile
+                    <a href="{profile_url}" target="_blank" class="text-xs bg-sky-600 hover:bg-sky-500 text-white font-semibold px-4 py-2 rounded-xl transition">
+                        View GitHub Profile (@{username})
                     </a>
                 </div>
             </div>
@@ -395,7 +412,6 @@ def generate_student_portfolio_html(*args, **kwargs) -> str:
     if args and isinstance(args[0], dict):
         return generate_candidate_dossier_html(args[0])
     
-    # Map positional or kwarg inputs into student_dict
     candidate_name = kwargs.get("candidate_name") or (args[0] if len(args) > 0 else "Candidate")
     student_id = kwargs.get("student_id") or (args[1] if len(args) > 1 else "STU-1001")
     course_name = kwargs.get("course_name") or (args[2] if len(args) > 2 else "Vocational Course")
