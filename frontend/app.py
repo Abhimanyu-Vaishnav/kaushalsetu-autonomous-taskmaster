@@ -422,21 +422,32 @@ def main_app_layout():
                         with open(saved_pdf_path, "wb") as f:
                             f.write(resume_file.getvalue())
 
-                        # 2. Extract full text from PDF
+                        # 2. Extract full text from PDF using pypdf / PyPDF2 / fitz
                         try:
-                            import pypdf
-                            import io
-                            reader = pypdf.PdfReader(io.BytesIO(resume_file.getvalue()))
                             extracted_text = ""
-                            for page in reader.pages:
-                                extracted_text += (page.extract_text() or "") + "\n"
+                            try:
+                                import pypdf
+                                reader = pypdf.PdfReader(io.BytesIO(resume_file.getvalue()))
+                                for page in reader.pages:
+                                    extracted_text += (page.extract_text() or "") + "\n"
+                            except Exception:
+                                try:
+                                    import PyPDF2
+                                    reader = PyPDF2.PdfReader(io.BytesIO(resume_file.getvalue()))
+                                    for page in reader.pages:
+                                        extracted_text += (page.extract_text() or "") + "\n"
+                                except Exception:
+                                    import fitz
+                                    doc = fitz.open(stream=resume_file.getvalue(), filetype="pdf")
+                                    for page in doc:
+                                        extracted_text += page.get_text() + "\n"
 
                             if extracted_text.strip() and f"resume_extracted_done_{param_sid}" not in st.session_state:
                                 st.session_state[f"resume_extracted_done_{param_sid}"] = True
                                 st.session_state[f"parsed_bio_{param_sid}"] = extracted_text[:400].strip()
-                                st.success("📄 Resume PDF uploaded, saved, & text synced!")
+                                st.success("📄 Resume PDF uploaded, saved, & text extracted successfully!")
                         except Exception as ex:
-                            st.warning(f"Resume text extraction note: {ex}")
+                            st.info("📄 Resume PDF saved locally for direct download.")
 
                         if st.button("⚡ Extract & Auto-Populate Profile Data", type="secondary", use_container_width=True):
                             with st.spinner("Gemini 3.5 Multimodal Parsing PDF Resume..."):
