@@ -229,6 +229,9 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
                         <a href="{profile_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 px-3 py-1 rounded-lg border border-sky-500/30 transition">
                             <i class="fa-brands fa-github"></i> View GitHub Profile (@{username})
                         </a>
+                        <a href="/api/students/{student_id}/resume" target="_blank" download class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 rounded-lg px-3 py-1 transition shadow-sm">
+                            <i class="fa-solid fa-file-pdf"></i> 📄 Download Official Resume (PDF)
+                        </a>
                     </div>
                 </div>
             </div>

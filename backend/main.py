@@ -488,6 +488,17 @@ def api_set_consent(req: StudentConsentReq):
     set_student_consent(req.student_id, req.consent)
     return {"success": True, "data": get_student_by_id(req.student_id)}
 
+from fastapi.responses import FileResponse, HTMLResponse
+
+os.makedirs(os.path.join("backend", "resumes"), exist_ok=True)
+
+@app.get("/api/students/{student_id}/resume")
+async def download_student_resume(student_id: str):
+    pdf_path = os.path.join("backend", "resumes", f"{student_id}_resume.pdf")
+    if os.path.exists(pdf_path):
+        return FileResponse(pdf_path, media_type="application/pdf", filename=f"{student_id}_Resume.pdf")
+    raise HTTPException(status_code=404, detail="Resume PDF not uploaded yet.")
+
 @app.post("/api/students/bulk-upload")
 async def api_bulk_upload(
     file: UploadFile = File(...),
