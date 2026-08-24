@@ -4,7 +4,18 @@ import sqlite3
 import uuid
 from typing import List, Dict, Any, Optional
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skillforge.db")
+import shutil
+
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kaushalsetu.db")
+OLD_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skillforge.db")
+
+# Auto-migrate legacy SQLite database if present
+if os.path.exists(OLD_DB_PATH) and not os.path.exists(DB_PATH):
+    try:
+        shutil.copy2(OLD_DB_PATH, DB_PATH)
+        print(f"[DATABASE MIGRATION] Migrated '{OLD_DB_PATH}' to '{DB_PATH}' successfully.")
+    except Exception as mig_ex:
+        print(f"[DATABASE MIGRATION WARNING] {mig_ex}")
 
 def get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, timeout=30.0, check_same_thread=False)
@@ -192,8 +203,8 @@ def seed_initial_data(conn: sqlite3.Connection):
     cursor = conn.cursor()
     
     inst_id = "INST-GLOBAL-01"
-    code = "SKILLFORGE-HQ"
-    inst_name = "SkillForge Vocational Foundation"
+    code = "KAUSHALSETU-HQ"
+    inst_name = "KaushalSetu Vocational Foundation"
     
     cursor.execute("""
         INSERT OR IGNORE INTO institutes (id, name, code, placement_threshold, max_interviews_cap)
@@ -222,10 +233,10 @@ def seed_initial_data(conn: sqlite3.Connection):
     """, courses_data)
     
     students_data = [
-        ("STU-1001", inst_id, "BR-NANGLOI", "CRS-AUTO-01", "Nangloi Center", "Automotive & Hardware Diagnostics", "Alex Mercer", "2002-01-15", "alex.mercer@skillforge-edu.org", "+91 9876543210", "Automotive technician candidate specializing in ECU waveform diagnostics", "https://github.com/skillforge/alex-mercer", "", "", "PAID", 1, 1, 0, 0, 0),
-        ("STU-1002", inst_id, "BR-NANGLOI", "CRS-WEB-01", "Nangloi Center", "Full Stack Web Development", "Priya Sundaram", "2001-05-20", "priya.s@skillforge-edu.org", "+91 9876543211", "Full stack developer proficient in React and Python backend architectures", "https://github.com/skillforge/priya-web", "", "", "PAID", 1, 1, 0, 0, 0),
-        ("STU-1003", inst_id, "BR-YAMUNAVIHAR", "CRS-TALLY-01", "Yamuna Vihar Center", "Accounting & Financial Tally", "Jordan Smith", "2000-11-10", "jordan.s@skillforge-edu.org", "+91 9876543212", "Financial tally accountant with GST compliance verification expertise", "", "", "", "PAID", 1, 1, 0, 0, 0),
-        ("STU-1004", inst_id, "BR-JWALAPUR", "CRS-AUTO-02", "Jwalapur Center", "Automotive & Hardware Diagnostics", "Amitabh Choudhury", "1999-08-04", "amitabh.c@skillforge-edu.org", "+91 9876543213", "Diagnostics engineer trained on heavy electrical wiring & safety lockout", "", "", "", "PAID", 1, 1, 0, 0, 0)
+        ("STU-1001", inst_id, "BR-NANGLOI", "CRS-AUTO-01", "Nangloi Center", "Automotive & Hardware Diagnostics", "Alex Mercer", "2002-01-15", "alex.mercer@kaushalsetu-edu.org", "+91 9876543210", "Automotive technician candidate specializing in ECU waveform diagnostics", "https://github.com/kaushalsetu/alex-mercer", "", "", "PAID", 1, 1, 0, 0, 0),
+        ("STU-1002", inst_id, "BR-NANGLOI", "CRS-WEB-01", "Nangloi Center", "Full Stack Web Development", "Priya Sundaram", "2001-05-20", "priya.s@kaushalsetu-edu.org", "+91 9876543211", "Full stack developer proficient in React and Python backend architectures", "https://github.com/kaushalsetu/priya-web", "", "", "PAID", 1, 1, 0, 0, 0),
+        ("STU-1003", inst_id, "BR-YAMUNAVIHAR", "CRS-TALLY-01", "Yamuna Vihar Center", "Accounting & Financial Tally", "Jordan Smith", "2000-11-10", "jordan.s@kaushalsetu-edu.org", "+91 9876543212", "Financial tally accountant with GST compliance verification expertise", "", "", "", "PAID", 1, 1, 0, 0, 0),
+        ("STU-1004", inst_id, "BR-JWALAPUR", "CRS-AUTO-02", "Jwalapur Center", "Automotive & Hardware Diagnostics", "Amitabh Choudhury", "1999-08-04", "amitabh.c@kaushalsetu-edu.org", "+91 9876543213", "Diagnostics engineer trained on heavy electrical wiring & safety lockout", "", "", "", "PAID", 1, 1, 0, 0, 0)
     ]
     cursor.executemany("""
         INSERT OR IGNORE INTO students 

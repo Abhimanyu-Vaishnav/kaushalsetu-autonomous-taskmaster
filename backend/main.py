@@ -35,9 +35,9 @@ from agent_engine import (
 from recruiter_agent import AutonomousRecruiterAgent
 
 app = FastAPI(
-    title="SkillForge Autonomous - Enterprise Multi-Tenant Platform",
-    description="Autonomous Vocational Operations, Multimodal Grading & Placement Action Engine",
-    version="4.0.0",
+    title="KaushalSetu: Autonomous Vocational Taskmaster",
+    description="Autonomous Dual-AI Institutional Taskmaster for Vocational Skilling, Multimodal Evaluation & Zero-HITL Job Dispatch",
+    version="4.1.0",
 )
 
 app.add_middleware(
@@ -150,18 +150,18 @@ class CertificateReq(BaseModel):
 def root():
     return {
         "status": "healthy",
-        "service": "SkillForge Autonomous Multi-Tenant Architecture Engine",
+        "service": "KaushalSetu: Autonomous Vocational Taskmaster Engine",
         "version": "4.1.0",
         "docs_url": "http://localhost:8000/docs",
         "health_url": "http://localhost:8000/health",
-        "message": "Welcome to SkillForge Autonomous Backend API. Open /docs for Interactive Swagger Documentation."
+        "message": "Welcome to KaushalSetu Backend API. Open /docs for Interactive Swagger Documentation."
     }
 
 @app.get("/health")
 def health_check():
     return {
         "status": "healthy",
-        "service": "SkillForge Autonomous Multi-Tenant Architecture Engine",
+        "service": "KaushalSetu: Autonomous Vocational Taskmaster Engine",
         "version": "4.1.0"
     }
 

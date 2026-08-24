@@ -1,11 +1,11 @@
 @echo off
-REM Google Cloud Run Batch Deployment Script for SkillForge Autonomous
+REM Google Cloud Run Batch Deployment Script for KaushalSetu Taskmaster
 
 set REGION=us-central1
-set SERVICE_NAME=skillforge-autonomous
+set SERVICE_NAME=kaushalsetu-taskmaster
 
 echo ==========================================================
-echo ⚡ Deploying SkillForge Autonomous to Google Cloud Run
+echo 🌉 Deploying KaushalSetu Taskmaster to Google Cloud Run
 echo ==========================================================
 
 gcloud services enable containerregistry.googleapis.com run.googleapis.com

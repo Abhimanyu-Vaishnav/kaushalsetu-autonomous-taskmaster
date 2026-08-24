@@ -1,16 +1,18 @@
-# DEVPOST SUBMISSION PACK: SKILLFORGE AUTONOMOUS
+# DEVPOST SUBMISSION PACK: KAUSHALSETU
+
+**Project Title:** KaushalSetu — Autonomous Vocational Taskmaster  
 **Category Track:** Taskmaster Track (Autonomous Workflows & Continuous Action Engine)  
 **Hackathon:** Google All Things Agentic Hackathon 2026  
 
 ---
 
 ## 📌 Project Title
-**SkillForge Autonomous**: Multi-Tenant Institutional AI Operations, Live GitHub/Resume Telemetry & Autonomous 360° Candidate Placement Engine
+**KaushalSetu**: Autonomous Vocational Taskmaster, Live GitHub/Resume Telemetry & Autonomous 360° Candidate Placement Engine
 
 ---
 
 ## 💡 Elevator Pitch (1-Line Summary)
-SkillForge Autonomous is a 100% Zero-Human-in-the-Loop (Zero-HITL) action engine that replaces 4.5 hours of manual educator labor per candidate with a 3.2-second autonomous pipeline: synthesizing vocational exams, executing dual-AI multimodal grading (Gemma 42ms AST screener + Gemini 3.5 Flash), harvesting live GitHub/Resume telemetry, and dispatching SHA-256 cryptographically sealed candidate portfolios directly to search-grounded job requisitions.
+KaushalSetu is a 100% Zero-Human-in-the-Loop (Zero-HITL) action engine that replaces 4.5 hours of manual educator labor per candidate with a 3.2-second autonomous pipeline: synthesizing vocational exams, executing dual-AI multimodal grading (Gemma 42ms AST screener + Gemini 3.5 Flash), harvesting live GitHub/Resume telemetry, and dispatching SHA-256 cryptographically sealed candidate portfolios directly to search-grounded job requisitions.
 
 ---
 
@@ -24,7 +26,7 @@ SkillForge Autonomous is a 100% Zero-Human-in-the-Loop (Zero-HITL) action engine
 - **Gemini 3.5 Pro (`gemini-2.5-flash` / `gemini-3.5-pro`)**: Powers syllabus-grounded exam synthesis, cognitive rubric grading, and dynamic domain HTML portfolio synthesis.
 - **Gemini 3.5 Flash Multimodal**: Parses raw PDF resume byte buffers (`types.Part.from_bytes(data=pdf_bytes, mime_type='application/pdf')`) and grades physical schematic/code submission images.
 - **Google Search Tool Grounding**: Enabled via `types.GenerateContentConfig(tools=[types.Tool(google_search=types.GoogleSearch())])` to continuously index live job vacancies across Naukri, Indeed, LinkedIn, and Google Jobs with active application links.
-- **Google Cloud Run**: Containerized via root `Dockerfile` and deployed via `deploy.sh` script (`gcloud run deploy skillforge-autonomous`).
+- **Google Cloud Run**: Containerized via root `Dockerfile` and deployed via `deploy.sh` script (`gcloud run deploy kaushalsetu-taskmaster`).
 
 ### 3. Bonus Category (+0.2 Bonus Points)
 - **Gemma Edge Screener (`Gemma 2B / 7B`)**: Executes ultra-fast 42ms AST syntax and token validation (`FastScreeningResult`), screening out malformed code before invoking high-order models and saving 80% compute overhead.
@@ -38,7 +40,7 @@ Vocational training centers across Tier-2/3 cities and rural hubs face severe ad
 2. **Evaluation Latency**: Instructors spend 1.5 hours grading code submissions, circuit schematics, and Tally balance sheets.
 3. **Placement Dispatch Delay**: Placement officers spend 40 minutes formatting candidate resumes and manually searching job portals.
 
-**The SkillForge Solution**: SkillForge Autonomous executes this entire 4.5-hour pipeline in **3.2 seconds** with **100% Zero-HITL automation**.
+**The KaushalSetu Solution**: KaushalSetu executes this entire 4.5-hour pipeline in **3.2 seconds** with **100% Zero-HITL automation**.
 
 ```
 [Candidate Submission]
@@ -123,7 +125,7 @@ flowchart TD
 
 ### Option A: LinkedIn Post
 ```text
-🚀 Excited to introduce "SkillForge Autonomous" - built for the Google #AllThingsAgenticHackathon!
+🚀 Excited to introduce "KaushalSetu: Autonomous Vocational Taskmaster" - built for the Google #AllThingsAgenticHackathon!
 
 We built a 100% Zero-Human-in-the-Loop (Zero-HITL) continuous action engine that replaces 4.5 hours of manual educator work per candidate with a 3.2-second autonomous pipeline!
 
@@ -141,7 +143,7 @@ Check out our repository and full Devpost submission! 🏆
 
 ### Option B: X (Twitter) Post
 ```text
-🚀 Built "SkillForge Autonomous" for the Google #AllThingsAgenticHackathon!
+🚀 Built "KaushalSetu: Autonomous Vocational Taskmaster" for the Google #AllThingsAgenticHackathon!
 
 Replaced 4.5 hours of manual educator labor with a 3.2s Zero-HITL pipeline:
 ⚡ Gemma 42ms AST screener

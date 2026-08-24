@@ -255,12 +255,12 @@ def parse_resume_profile(text_or_url: str) -> dict:
         # Fallback heuristic parser
         return {
             "full_name": "Rohan Mehta",
-            "email": "rohan.mehta@skillforge-edu.org",
+            "email": "rohan.mehta@kaushalsetu-edu.org",
             "phone": "+91 9876543210",
             "bio": "Certified vocational candidate trained in hardware circuit diagnostic isolation and waveform inspection.",
             "skills_list": ["Circuit Diagnostics", "Multimeter Waveforms", "ECU Testing", "Safety Lockout", "Soldering"],
             "target_role_preference": "Hardware Diagnostics Specialist",
-            "past_companies_text": "Trained through SkillForge Vocational Foundation",
+            "past_companies_text": "Trained through KaushalSetu Vocational Foundation",
             "work_experience_years": 1
         }
 
@@ -640,7 +640,7 @@ def generate_verified_certificate(candidate_name: str, student_id: str, course_n
 <body>
     <div class="cert-card">
         <div class="header">
-            <h1>⚡ SkillForge Autonomous</h1>
+            <h1>🌉 KaushalSetu Taskmaster</h1>
             <p>OFFICIAL VERIFIED CANDIDATE COMPETENCY DOSSIER</p>
         </div>
         <div class="content">
@@ -662,10 +662,10 @@ def generate_verified_certificate(candidate_name: str, student_id: str, course_n
                 </div>
             </div>
             
-            <p>Verified Competencies: <strong>Hardware Circuit Isolation, Safety Protocol Compliance, Automated Fault Diagnostics</strong></p>
+            <p>Verified Competency Badges: <strong>Hardware Circuit Isolation, Safety Protocol Compliance, Automated Fault Diagnostics</strong></p>
         </div>
         <div class="footer">
-            <p>Issued by SkillForge Autonomous Continuous Placement Engine | 2026-08-23</p>
+            <p>Issued by KaushalSetu Autonomous Continuous Placement Engine | 2026-08-24</p>
             <div class="hash-tag">CRYPTOGRAPHIC VERIFICATION HASH: {metric_hash}</div>
         </div>
     </div>
@@ -674,7 +674,7 @@ def generate_verified_certificate(candidate_name: str, student_id: str, course_n
 
     return {
         "certificate_id": cert_id,
-        "issuer": "SkillForge Vocational Foundation & Placement Engine",
+        "issuer": "KaushalSetu Vocational Foundation & Placement Engine",
         "candidate_name": candidate_name,
         "student_id": student_id,
         "course_name": course_name,
@@ -786,7 +786,7 @@ def parse_pdf_resume_with_gemini(pdf_bytes: bytes, filename: str = "resume.pdf")
             "experience_years": 1,
             "past_companies": "Vocational Training Node & Applied Projects",
             "professional_summary": summary_snippet,
-            "github_url": extracted_github or "https://github.com/skillforge-autonomous",
+            "github_url": extracted_github or "https://github.com/kaushalsetu-taskmaster",
             "highlighted_projects": [],
             "raw_pdf_text": parsed_pdf_text
         }

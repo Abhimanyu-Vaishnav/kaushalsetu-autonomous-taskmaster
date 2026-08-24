@@ -1,13 +1,13 @@
 #!/bin/bash
-# Google Cloud Run Deployment Script for SkillForge Autonomous
+# Google Cloud Run Deployment Script for KaushalSetu Taskmaster
 
 PROJECT_ID=$(gcloud config get-value project 2>/dev/null)
 REGION="us-central1"
-SERVICE_NAME="skillforge-autonomous"
+SERVICE_NAME="kaushalsetu-taskmaster"
 IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest"
 
 echo "=========================================================="
-echo "⚡ Deploying SkillForge Autonomous to Google Cloud Run"
+echo "🌉 Deploying KaushalSetu Taskmaster to Google Cloud Run"
 echo "=========================================================="
 echo "Project ID: ${PROJECT_ID}"
 echo "Region:     ${REGION}"

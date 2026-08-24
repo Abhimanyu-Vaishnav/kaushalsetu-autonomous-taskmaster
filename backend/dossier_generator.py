@@ -21,10 +21,7 @@ def fetch_real_github_dossier(github_url: str) -> dict:
     username = match.group(1).strip()
     print(f"[GITHUB LIVE HARVEST] Crawling GitHub API for user: '{username}'")
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Accept": "application/vnd.github.v3+json"
-    }
+    headers = {"User-Agent": "KaushalSetu-Autonomous-Agent", "Accept": "application/vnd.github.v3+json"}
 
     try:
         # 1. Fetch user profile stats
@@ -82,13 +79,13 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
     candidate_name = student_dict.get("full_name") or "Certified Specialist"
     course_name = student_dict.get("course_name") or "Vocational Specialty"
     branch_name = student_dict.get("branch_name") or "Main Center Node"
-    email = student_dict.get("email") or f"{student_id.lower()}@skillforge.internal"
+    email = student_dict.get("email") or f"{student_id.lower()}@kaushalsetu.internal"
     phone = student_dict.get("phone") or "+91 9876543210"
-    bio = student_dict.get("bio") or f"Vocational graduate specializing in {course_name}, certified by SkillForge Autonomous Engine."
+    bio = student_dict.get("bio") or f"Vocational graduate specializing in {course_name}, certified by KaushalSetu Taskmaster Engine."
     target_role = student_dict.get("target_role_preference") or "Specialist Technical Engineer"
-    past_companies = student_dict.get("past_companies_text") or "Certified through SkillForge institutional vocational curriculum."
+    past_companies = student_dict.get("past_companies_text") or "Certified through KaushalSetu institutional vocational curriculum."
     exp_years = int(student_dict.get("work_experience_years", 0))
-    github_url = student_dict.get("github_url") or "https://github.com/skillforge-autonomous"
+    github_url = student_dict.get("github_url") or "https://github.com/kaushalsetu-taskmaster"
 
     # Harvest real live GitHub data
     gh_data = fetch_real_github_dossier(github_url)
@@ -126,7 +123,7 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
 
     # Cryptographic integrity digest
     raw_payload = f"{student_id}|{branch_name}|92.0%|VERIFIED"
-    sha256_hash = "0x" + hashlib.sha256(raw_payload.encode('utf-8')).hexdigest()
+    sha256_hash = f"0xKAUSHALSETU_{student_id}_SHA256_VERIFIED_" + hashlib.sha256(raw_payload.encode('utf-8')).hexdigest()[:24]
 
     # Build Project Cards HTML dynamically from real harvested data
     proj_cards_html = ""
@@ -171,7 +168,7 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkillForge Autonomous Dossier - {candidate_name}</title>
+    <title>KaushalSetu Verified Candidate Dossier - {candidate_name}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -237,7 +234,7 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
             </div>
 
             <div class="text-center md:text-right bg-slate-950/80 p-6 rounded-2xl border border-slate-800 min-w-[200px]">
-                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">SkillForge Score</div>
+                <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">KaushalSetu Score</div>
                 <div class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400 font-heading">92%</div>
                 <div class="text-xs text-emerald-400 font-bold mt-1.5 flex items-center justify-center md:justify-end gap-1">
                     <i class="fa-solid fa-trophy text-amber-400"></i> Top 5% Candidate
@@ -313,7 +310,7 @@ def generate_candidate_dossier_html(student_dict: dict) -> str:
                 </span>
             </div>
             <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 font-mono text-xs text-sky-300 space-y-2 overflow-x-auto">
-                <div class="text-slate-500">// SkillForge Autonomous Verified Code Execution Pipeline</div>
+                <div class="text-slate-500">// KaushalSetu Autonomous Verified Code Execution Pipeline</div>
                 <div><span class="text-purple-400">async function</span> <span class="text-yellow-300">verifyCandidateDossier</span>(candidateId, sha256Digest) {{</div>
                 <div>&nbsp;&nbsp;<span class="text-purple-400">const</span> ledgerState = <span class="text-purple-400">await</span> db.<span class="text-blue-400">query</span>(<span class="text-emerald-300">"SELECT * FROM students WHERE id = ?"</span>, [candidateId]);</div>
                 <div>&nbsp;&nbsp;<span class="text-purple-400">const</span> isAuthentic = crypto.<span class="text-blue-400">verifyHash</span>(ledgerState.payload, sha256Digest);</div>

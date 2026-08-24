@@ -11,8 +11,8 @@ import datetime
 BACKEND_URL = "http://localhost:8000"
 
 st.set_page_config(
-    page_title="SkillForge Autonomous - Live Job Search & Autonomous Placement Engine",
-    page_icon="⚡",
+    page_title="KaushalSetu | Autonomous Vocational Taskmaster",
+    page_icon="🌉",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -858,10 +858,10 @@ def main_app_layout():
                     """)
 
         # --- SLEEK MINIMALIST NAVIGATION & GOVERNANCE HEADER ---
-        col_title, col_actions = st.columns([5, 5], vertical_alignment="center")
+        col_title, col_actions = st.columns([6, 4], vertical_alignment="center")
         with col_title:
-            st.markdown('<div class="main-header" style="margin-bottom:0;">⚡ SkillForge Autonomous</div>', unsafe_allow_html=True)
-            st.markdown('<div class="sub-header" style="margin-bottom:0;">Institutional AI Operations & Placement Copilot | Taskmaster Engine v10.5.0</div>', unsafe_allow_html=True)
+            st.markdown('<div class="main-header" style="margin-bottom:0;">🌉 KaushalSetu: Autonomous Vocational Taskmaster</div>', unsafe_allow_html=True)
+            st.markdown('<div class="sub-header" style="margin-bottom:0;">Autonomous Dual-AI Institutional Taskmaster for Vocational Skilling, Multimodal Evaluation & Zero-HITL Job Dispatch</div>', unsafe_allow_html=True)
         with col_actions:
             sub_c1, sub_c2, sub_c3 = st.columns([1.5, 1, 1.8], vertical_alignment="center")
             with sub_c1:
