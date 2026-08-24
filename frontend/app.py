@@ -716,41 +716,112 @@ else:
         with st.container():
             st.markdown("""
             <div style="background:#0F172A; border:2px solid #38BDF8; padding:24px; border-radius:12px; margin-bottom:20px;">
-                <h3 style="color:#38BDF8; margin:0 0 8px 0;">🎬 Interactive Agent Copilot Autonomous Simulation Tour</h3>
-                <p style="color:#94A3B8; font-size:0.95rem; margin-bottom:16px;">
-                    Experience how SkillForge Autonomous transforms hours of manual educator work into instant sub-second AI execution.
-                </p>
-                <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:12px; font-size:0.82rem; text-align:center; margin-bottom:16px;">
-                    <div style="background:#1E293B; padding:12px; border-radius:8px; border:1px solid #0284C7;">
-                        <b style="color:#38BDF8;">1️⃣ Zero-Friction Ingest</b><br/>
-                        <span style="color:#CBD5E1; font-size:0.78rem;">Resume & course synthesized in &lt;2s</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+                    <div>
+                        <h3 style="color:#38BDF8; margin:0;">🎬 Interactive Agent Copilot Autonomous Simulation Tour</h3>
+                        <p style="color:#94A3B8; font-size:0.9rem; margin:4px 0 0 0;">
+                            Live stage-by-stage interactive demonstration of the autonomous vocational agent pipeline.
+                        </p>
                     </div>
-                    <div style="background:#1E293B; padding:12px; border-radius:8px; border:1px solid #A855F7;">
-                        <b style="color:#A855F7;">2️⃣ Dynamic Assessment</b><br/>
-                        <span style="color:#CBD5E1; font-size:0.78rem;">Syllabus-grounded MCQ & capstone</span>
+                    <div>
+                        <span class="badge-live" style="font-size:0.85rem;">TASKMASTER AUTONOMOUS SIMULATOR</span>
                     </div>
-                    <div style="background:#1E293B; padding:12px; border-radius:8px; border:1px solid #22C55E;">
-                        <b style="color:#22C55E;">3️⃣ Multimodal Grading</b><br/>
-                        <span style="color:#CBD5E1; font-size:0.78rem;">Gemma (42ms) + Gemini 3.5 rubric</span>
-                    </div>
-                    <div style="background:#1E293B; padding:12px; border-radius:8px; border:1px solid #EAB308;">
-                        <b style="color:#EAB308;">4️⃣ Whole-Web Search</b><br/>
-                        <span style="color:#CBD5E1; font-size:0.78rem;">Grounded vacancy crawl across portals</span>
-                    </div>
-                    <div style="background:#1E293B; padding:12px; border-radius:8px; border:1px solid #EC4899;">
-                        <b style="color:#EC4899;">5️⃣ Outbox Dispatch</b><br/>
-                        <span style="color:#CBD5E1; font-size:0.78rem;">SHA-256 portfolio sent to recruiters</span>
-                    </div>
-                </div>
-                <div style="background:#0284C71A; border:1px solid #0284C7; padding:12px 16px; border-radius:8px; color:#38BDF8; font-weight:600; font-size:0.95rem; text-align:center;">
-                    ⏱️ 4.5 Hours of Manual Grading & Placement Outreach reduced to 3.2 Seconds by Autonomous Agent
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("❌ Close Tour View", use_container_width=True):
-                st.session_state["show_demo_tour"] = False
-                st.rerun()
-                st.rerun()
+            
+            # Interactive Stage Stepper State
+            if "tour_stage" not in st.session_state:
+                st.session_state["tour_stage"] = 1
+                
+            col_tst1, col_tst2, col_tst3, col_tst4, col_tst5 = st.columns(5)
+            with col_tst1:
+                if st.button("1️⃣ Ingest", type="primary" if st.session_state["tour_stage"] == 1 else "secondary", use_container_width=True):
+                    st.session_state["tour_stage"] = 1
+            with col_tst2:
+                if st.button("2️⃣ Assessment", type="primary" if st.session_state["tour_stage"] == 2 else "secondary", use_container_width=True):
+                    st.session_state["tour_stage"] = 2
+            with col_tst3:
+                if st.button("3️⃣ Evaluation", type="primary" if st.session_state["tour_stage"] == 3 else "secondary", use_container_width=True):
+                    st.session_state["tour_stage"] = 3
+            with col_tst4:
+                if st.button("4️⃣ Web Search", type="primary" if st.session_state["tour_stage"] == 4 else "secondary", use_container_width=True):
+                    st.session_state["tour_stage"] = 4
+            with col_tst5:
+                if st.button("5️⃣ Outbox", type="primary" if st.session_state["tour_stage"] == 5 else "secondary", use_container_width=True):
+                    st.session_state["tour_stage"] = 5
+                    
+            st.progress(st.session_state["tour_stage"] / 5.0, text=f"Stage {st.session_state['tour_stage']} of 5 Active")
+            
+            # Mode Controls
+            col_mc1, col_mc2, col_mc3 = st.columns([2, 2, 2])
+            with col_mc1:
+                if st.button("▶️ Auto-Play Full Simulation Tour", type="primary", use_container_width=True):
+                    for stg in range(1, 6):
+                        st.session_state["tour_stage"] = stg
+                        time.sleep(0.4)
+                        st.rerun()
+            with col_mc2:
+                if st.button("➡️ Step to Next Stage", use_container_width=True):
+                    st.session_state["tour_stage"] = (st.session_state["tour_stage"] % 5) + 1
+                    st.rerun()
+            with col_mc3:
+                if st.button("❌ Close Tour View", use_container_width=True):
+                    st.session_state["show_demo_tour"] = False
+                    st.rerun()
+
+            # Dynamic Live Telemetry Log per Stage
+            cur_stage = st.session_state["tour_stage"]
+            if cur_stage == 1:
+                st.markdown("""
+                <div style="background:#090D16; border:1px solid #0284C7; padding:18px; border-radius:10px; font-family:monospace; color:#38BDF8; font-size:0.88rem; line-height:1.6;">
+                    <b style="color:#38BDF8;">STAGE 1: ZERO-FRICTION CANDIDATE & COURSE AI INGESTION</b><br/>
+                    [12:00:01.002] ⚡ Gemma Fast Token Screener: Ingested 'Alex Mercer - ECU Diagnostics Specialist'<br/>
+                    [12:00:01.040] 🧠 Gemini 3.5 Pro: Extracted 5 Core Skill Tags: [ECU Flashing, Oscilloscope Waveforms, CAN-bus, Safety Lockout, Wire Repair]<br/>
+                    [12:00:01.085] 📁 SQLite Multi-Tenant Ledger: Assigned Candidate ID STU-NAN-7C21 under Branch Nangloi Center Node<br/>
+                    [12:00:01.120] ✅ Zero Manual Form Entry Required (Saved ~45 minutes of manual registrar data entry)
+                </div>
+                """, unsafe_allow_html=True)
+            elif cur_stage == 2:
+                st.markdown("""
+                <div style="background:#090D16; border:1px solid #A855F7; padding:18px; border-radius:10px; font-family:monospace; color:#C084FC; font-size:0.88rem; line-height:1.6;">
+                    <b style="color:#A855F7;">STAGE 2: SYLLABUS-GROUNDED DYNAMIC EXAM SYNTHESIS</b><br/>
+                    [12:00:02.010] 🧠 Gemini 3.5 Pro Assessment Synthesizer: Loaded Course 'Automotive & Hardware Diagnostics'<br/>
+                    [12:00:02.150] 📖 Curriculum Grounding: Generated 10 MCQs evenly distributed across Module 1 (ECU Testing) & Module 2 (Safety Lockout)<br/>
+                    [12:00:02.280] 🔬 Practical Capstone Synthesis: Generated Multimodal Oscilloscope Signal Isolation Challenge<br/>
+                    [12:00:02.350] 🎓 Standalone Candidate Exam URL Dispatched: http://localhost:8501/?page=exam&sid=STU-NAN-7C21
+                </div>
+                """, unsafe_allow_html=True)
+            elif cur_stage == 3:
+                st.markdown("""
+                <div style="background:#090D16; border:1px solid #22C55E; padding:18px; border-radius:10px; font-family:monospace; color:#4ADE80; font-size:0.88rem; line-height:1.6;">
+                    <b style="color:#22C55E;">STAGE 3: DUAL-AI MULTIMODAL RUBRIC GRADED EVALUATION</b><br/>
+                    [12:00:03.005] ⚡ Gemma 2B/7B Fast Pre-Screen: Code Structure & Token Check PASS (42ms)<br/>
+                    [12:00:03.112] 🧠 Gemini 3.5 Multimodal Evaluation: Evaluated diagnostic code submission & image circuit schematic<br/>
+                    [12:00:03.450] 📊 Dynamic Score Calculation: Objective MCQ (45.0/50) + Practical Rubric (42.0/50) = 87.0% Aggregate<br/>
+                    [12:00:03.520] 🏆 Result: PASS (PLACED) | Verified SHA-256 Hasher Seal: 0x8F92A1B7E34F0C9A
+                </div>
+                """, unsafe_allow_html=True)
+            elif cur_stage == 4:
+                st.markdown("""
+                <div style="background:#090D16; border:1px solid #EAB308; padding:18px; border-radius:10px; font-family:monospace; color:#FACC15; font-size:0.88rem; line-height:1.6;">
+                    <b style="color:#EAB308;">STAGE 4: WHOLE-WEB REAL VACANCY DISCOVERY & MATCHING</b><br/>
+                    [12:00:04.020] 🌐 Google Search Grounding: Crawled 20 live open requisitions across Google Jobs, Indeed India, Naukri & Corporate Hubs<br/>
+                    [12:00:04.380] 🎯 Smart Match Engine: Calculated candidate acceptance probability score based on candidate skills vs employer specs<br/>
+                    [12:00:04.490] 🔥 High-Yield Match Flagged: Tata Motors Electric & Auto Tech (94% Match Score | ₹6.5L - ₹9.0L PA)<br/>
+                    [12:00:04.550] 🔗 Verified Live Deep-Link Attached: https://www.google.com/search?q=Automotive+Specialist+jobs+in+Delhi
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="background:#090D16; border:1px solid #EC4899; padding:18px; border-radius:10px; font-family:monospace; color:#F472B6; font-size:0.88rem; line-height:1.6;">
+                    <b style="color:#EC4899;">STAGE 5: AUTONOMOUS RECRUITER OUTBOX DISPATCH & MULTI-CHANNEL ALERTS</b><br/>
+                    [12:00:05.010] 🎨 Domain-Adaptive Animated Portfolio Dossier Compiled: http://localhost:8000/portfolio/STU-NAN-7C21<br/>
+                    [12:00:05.200] 🚀 Recruiter Outbox Dispatch: Auto-dispatched candidate application payload to Tata Motors & Hero Tech<br/>
+                    [12:00:05.340] 🔔 Instant Multi-Channel Alerts: Sent interview slot notification to candidate workspace & institute ledger<br/>
+                    [12:00:05.410] ⏱️ 4.5 Hours of Manual Grading & Placement Outreach reduced to 3.2 Seconds by Autonomous Agent
+                </div>
+                """, unsafe_allow_html=True)
 
     # --- MODAL DIALOGS FOR GOVERNANCE ---
     @st.dialog("🏢 Create New Institute & Initial Branch Node")
