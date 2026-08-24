@@ -258,7 +258,10 @@ class StudentAutoApplyReq(BaseModel):
     student_id: str
     auto_apply_mode: bool
 
-# 6. Live Job Discovery Endpoint
+class StudentRetestReq(BaseModel):
+    student_id: str
+
+# 6. Live Job Discovery & Retest Governance Endpoints
 @app.get("/api/jobs/discover")
 def api_discover_jobs(course_name: str = "Automotive & Hardware Diagnostics", skills: str = "ECU,Multimeter,Oscilloscope"):
     from job_discovery_agent import discover_live_jobs
@@ -270,6 +273,18 @@ def api_discover_jobs(course_name: str = "Automotive & Hardware Diagnostics", sk
 def api_set_auto_apply_mode(req: StudentAutoApplyReq):
     from database import set_student_auto_apply_mode, get_student_by_id
     set_student_auto_apply_mode(req.student_id, req.auto_apply_mode)
+    return {"success": True, "data": get_student_by_id(req.student_id)}
+
+@app.post("/api/students/request-retest")
+def api_request_retest(req: StudentRetestReq):
+    from database import request_retest, get_student_by_id
+    request_retest(req.student_id)
+    return {"success": True, "data": get_student_by_id(req.student_id)}
+
+@app.post("/api/students/approve-retest")
+def api_approve_retest(req: StudentRetestReq):
+    from database import approve_retest, get_student_by_id
+    approve_retest(req.student_id)
     return {"success": True, "data": get_student_by_id(req.student_id)}
 
 # 7. Verified Certificate Generator Endpoint

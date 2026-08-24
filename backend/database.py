@@ -74,9 +74,11 @@ def init_db():
             fees_status TEXT DEFAULT 'PAID',
             consent_given INTEGER DEFAULT 0,
             consent_for_job_dispatch INTEGER DEFAULT 0,
-            auto_apply_mode INTEGER DEFAULT 1,     -- 1 for Autonomous Auto-Apply, 0 for Student-Guided Comparison
+            auto_apply_mode INTEGER DEFAULT 0,     -- Default 0 (OFF) as requested
             exam_completed INTEGER DEFAULT 0,
             portfolio_generated INTEGER DEFAULT 0,
+            retest_requested INTEGER DEFAULT 0,
+            retest_approved INTEGER DEFAULT 0,
             interview_count INTEGER DEFAULT 0,
             registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(institute_id) REFERENCES institutes(id),
@@ -343,6 +345,20 @@ def set_student_auto_apply_mode(student_id: str, mode: bool) -> bool:
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("UPDATE students SET auto_apply_mode = ? WHERE student_id = ?", (1 if mode else 0, student_id))
+        conn.commit()
+        return True
+
+def request_retest(student_id: str) -> bool:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE students SET retest_requested = 1, retest_approved = 0 WHERE student_id = ?", (student_id,))
+        conn.commit()
+        return True
+
+def approve_retest(student_id: str) -> bool:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE students SET retest_approved = 1, exam_completed = 0 WHERE student_id = ?", (student_id,))
         conn.commit()
         return True
 
