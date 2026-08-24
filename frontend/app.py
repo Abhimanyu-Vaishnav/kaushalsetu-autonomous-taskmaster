@@ -173,62 +173,71 @@ if current_page in ["exam", "student_portal"]:
     st.divider()
     st.markdown("### 📝 Stepper Assessment & Capstone Submission")
     
-    if "current_exam" not in st.session_state:
-        with st.spinner(f"Initializing Assessment for {student_data['course_name']}..."):
-            e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
-                "topic": student_data['course_name'],
-                "difficulty": "Intermediate"
-            })
-            if e_res.status_code == 200:
-                st.session_state["current_exam"] = e_res.json()["data"]
-                st.session_state["mcq_step"] = 0
-                st.session_state["mcq_answers_dict"] = {}
-                st.rerun()
+    if "current_exam" not in st.session_state or not st.session_state["current_exam"]:
+        with st.spinner(f"⚡ AI Agent is dynamically synthesizing assessment for {student_data['course_name']}..."):
+            try:
+                e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
+                    "topic": student_data['course_name'],
+                    "difficulty": "Intermediate"
+                })
+                if e_res.status_code == 200:
+                    st.session_state["current_exam"] = e_res.json()["data"]
+                    st.session_state["mcq_step"] = 0
+                    st.session_state["mcq_answers_dict"] = {}
+                else:
+                    st.session_state["current_exam"] = {
+                        "title": f"{student_data['course_name']} Assessment",
+                        "mcqs": [{"question": f"Core competency test for {student_data['course_name']}?", "options": ["Adhere to safety lockout & specs", "Ignore circuit specs", "Skip documentation", "Bypass grounds"], "correct_option": 0}],
+                        "practical_task": f"Build a complete practical capstone demonstrating {student_data['course_name']} concepts.",
+                        "grading_rubric": ["Safety lockout procedure followed", "Diagnostic accuracy verified", "Documentation complete"]
+                    }
+            except Exception as e:
+                st.error(f"Error initializing assessment: {e}")
                     
-        exam = st.session_state.get("current_exam", {})
-        mcqs = exam.get("mcqs", [])
+    exam = st.session_state.get("current_exam", {})
+    mcqs = exam.get("mcqs", [])
+    
+    # Build 50-MCQ items by extending base questions
+    full_50_mcqs = []
+    for i in range(50):
+        base_mcq = mcqs[i % len(mcqs)] if mcqs else {"question": f"Sample Diagnostic Question {i+1}", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_option": 0}
+        full_50_mcqs.append({
+            "id": i + 1,
+            "question": f"Q{i+1}: {base_mcq['question']}",
+            "options": base_mcq['options'],
+            "correct_option": base_mcq['correct_option']
+        })
         
-        # Build 50-MCQ items by extending base questions
-        full_50_mcqs = []
-        for i in range(50):
-            base_mcq = mcqs[i % len(mcqs)] if mcqs else {"question": f"Sample Diagnostic Question {i+1}", "options": ["Option A", "Option B", "Option C", "Option D"], "correct_option": 0}
-            full_50_mcqs.append({
-                "id": i + 1,
-                "question": f"Q{i+1}: {base_mcq['question']}",
-                "options": base_mcq['options'],
-                "correct_option": base_mcq['correct_option']
-            })
-            
-        mcq_step = st.session_state.get("mcq_step", 0)
-        answers_dict = st.session_state.get("mcq_answers_dict", {})
-        
-        # Stepper Header & Progress Bar
-        st.progress((mcq_step + 1) / 50.0, text=f"Question {mcq_step + 1} of 50")
-        
-        cur_q = full_50_mcqs[mcq_step]
-        st.markdown(f"#### **{cur_q['question']}**")
-        
-        selected_option = st.radio(
-            "Choose answer:",
-            cur_q['options'],
-            index=answers_dict.get(mcq_step, None),
-            key=f"stepper_q_{mcq_step}_{student_data['student_id']}"
-        )
-        if selected_option in cur_q['options']:
-            answers_dict[mcq_step] = cur_q['options'].index(selected_option)
-            st.session_state["mcq_answers_dict"] = answers_dict
+    mcq_step = st.session_state.get("mcq_step", 0)
+    answers_dict = st.session_state.get("mcq_answers_dict", {})
+    
+    # Stepper Header & Progress Bar
+    st.progress((mcq_step + 1) / 50.0, text=f"Question {mcq_step + 1} of 50")
+    
+    cur_q = full_50_mcqs[mcq_step]
+    st.markdown(f"#### **{cur_q['question']}**")
+    
+    selected_option = st.radio(
+        "Choose answer:",
+        cur_q['options'],
+        index=answers_dict.get(mcq_step, None),
+        key=f"stepper_q_{mcq_step}_{student_data['student_id']}"
+    )
+    if selected_option in cur_q['options']:
+        answers_dict[mcq_step] = cur_q['options'].index(selected_option)
+        st.session_state["mcq_answers_dict"] = answers_dict
 
-        col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
-        with col_nav1:
-            if st.button("⬅️ Previous Question", disabled=(mcq_step == 0)):
-                st.session_state["mcq_step"] = mcq_step - 1
-                st.rerun()
-        with col_nav2:
-            st.caption(f"Answered: {len(answers_dict)} of 50 questions")
-        with col_nav3:
-            if st.button("Next Question ➡️", disabled=(mcq_step == 49)):
-                st.session_state["mcq_step"] = mcq_step + 1
-                st.rerun()
+    col_nav1, col_nav2, col_nav3 = st.columns([1, 2, 1])
+    with col_nav1:
+        if st.button("⬅️ Previous Question", disabled=(mcq_step == 0)):
+            st.session_state["mcq_step"] = mcq_step - 1
+            st.rerun()
+    with col_nav2:
+        st.caption(f"Answered: {len(answers_dict)} of 50 questions")
+    with col_nav3:
+        if st.button("Next Question ➡️", disabled=(mcq_step == 49)):
+            st.session_state["mcq_step"] = mcq_step + 1
+            st.rerun()
 
         st.divider()
         st.markdown("##### **Part 2: Multimodal Practical Project Submission (50 Points Max)**")
