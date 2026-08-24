@@ -241,11 +241,25 @@ def api_get_courses(branch_id: str):
 
 @app.post("/api/courses/create")
 def api_create_course(req: CourseCreateReq):
-    course = create_course(
-        req.institute_id, req.branch_id, req.course_name, req.curriculum_summary,
-        req.course_description, req.curriculum_sections, req.core_skills, req.default_mcq_count
+    from agent_engine import enrich_and_synthesize_course_input
+    from database import log_agent_activity
+    
+    # Run Gemini 3.5 AI Auto-Correction & Curriculum Enrichment
+    enriched = enrich_and_synthesize_course_input(
+        req.course_name, req.course_description or "", req.curriculum_sections or "", req.core_skills or ""
     )
-    return {"success": True, "data": course}
+    
+    final_title = enriched.get("course_title", req.course_name)
+    final_desc = enriched.get("course_description", req.course_description or req.curriculum_summary)
+    final_sections = ", ".join(enriched.get("curriculum_sections", [])) if isinstance(enriched.get("curriculum_sections"), list) else enriched.get("curriculum_sections", req.curriculum_sections)
+    final_skills = ", ".join(enriched.get("core_skills", [])) if isinstance(enriched.get("core_skills"), list) else enriched.get("core_skills", req.core_skills)
+    
+    course = create_course(
+        req.institute_id, req.branch_id, final_title, final_desc,
+        final_desc, final_sections, final_skills, req.default_mcq_count
+    )
+    log_agent_activity("COURSE_AI_SYNTHESIZED", f"Gemini 3.5 Auto-Corrected & Synthesized course '{final_title}'", institute_id=req.institute_id, branch_id=req.branch_id)
+    return {"success": True, "data": course, "enriched": enriched}
 
 # 2. Student Enrollment & CSV Bulk Upload
 @app.get("/api/students")

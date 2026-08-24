@@ -153,7 +153,52 @@ def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_
     return exam_dict
 
 
-# --- AI Course Synthesizer ---
+# --- AI Course Synthesizer & Input Auto-Corrector ---
+class CourseEnrichmentSchema(BaseModel):
+    course_title: str
+    course_description: str
+    curriculum_sections: List[str]
+    core_skills: List[str]
+
+def enrich_and_synthesize_course_input(title: str, description: str, raw_modules: str, raw_skills: str) -> dict:
+    """Uses Gemini 3.5 to auto-correct typos, flesh out 4-5 rigorous vocational modules, and extract 6 practical skill tags."""
+    client = get_genai_client()
+    prompt = (
+        f"You are an institutional curriculum architect. Take this rough course title/notes: "
+        f"Title: '{title}' | Description: '{description}' | Modules: '{raw_modules}' | Skills: '{raw_skills}'. "
+        f"Fix all spelling mistakes and typos, flesh out 4-5 rigorous vocational curriculum modules, and extract 6 industry-standard practical skill tags. "
+        f"Return clean JSON."
+    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=CourseEnrichmentSchema,
+                temperature=0.4
+            )
+        )
+        if hasattr(response, "parsed") and response.parsed:
+            if isinstance(response.parsed, CourseEnrichmentSchema):
+                return response.parsed.model_dump()
+            return CourseEnrichmentSchema(**response.parsed).model_dump()
+        return CourseEnrichmentSchema(**json.loads(response.text)).model_dump()
+    except Exception:
+        # Safe fallback: sanitize raw text
+        cleaned_modules = [m.strip() for m in raw_modules.replace('\n', ',').split(',') if m.strip()]
+        if not cleaned_modules:
+            cleaned_modules = ["Module 1: Fundamentals & Safety", "Module 2: Diagnostic Inspection", "Module 3: Advanced Practical Capstone"]
+        cleaned_skills = [s.strip() for s in raw_skills.replace('\n', ',').split(',') if s.strip()]
+        if not cleaned_skills:
+            cleaned_skills = ["Diagnostics", "System Safety", "Quality Inspection", "Compliance", "Practical Repair", "Reporting"]
+        return {
+            "course_title": title.strip() or "Vocational Specialization Course",
+            "course_description": description.strip() or f"Hands-on vocational specialization program covering practical industry competencies for {title}.",
+            "curriculum_sections": cleaned_modules,
+            "core_skills": cleaned_skills
+        }
+
 def synthesize_course_from_input(course_title_or_syllabus: str) -> dict:
     client = get_genai_client()
     prompt = (

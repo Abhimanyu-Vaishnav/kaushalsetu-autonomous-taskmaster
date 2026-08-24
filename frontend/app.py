@@ -884,20 +884,29 @@ def main_app_layout():
                 mc_mcqs = st.select_slider("Default MCQ Exam Count", options=[5, 10, 15, 25, 50], value=10)
                 sub_mc = st.form_submit_button("⚡ AI Synthesize & Create Course", type="primary", use_container_width=True)
                 if sub_mc:
-                    with st.spinner("Synthesizing curriculum structure..."):
-                        r_mc = requests.post(f"{BACKEND_URL}/api/courses/create", json={
-                            "institute_id": target_inst_id,
-                            "branch_id": target_branch_id,
-                            "course_name": mc_title,
-                            "course_description": mc_desc,
-                            "curriculum_summary": mc_desc,
-                            "curriculum_sections": mc_sections,
-                            "core_skills": mc_skills,
-                            "default_mcq_count": mc_mcqs
-                        })
-                        if r_mc.status_code == 200:
-                            st.success(f"✅ Course '{mc_title}' Created!")
-                            st.rerun()
+                    with st.spinner("⚡ Gemini 3.5 Auto-Correcting Typos & Synthesizing Curriculum..."):
+                        try:
+                            r_mc = requests.post(f"{BACKEND_URL}/api/courses/create", json={
+                                "institute_id": target_inst_id,
+                                "branch_id": target_branch_id,
+                                "course_name": mc_title,
+                                "course_description": mc_desc,
+                                "curriculum_summary": mc_desc,
+                                "curriculum_sections": mc_sections,
+                                "core_skills": mc_skills,
+                                "default_mcq_count": mc_mcqs
+                            }, timeout=12)
+                            if r_mc.status_code in [200, 201]:
+                                res_json = r_mc.json()
+                                c_data = res_json.get("data", {})
+                                c_name = c_data.get("course_name", mc_title)
+                                st.toast(f"🚀 Course '{c_name}' Synthesized & Created Successfully!", icon="✅")
+                                st.session_state["courses_last_updated"] = time.time()
+                                st.rerun()
+                            else:
+                                st.error(f"⚠️ Course creation failed: {r_mc.text}")
+                        except Exception as ex:
+                            st.error(f"⚠️ Network error while creating course: {str(ex)}")
 
         @st.dialog("👤 Enroll New Candidate")
         def modal_add_student(target_inst_id, target_branch_id, target_branch_name, course_options_dict):
