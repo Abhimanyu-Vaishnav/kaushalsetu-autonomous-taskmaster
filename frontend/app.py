@@ -1989,35 +1989,50 @@ def main_app_layout():
 
         # --- TAB 4: REAL-TIME AGENT OPERATIONAL AUDIT LOG ---
         with tabs[3]:
+            if "log_page" not in st.session_state:
+                st.session_state.log_page = 1
+
+            log_data = direct_get_agent_logs(page=st.session_state.log_page, page_size=15, branch_id=sel_branch['id'])
+            logs_list = log_data.get("logs") or log_data.get("data") or []
+            total_pages = log_data.get("total_pages", 1)
+            total_count = log_data.get("total_count", 0)
+
             col_al1, col_al2 = st.columns([3, 1])
             with col_al1:
-                st.subheader(f"📜 Real-Time Agent Operational Audit Log ({sel_branch['branch_name']})")
+                st.subheader(f"📜 Real-Time Agent Operational Audit Log ({total_count} Total Events)")
                 st.caption("Immutable chronological audit log recording every autonomous action executed across exams, evaluations, and outbox dispatches.")
             with col_al2:
-                st.button("🔄 Refresh Audit Logs", use_container_width=True)
+                if st.button("🔄 Refresh Audit Logs", use_container_width=True):
+                    st.rerun()
 
-            logs_res = direct_get_agent_logs(branch_id=sel_branch['id'])
-            if logs_res.get("status") == "success" or logs_res.get("success"):
-                agent_logs = logs_res.get("logs") or logs_res.get("data") or []
-                if not agent_logs:
-                    st.info("ℹ️ No agent activity logged yet for this branch. Perform an action (like creating a course or registering a candidate) to see live logs.")
-                else:
-                    for log in agent_logs:
-                        with st.container():
-                            col_l1, col_l2, col_l3 = st.columns([1.5, 3.5, 2])
-                            with col_l1:
-                                st.caption(f"⏱️ `{log.get('timestamp', '')}`")
-                            with col_l2:
-                                act_name = log.get('action') or log.get('action_type', 'ACTION')
-                                details = log.get('details') or log.get('description', '')
-                                st.markdown(f"**[{act_name}]** {details}")
-                            with col_l3:
-                                s_id = log.get('student_id') or log.get('entity_id')
-                                if s_id:
-                                    st.caption(f"Candidate: `{s_id}`")
-                        st.divider()
+            if not logs_list:
+                st.info("ℹ️ No operational activities logged yet on Cloud. Create a course or enroll a candidate to initiate agent events.")
             else:
-                st.error(f"Error loading agent audit logs: {logs_res.get('message')}")
+                for entry in logs_list:
+                    act_name = entry.get('action') or entry.get('action_type', 'ACTION')
+                    details = entry.get('details') or entry.get('description', '')
+                    e_id = entry.get('entity_id') or entry.get('student_id', 'N/A')
+                    st.markdown(f"""
+                    <div style="padding: 10px 14px; margin-bottom: 8px; border-radius: 8px; background: rgba(255,255,255,0.02); border-left: 3px solid #3b82f6;">
+                        <span style="font-size: 0.8rem; color: #9ca3af;">⏱️ {entry.get('timestamp')}</span> | 
+                        <b style="color: #60a5fa;">[{act_name}]</b> 
+                        <span>{details}</span> 
+                        <span style="color: #6b7280; font-size: 0.8rem;">(Entity: {e_id})</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # Clean Pagination Controls
+                col_prev, col_info, col_next = st.columns([1, 2, 1])
+                with col_prev:
+                    if st.button("⬅️ Previous", disabled=(st.session_state.log_page <= 1), key="log_prev_btn"):
+                        st.session_state.log_page -= 1
+                        st.rerun()
+                with col_info:
+                    st.markdown(f"<p style='text-align: center; color: #9ca3af; margin-top: 6px;'>Page {st.session_state.log_page} of {total_pages}</p>", unsafe_allow_html=True)
+                with col_next:
+                    if st.button("Next ➡️", disabled=(st.session_state.log_page >= total_pages), key="log_next_btn"):
+                        st.session_state.log_page += 1
+                        st.rerun()
 
 # --- TOP-LEVEL ROOT ERROR BOUNDARY EXECUTION ---
 try:

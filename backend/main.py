@@ -450,7 +450,7 @@ def direct_add_student(payload: dict):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-def direct_get_agent_logs(branch_id: str = None, limit: int = 50):
+def direct_get_agent_logs(page: int = 1, page_size: int = 15, branch_id: str = None):
     try:
         conn = get_db()
         c = conn.cursor()
@@ -468,10 +468,19 @@ def direct_get_agent_logs(branch_id: str = None, limit: int = 50):
         """)
         conn.commit()
 
+        page = max(1, int(page or 1))
+        page_size = max(1, int(page_size or 15))
+        offset = (page - 1) * page_size
+
         if branch_id and str(branch_id).strip():
-            c.execute("SELECT * FROM agent_activity_logs WHERE branch_id = ? ORDER BY timestamp DESC LIMIT ?", (str(branch_id).strip(), limit))
+            c.execute("SELECT COUNT(*) FROM agent_activity_logs WHERE branch_id = ?", (str(branch_id).strip(),))
+            total_count = c.fetchone()[0]
+            c.execute("SELECT * FROM agent_activity_logs WHERE branch_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?", (str(branch_id).strip(), page_size, offset))
         else:
-            c.execute("SELECT * FROM agent_activity_logs ORDER BY timestamp DESC LIMIT ?", (limit,))
+            c.execute("SELECT COUNT(*) FROM agent_activity_logs")
+            total_count = c.fetchone()[0]
+            c.execute("SELECT * FROM agent_activity_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?", (page_size, offset))
+
         rows = [dict(r) for r in c.fetchall()]
         conn.close()
         for r in rows:
@@ -481,9 +490,20 @@ def direct_get_agent_logs(branch_id: str = None, limit: int = 50):
                 r["details"] = r.get("description") or "Operation recorded"
             if not r.get("entity_id"):
                 r["entity_id"] = r.get("student_id") or r.get("id") or "N/A"
-        return {"status": "success", "success": True, "logs": rows, "data": rows}
+
+        total_pages = max(1, (total_count + page_size - 1) // page_size)
+
+        return {
+            "status": "success",
+            "success": True,
+            "logs": rows,
+            "data": rows,
+            "total_count": total_count,
+            "page": page,
+            "total_pages": total_pages
+        }
     except Exception as e:
-        return {"status": "error", "message": str(e), "logs": [], "data": []}
+        return {"status": "error", "message": str(e), "logs": [], "data": [], "total_count": 0, "total_pages": 1}
 
 def direct_create_student(payload: dict):
     try:
