@@ -116,23 +116,154 @@ def init_db():
         )
         """)
         
-        # Safely migrate missing columns for existing SQLite tables
+        # 5. Agent Activity Logs Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS agent_activity_logs (
+            id TEXT PRIMARY KEY,
+            institute_id TEXT DEFAULT 'INST-GLOBAL-01',
+            branch_id TEXT DEFAULT '',
+            student_id TEXT DEFAULT '',
+            action_type TEXT NOT NULL,
+            description TEXT NOT NULL,
+            metadata_json TEXT DEFAULT '{}',
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # 6. Evaluations Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS evaluations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id TEXT,
+            course_id TEXT,
+            mcq_score REAL DEFAULT 0.0,
+            practical_score REAL DEFAULT 0.0,
+            feedback TEXT DEFAULT '',
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+        
+        # 7. Assessments Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS assessments (
+            id TEXT PRIMARY KEY,
+            institute_id TEXT NOT NULL,
+            course_name TEXT NOT NULL,
+            difficulty TEXT NOT NULL,
+            generated_exam TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(institute_id) REFERENCES institutes(id)
+        )
+        """)
+        
+        # 8. Student Submissions Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS student_submissions (
+            id TEXT PRIMARY KEY,
+            student_id TEXT NOT NULL,
+            assessment_id TEXT NOT NULL,
+            mcq_answers TEXT,
+            mcq_score REAL DEFAULT 0.0,
+            practical_submission_text TEXT NOT NULL,
+            practical_score REAL DEFAULT 0.0,
+            total_score INTEGER NOT NULL,
+            strengths TEXT,
+            skill_gaps TEXT,
+            artifact_image_base64 TEXT,
+            gemma_screening_result TEXT NOT NULL,
+            gemini_evaluation TEXT NOT NULL,
+            submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(student_id) REFERENCES students(student_id),
+            FOREIGN KEY(assessment_id) REFERENCES assessments(id)
+        )
+        """)
+        
+        # 9. Autonomous Job Applications Ledger Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS job_applications (
+            id TEXT PRIMARY KEY,
+            student_id TEXT NOT NULL,
+            company_name TEXT NOT NULL,
+            role_title TEXT NOT NULL,
+            match_percentage INTEGER NOT NULL,
+            dossier_sent_url TEXT DEFAULT '',
+            status TEXT NOT NULL,
+            interview_details TEXT DEFAULT '',
+            student_notified INTEGER DEFAULT 1,
+            branch_notified INTEGER DEFAULT 1,
+            metric_hash TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(student_id) REFERENCES students(student_id)
+        )
+        """)
+        
+        # Ensure unique candidate email index
+        try:
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_students_unique_email ON students(institute_id, branch_id, email)")
+        except Exception:
+            pass
+
+        conn.commit()
+        
+        # Run column migration helper
         ensure_db_schema()
 
+        # Seed initial data if institutes empty
+        cursor.execute("SELECT COUNT(*) FROM institutes")
+        if cursor.fetchone()[0] == 0:
+            seed_initial_data(conn)
+
 def ensure_db_schema():
-    """Dynamically migrates missing columns in SQLite database without crashing."""
+    """Dynamically migrates missing columns & tables in SQLite database without crashing."""
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            
+            # Ensure tables exist
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS agent_activity_logs (
+                id TEXT PRIMARY KEY,
+                institute_id TEXT DEFAULT 'INST-GLOBAL-01',
+                branch_id TEXT DEFAULT '',
+                student_id TEXT DEFAULT '',
+                action_type TEXT NOT NULL,
+                description TEXT NOT NULL,
+                metadata_json TEXT DEFAULT '{}',
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
+
+            cursor.execute("""
+            CREATE TABLE IF NOT EXISTS evaluations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                student_id TEXT,
+                course_id TEXT,
+                mcq_score REAL DEFAULT 0.0,
+                practical_score REAL DEFAULT 0.0,
+                feedback TEXT DEFAULT '',
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+            """)
+
+            # Migrate students table columns
             existing_cols = [row[1] for row in cursor.execute("PRAGMA table_info(students)").fetchall()]
             columns_to_add = {
+                "id": "TEXT DEFAULT ''",
+                "name": "TEXT DEFAULT ''",
                 "dob": "TEXT DEFAULT '2000-01-01'",
+                "email": "TEXT DEFAULT ''",
                 "phone": "TEXT DEFAULT ''",
                 "city": "TEXT DEFAULT ''",
+                "branch_center": "TEXT DEFAULT 'Delhi Nangloi'",
+                "track": "TEXT DEFAULT 'General Track'",
                 "linkedin_url": "TEXT DEFAULT ''",
                 "github_url": "TEXT DEFAULT ''",
                 "website_url": "TEXT DEFAULT ''",
                 "twitter_url": "TEXT DEFAULT ''",
+                "mcq_score": "REAL DEFAULT 0.0",
+                "capstone_score": "REAL DEFAULT 0.0",
+                "aggregate_score": "REAL DEFAULT 0.0",
+                "status_seal": "TEXT DEFAULT 'PENDING'",
                 "experience_summary": "TEXT DEFAULT ''",
                 "parsed_skills": "TEXT DEFAULT ''",
                 "resume_text": "TEXT DEFAULT ''"
@@ -143,100 +274,31 @@ def ensure_db_schema():
                         cursor.execute(f"ALTER TABLE students ADD COLUMN {col} {col_type}")
                     except Exception:
                         pass
+
+            # Migrate courses table columns
+            course_cols = [row[1] for row in cursor.execute("PRAGMA table_info(courses)").fetchall()]
+            course_cols_to_add = {
+                "title": "TEXT DEFAULT ''",
+                "topic": "TEXT DEFAULT ''",
+                "modules": "TEXT DEFAULT ''",
+                "mcqs": "TEXT DEFAULT ''",
+                "capstone": "TEXT DEFAULT ''",
+                "course_description": "TEXT DEFAULT ''",
+                "curriculum_summary": "TEXT DEFAULT ''",
+                "curriculum_sections": "TEXT DEFAULT ''",
+                "core_skills": "TEXT DEFAULT ''",
+                "default_mcq_count": "INTEGER DEFAULT 10"
+            }
+            for col, col_type in course_cols_to_add.items():
+                if col not in course_cols:
+                    try:
+                        cursor.execute(f"ALTER TABLE courses ADD COLUMN {col} {col_type}")
+                    except Exception:
+                        pass
+
             conn.commit()
     except Exception as ex:
         print(f"[SCHEMA MIGRATION WARNING] {ex}")
-        
-        # 5. Agent Activity Logs Table
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS agent_activity_logs (
-            id TEXT PRIMARY KEY,
-            institute_id TEXT,
-            branch_id TEXT,
-            student_id TEXT,
-            action_type TEXT NOT NULL,
-            description TEXT NOT NULL,
-            metadata_json TEXT DEFAULT '{}',
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-        
-        # 5. Assessments Table
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS assessments (
-            id TEXT PRIMARY KEY,
-            institute_id TEXT NOT NULL,
-            course_name TEXT NOT NULL,
-            difficulty TEXT NOT NULL,
-            generated_exam TEXT NOT NULL,   -- JSON Gemini 3.5 output
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(institute_id) REFERENCES institutes(id)
-        )
-        """)
-        
-        # 6. Student Submissions Table
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS student_submissions (
-            id TEXT PRIMARY KEY,
-            student_id TEXT NOT NULL,
-            assessment_id TEXT NOT NULL,
-            mcq_answers TEXT,              -- JSON
-            mcq_score REAL DEFAULT 0.0,
-            practical_submission_text TEXT NOT NULL,
-            practical_score REAL DEFAULT 0.0,
-            total_score INTEGER NOT NULL,
-            strengths TEXT,                -- JSON
-            skill_gaps TEXT,               -- JSON
-            artifact_image_base64 TEXT,
-            gemma_screening_result TEXT NOT NULL, -- JSON
-            gemini_evaluation TEXT NOT NULL,       -- JSON
-            submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(student_id) REFERENCES students(student_id),
-            FOREIGN KEY(assessment_id) REFERENCES assessments(id)
-        )
-        """)
-        
-        # 7. Autonomous Job Applications Ledger Table
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS job_applications (
-            id TEXT PRIMARY KEY,
-            student_id TEXT NOT NULL,
-            company_name TEXT NOT NULL,
-            role_title TEXT NOT NULL,
-            match_percentage INTEGER NOT NULL,
-            dossier_sent_url TEXT DEFAULT '',
-            status TEXT NOT NULL,             -- 'DISPATCHED', 'INTERVIEW_SCHEDULED', 'NEEDS_HUMAN_INTERVENTION', 'REMEDIAL_ASSIGNED'
-            interview_details TEXT DEFAULT '',
-            student_notified INTEGER DEFAULT 1,
-            branch_notified INTEGER DEFAULT 1,
-            metric_hash TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(student_id) REFERENCES students(student_id)
-        )
-        """)
-        
-        # Ensure all required course columns exist if database was created in earlier schema
-        for col_def in [
-            ("course_description", "TEXT DEFAULT ''"),
-            ("curriculum_summary", "TEXT DEFAULT ''"),
-            ("curriculum_sections", "TEXT DEFAULT ''"),
-            ("core_skills", "TEXT DEFAULT ''"),
-            ("default_mcq_count", "INTEGER DEFAULT 10")
-        ]:
-            try:
-                cursor.execute(f"ALTER TABLE courses ADD COLUMN {col_def[0]} {col_def[1]}")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
-
-        # Ensure unique candidate email constraint per branch
-        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_students_unique_email ON students(institute_id, branch_id, email)")
-
-        conn.commit()
-        
-        # Seed initial data if institutes empty
-        cursor.execute("SELECT COUNT(*) FROM institutes")
-        if cursor.fetchone()[0] == 0:
-            seed_initial_data(conn)
 
 def seed_initial_data(conn: sqlite3.Connection):
     cursor = conn.cursor()
