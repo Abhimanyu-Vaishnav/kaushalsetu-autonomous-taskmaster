@@ -4,6 +4,10 @@
 *.db-journal
 *.db-wal
 *.db-shm
+data/
+backend/*.db
+backend/*.sqlite
+frontend/*.db
 __pycache__/
 *.pyc
 *.py[cod]

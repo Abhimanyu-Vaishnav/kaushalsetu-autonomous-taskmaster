@@ -310,21 +310,21 @@ def direct_create_course(payload: dict):
     try:
         import uuid, json
         
-        c_name = str(
+        c_title = str(
             payload.get("course_name") 
             or payload.get("title") 
             or payload.get("course_title") 
-            or "Vocational Technical Track"
+            or "Vocational Technical Course"
         ).strip()
 
-        topic = str(payload.get("topic") or c_name).strip()
-        branch_id = str(payload.get("branch_id") or "").strip()
-        institute_id = str(payload.get("institute_id") or "").strip()
+        topic = str(payload.get("topic") or c_title).strip()
         modules = payload.get("modules") or payload.get("curriculum_sections") or []
         mcqs = payload.get("mcqs") or []
         capstone = str(payload.get("capstone_assignment") or payload.get("capstone") or payload.get("course_description") or "").strip()
         skills = payload.get("skills") or payload.get("core_skills") or []
-        desc = str(payload.get("course_description") or payload.get("curriculum_summary") or c_name).strip()
+        branch_id = str(payload.get("branch_id") or "").strip()
+        institute_id = str(payload.get("institute_id") or "").strip()
+        desc = str(payload.get("course_description") or payload.get("curriculum_summary") or c_title).strip()
 
         course_id = str(payload.get("id") or f"CRS-{uuid.uuid4().hex[:6].upper()}").strip()
 
@@ -334,15 +334,53 @@ def direct_create_course(payload: dict):
 
         conn = get_db()
         c = conn.cursor()
-        c.execute("""
-            INSERT OR REPLACE INTO courses 
-            (id, institute_id, branch_id, title, course_name, topic, modules, mcqs, capstone, skills, course_description, curriculum_summary, curriculum_sections, core_skills)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (course_id, institute_id, branch_id, c_name, c_name, topic, modules_json, mcqs_json, capstone, skills_json, desc, desc, modules_json, skills_json))
+
+        # Check existing columns in courses table
+        c.execute("PRAGMA table_info(courses)")
+        cols = [r[1] for r in c.fetchall()]
+
+        # Build dynamic INSERT query based on actual existing columns
+        insert_data = {
+            "id": course_id,
+            "topic": topic,
+            "modules": modules_json,
+            "mcqs": mcqs_json,
+            "capstone": capstone
+        }
+
+        if "title" in cols:
+            insert_data["title"] = c_title
+        if "course_name" in cols:
+            insert_data["course_name"] = c_title
+        if "skills" in cols:
+            insert_data["skills"] = skills_json
+        if "branch_id" in cols:
+            insert_data["branch_id"] = branch_id
+        if "institute_id" in cols:
+            insert_data["institute_id"] = institute_id
+        if "course_description" in cols:
+            insert_data["course_description"] = desc
+        if "curriculum_summary" in cols:
+            insert_data["curriculum_summary"] = desc
+        if "curriculum_sections" in cols:
+            insert_data["curriculum_sections"] = modules_json
+        if "core_skills" in cols:
+            insert_data["core_skills"] = skills_json
+
+        columns_str = ", ".join(insert_data.keys())
+        placeholders_str = ", ".join(["?"] * len(insert_data))
+        values = list(insert_data.values())
+
+        c.execute(f"INSERT OR REPLACE INTO courses ({columns_str}) VALUES ({placeholders_str})", values)
         conn.commit()
         conn.close()
 
-        return {"status": "success", "success": True, "message": "Course created successfully!", "course_id": course_id, "id": course_id, "title": c_name, "course_name": c_name, "data": {"id": course_id, "title": c_name, "course_name": c_name}}
+        try:
+            log_agent_activity("CREATE_COURSE", "course", course_id, f"Created curriculum for {c_title}")
+        except Exception:
+            pass
+
+        return {"status": "success", "success": True, "message": "Course created successfully!", "course_id": course_id, "title": c_title, "id": course_id, "data": {"id": course_id, "title": c_title, "course_name": c_title}}
     except Exception as e:
         return {"status": "error", "message": f"Course creation failed: {str(e)}"}
 

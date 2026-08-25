@@ -42,6 +42,152 @@ def get_db_connection() -> sqlite3.Connection:
 
 get_db = get_db_connection
 
+def init_complete_db():
+    conn = get_db()
+    c = conn.cursor()
+
+    # 1. Create table with both title and course_name with safe defaults
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS courses (
+            id TEXT PRIMARY KEY,
+            institute_id TEXT DEFAULT '',
+            branch_id TEXT DEFAULT '',
+            title TEXT DEFAULT 'Vocational Course',
+            course_name TEXT DEFAULT 'Vocational Course',
+            topic TEXT DEFAULT '',
+            modules TEXT DEFAULT '[]',
+            mcqs TEXT DEFAULT '[]',
+            capstone TEXT DEFAULT '',
+            skills TEXT DEFAULT '[]',
+            course_description TEXT DEFAULT '',
+            curriculum_summary TEXT DEFAULT '',
+            curriculum_sections TEXT DEFAULT '',
+            core_skills TEXT DEFAULT '',
+            default_mcq_count INTEGER DEFAULT 10,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 2. Check existing columns and alter safely if missing
+    c.execute("PRAGMA table_info(courses)")
+    cols = [r[1] for r in c.fetchall()]
+    
+    if "course_name" not in cols:
+        try:
+            c.execute("ALTER TABLE courses ADD COLUMN course_name TEXT DEFAULT 'Vocational Course'")
+        except Exception:
+            pass
+
+    if "title" not in cols:
+        try:
+            c.execute("ALTER TABLE courses ADD COLUMN title TEXT DEFAULT 'Vocational Course'")
+        except Exception:
+            pass
+
+    if "skills" not in cols:
+        try:
+            c.execute("ALTER TABLE courses ADD COLUMN skills TEXT DEFAULT '[]'")
+        except Exception:
+            pass
+
+    # Ensure other tables exist cleanly
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS institutes (
+            id TEXT PRIMARY KEY,
+            name TEXT DEFAULT 'KaushalSetu Foundation',
+            code TEXT,
+            address TEXT DEFAULT '',
+            contact_email TEXT DEFAULT '',
+            contact_phone TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS branches (
+            id TEXT PRIMARY KEY,
+            institute_id TEXT,
+            name TEXT DEFAULT 'Main Branch',
+            branch_name TEXT DEFAULT 'Main Branch',
+            location TEXT DEFAULT '',
+            city TEXT DEFAULT '',
+            contact_person TEXT DEFAULT '',
+            phone TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS students (
+            id TEXT PRIMARY KEY,
+            student_id TEXT,
+            name TEXT,
+            full_name TEXT,
+            dob TEXT DEFAULT '2000-01-01',
+            email TEXT DEFAULT '',
+            phone TEXT DEFAULT '',
+            track TEXT DEFAULT 'General Track',
+            course_name TEXT DEFAULT 'General Track',
+            branch_center TEXT DEFAULT 'Delhi Nangloi',
+            branch_name TEXT DEFAULT 'Delhi Nangloi',
+            institute_id TEXT DEFAULT '',
+            branch_id TEXT DEFAULT '',
+            course_id TEXT DEFAULT '',
+            linkedin_url TEXT DEFAULT '',
+            github_url TEXT DEFAULT '',
+            website_url TEXT DEFAULT '',
+            twitter_url TEXT DEFAULT '',
+            mcq_score REAL DEFAULT 0.0,
+            capstone_score REAL DEFAULT 0.0,
+            aggregate_score REAL DEFAULT 0.0,
+            status_seal TEXT DEFAULT 'PENDING',
+            experience_summary TEXT DEFAULT '',
+            parsed_skills TEXT DEFAULT '',
+            resume_text TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS agent_activity_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT,
+            action_type TEXT DEFAULT 'ACTION',
+            entity_type TEXT,
+            entity_id TEXT,
+            student_id TEXT DEFAULT '',
+            branch_id TEXT DEFAULT '',
+            institute_id TEXT DEFAULT '',
+            details TEXT,
+            description TEXT DEFAULT '',
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS placement_ledger (
+            id TEXT PRIMARY KEY,
+            student_id TEXT,
+            student_name TEXT,
+            track TEXT,
+            branch_id TEXT,
+            company_name TEXT,
+            role_title TEXT,
+            match_percentage INTEGER,
+            status TEXT DEFAULT 'DISPATCHED',
+            dossier_url TEXT,
+            ledger_hash TEXT,
+            dispatched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+# Auto-run on import
+init_complete_db()
+
 def init_db():
     with get_db_connection() as conn:
         cursor = conn.cursor()
