@@ -7,16 +7,26 @@ from datetime import datetime, date
 from typing import List, Dict, Any, Optional, Union
 import shutil
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kaushalsetu.db")
-OLD_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skillforge.db")
+DATA_DIR = os.environ.get("DATA_DIR", "/app/data" if os.path.exists("/app") else os.path.dirname(os.path.abspath(__file__)))
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_PATH = os.path.join(DATA_DIR, "kaushalsetu_prod.db")
 
-# Auto-migrate legacy SQLite database if present
-if os.path.exists(OLD_DB_PATH) and not os.path.exists(DB_PATH):
-    try:
-        shutil.copy2(OLD_DB_PATH, DB_PATH)
-        print(f"[DATABASE MIGRATION] Migrated '{OLD_DB_PATH}' to '{DB_PATH}' successfully.")
-    except Exception as mig_ex:
-        print(f"[DATABASE MIGRATION WARNING] {mig_ex}")
+OLD_LOCAL_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kaushalsetu.db")
+LEGACY_SKILLFORGE_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skillforge.db")
+
+if not os.path.exists(DB_PATH):
+    if os.path.exists(OLD_LOCAL_DB):
+        try:
+            shutil.copy2(OLD_LOCAL_DB, DB_PATH)
+            print(f"[DATABASE MIGRATION] Migrated '{OLD_LOCAL_DB}' to production '{DB_PATH}'.")
+        except Exception as e:
+            print(f"[DATABASE MIGRATION WARNING] {e}")
+    elif os.path.exists(LEGACY_SKILLFORGE_DB):
+        try:
+            shutil.copy2(LEGACY_SKILLFORGE_DB, DB_PATH)
+            print(f"[DATABASE MIGRATION] Migrated '{LEGACY_SKILLFORGE_DB}' to production '{DB_PATH}'.")
+        except Exception as e:
+            print(f"[DATABASE MIGRATION WARNING] {e}")
 
 def get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, timeout=30.0, check_same_thread=False)
@@ -225,11 +235,6 @@ def init_db():
         # Run column migration helper
         ensure_db_schema()
 
-        # Seed initial data if institutes empty
-        cursor.execute("SELECT COUNT(*) FROM institutes")
-        if cursor.fetchone()[0] == 0:
-            seed_initial_data(conn)
-
 def ensure_db_schema():
     """Dynamically migrates missing columns & tables in SQLite database without crashing."""
     try:
@@ -318,6 +323,7 @@ def ensure_db_schema():
         print(f"[SCHEMA MIGRATION WARNING] {ex}")
 
 def seed_initial_data(conn: sqlite3.Connection):
+    """Optional seed helper if explicit seeding is ever requested."""
     cursor = conn.cursor()
     
     inst_id = "INST-GLOBAL-01"
@@ -352,9 +358,7 @@ def seed_initial_data(conn: sqlite3.Connection):
     
     students_data = [
         ("STU-1001", inst_id, "BR-NANGLOI", "CRS-AUTO-01", "Nangloi Center", "Automotive & Hardware Diagnostics", "Alex Mercer", "2002-01-15", "alex.mercer@kaushalsetu-edu.org", "+91 9876543210", "Automotive technician candidate specializing in ECU waveform diagnostics", "https://github.com/kaushalsetu/alex-mercer", "", "", "PAID", 1, 1, 0, 0, 0),
-        ("STU-1002", inst_id, "BR-NANGLOI", "CRS-WEB-01", "Nangloi Center", "Full Stack Web Development", "Priya Sundaram", "2001-05-20", "priya.s@kaushalsetu-edu.org", "+91 9876543211", "Full stack developer proficient in React and Python backend architectures", "https://github.com/kaushalsetu/priya-web", "", "", "PAID", 1, 1, 0, 0, 0),
-        ("STU-1003", inst_id, "BR-YAMUNAVIHAR", "CRS-TALLY-01", "Yamuna Vihar Center", "Accounting & Financial Tally", "Jordan Smith", "2000-11-10", "jordan.s@kaushalsetu-edu.org", "+91 9876543212", "Financial tally accountant with GST compliance verification expertise", "", "", "", "PAID", 1, 1, 0, 0, 0),
-        ("STU-1004", inst_id, "BR-JWALAPUR", "CRS-AUTO-02", "Jwalapur Center", "Automotive & Hardware Diagnostics", "Amitabh Choudhury", "1999-08-04", "amitabh.c@kaushalsetu-edu.org", "+91 9876543213", "Diagnostics engineer trained on heavy electrical wiring & safety lockout", "", "", "", "PAID", 1, 1, 0, 0, 0)
+        ("STU-1002", inst_id, "BR-NANGLOI", "CRS-WEB-01", "Nangloi Center", "Full Stack Web Development", "Priya Sundaram", "2001-05-20", "priya.s@kaushalsetu-edu.org", "+91 9876543211", "Full stack developer proficient in React and Python backend architectures", "https://github.com/kaushalsetu/priya-web", "", "", "PAID", 1, 1, 0, 0, 0)
     ]
     cursor.executemany("""
         INSERT OR IGNORE INTO students 
@@ -364,8 +368,8 @@ def seed_initial_data(conn: sqlite3.Connection):
     
     conn.commit()
 
-def reset_db():
-    """Wipes all database tables, deletes legacy SQLite files, and reinitializes clean minimal seed data."""
+def reset_database_clean_slate() -> bool:
+    """Strictly clears all database tables and leaves database 100% clean/empty without inserting mock candidates."""
     base_dir = os.path.dirname(os.path.abspath(__file__))
     
     # 1. Delete legacy SQLite files if present
@@ -374,22 +378,25 @@ def reset_db():
         if os.path.exists(legacy_path):
             try:
                 os.remove(legacy_path)
-                print(f"[RESET DB] Deleted legacy file '{legacy_path}'")
-            except Exception as e:
-                print(f"[RESET DB WARNING] Could not delete '{legacy_path}': {e}")
+            except Exception:
+                pass
 
     # 2. Wipe all tables from active SQLite database
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        tables = ["job_applications", "student_submissions", "assessments", "agent_activity_logs", "students", "courses", "branches", "institutes"]
+        tables = [
+            "crawled_jobs", "job_applications", "evaluations", "student_submissions", 
+            "assessments", "agent_activity_logs", "students", "courses", "branches", "institutes"
+        ]
         for t in tables:
-            cursor.execute(f"DROP TABLE IF EXISTS {t};")
+            try:
+                cursor.execute(f"DROP TABLE IF EXISTS {t};")
+            except Exception:
+                pass
         conn.commit()
 
-    # 3. Re-initialize database schema and seed minimal initial dataset
+    # 3. Re-initialize clean database schema without mock data
     init_db()
-    with get_db_connection() as conn:
-        seed_initial_data(conn)
 
     # 4. Clean up generated static portfolio HTML files
     portfolio_dir = os.path.join(base_dir, "static", "portfolios")
@@ -402,6 +409,8 @@ def reset_db():
                     pass
 
     return True
+
+reset_db = reset_database_clean_slate
 
 # --- Relational CRUD Helper Functions ---
 

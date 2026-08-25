@@ -980,12 +980,12 @@ def api_apply_job(req: JobApplyReq, request: Request = None):
     log_agent_activity("JOB_APPLICATION_DISPATCHED", f"Application submitted for {req.company_name} ({req.role_title})", branch_id=b_id, student_id=req.student_id)
     return {"success": True, "data": {"application_id": app_id, "status": "APPLIED_AND_DISPATCHED"}}
 
-# Admin Reset Database Endpoint
-@app.post("/api/admin/reset-database")
-def reset_database():
-    from database import reset_db
-    reset_db()
-    return {"status": "success", "message": "Database wiped and reinitialized."}
+# Admin Reset Database Clean Slate
+@app.post("/api/admin/reset-db")
+def api_reset_db_alias():
+    from database import reset_database_clean_slate
+    reset_database_clean_slate()
+    return {"status": "success", "success": True, "message": "Database completely purged and clean schema initialized."}
 
 # 6. Live Job Discovery & Retest Governance Endpoints
 @app.get("/api/jobs/discover")
