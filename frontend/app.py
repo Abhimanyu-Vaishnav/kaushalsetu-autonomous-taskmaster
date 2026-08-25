@@ -1242,18 +1242,45 @@ def main_app_layout():
                 st.session_state["demo_preset"] = "PRESET_B"
                 st.info("Loaded Remedial Candidate Preset! Go to Student Workspace to test.")
 
-        # Fetch Institutes
+        # Fetch Institutes with resilient backend health check & auto-initialization
+        backend_connected = False
         institutes = []
         try:
-            ires = requests.get(f"{BACKEND_URL}/api/institutes", timeout=2)
+            ires = requests.get(f"{BACKEND_URL}/api/institutes", timeout=8)
             if ires.status_code == 200:
-                institutes = ires.json()["data"]
+                backend_connected = True
+                institutes = ires.json().get("data", [])
         except Exception:
-            pass
+            try:
+                ires = requests.get("http://127.0.0.1:8000/api/institutes", timeout=5)
+                if ires.status_code == 200:
+                    backend_connected = True
+                    institutes = ires.json().get("data", [])
+                    BACKEND_URL = "http://127.0.0.1:8000"
+            except Exception:
+                pass
 
-        if not institutes:
+        if not backend_connected:
             st.error("🔴 Could not connect to backend server. Ensure run_app.py is active.")
+            st.caption(f"Connecting to internal endpoint: `{BACKEND_URL}`")
             st.stop()
+
+        # Auto-initialize default foundation network if database is completely clean/empty
+        if backend_connected and not institutes:
+            try:
+                r_auto = requests.post(f"{BACKEND_URL}/api/institutes/create", json={
+                    "name": "KaushalSetu Vocational Foundation",
+                    "code": "KAUSHALSETU-HQ",
+                    "initial_branch_name": "Nangloi Center Node",
+                    "initial_city": "New Delhi",
+                    "placement_threshold": 70
+                }, timeout=5)
+                if r_auto.status_code in [200, 201]:
+                    ires = requests.get(f"{BACKEND_URL}/api/institutes", timeout=5)
+                    if ires.status_code == 200:
+                        institutes = ires.json().get("data", [])
+            except Exception:
+                pass
 
         # --- MODAL DIALOGS FOR GOVERNANCE ---
         @st.dialog("🏢 Create New Institute & Initial Branch Node")
