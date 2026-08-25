@@ -841,26 +841,33 @@ def main_app_layout():
                     top_recs = [j for j in jobs if j.get("is_top_recommendation")]
                     if top_recs:
                         with st.expander("🔥 Agent Top Recommendations (Highest Conversion Chance)", expanded=True):
-                            for tr in top_recs[:2]:
+                            for idx_tr, tr in enumerate(top_recs[:2]):
+                                tr_role = tr.get("role_title") or tr.get("title") or "Specialist Role"
+                                tr_comp = tr.get("company_name") or tr.get("company") or "Enterprise Partner"
+                                tr_loc = tr.get("location") or tr.get("city") or "Delhi NCR / Remote"
+                                tr_sal = tr.get("salary_range") or tr.get("ctc_range") or tr.get("salary") or "₹5.5L - ₹8.2L PA"
+                                tr_pct = int(tr.get("match_percentage") or tr.get("match_score") or 85)
+                                tr_id = str(tr.get("job_id") or tr.get("id") or f"TOP-{idx_tr}")
+
                                 with st.container():
                                     col_tr1, col_tr2 = st.columns([3, 2])
                                     with col_tr1:
-                                        st.markdown(f"⭐ **{tr['role_title']}** at **{tr['company_name']}**")
-                                        st.markdown(f"📍 `{tr['location']}` | 💰 `{tr['salary_range']}` | 🎯 `{tr['match_percentage']}% Match`")
-                                        st.caption(f"💡 **Why Agent Recommends:** {tr.get('match_rationale', '')}")
-                                        st.markdown(f'<span class="badge-emerald">{tr.get("recommendation_badge")}</span>', unsafe_allow_html=True)
+                                        st.markdown(f"⭐ **{tr_role}** at **{tr_comp}**")
+                                        st.markdown(f"📍 `{tr_loc}` | 💰 `{tr_sal}` | 🎯 `{tr_pct}% Match`")
+                                        st.caption(f"💡 **Why Agent Recommends:** {tr.get('match_rationale', 'Direct skill match for candidate course track.')}")
+                                        st.markdown(f'<span class="badge-emerald">{tr.get("recommendation_badge", "🔥 TOP MATCH")}</span>', unsafe_allow_html=True)
                                     with col_tr2:
-                                        tr_url = tr.get('verified_search_url', tr.get('direct_application_url'))
+                                        tr_url = tr.get('apply_url') or tr.get('verified_search_url') or tr.get('direct_application_url') or "https://careers.google.com"
                                         st.link_button("🔗 View Official Job Post", tr_url, use_container_width=True)
-                                        if st.button(f"🚀 Apply with Verified Dossier", key=f"rec_apply_{tr['job_id']}", type="primary", use_container_width=True):
+                                        if st.button(f"🚀 Apply with Verified Dossier", key=f"rec_apply_{tr_id}", type="primary", use_container_width=True):
                                             requests.post(f"{BACKEND_URL}/api/jobs/apply", json={
                                                 "student_id": param_sid,
-                                                "company_name": tr['company_name'],
-                                                "role_title": tr['role_title'],
-                                                "match_percentage": tr['match_percentage'],
-                                                "dossier_sent_url": student_data.get("portfolio_url") or f"{BACKEND_URL}/portfolio/{param_sid}"
+                                                "company_name": tr_comp,
+                                                "role_title": tr_role,
+                                                "match_percentage": tr_pct,
+                                                "dossier_sent_url": student_data.get("portfolio_url") or f"{PUBLIC_BASE_URL}/?page=student_dashboard&view=portfolio&sid={param_sid}"
                                             })
-                                            st.success(f"✅ AI Dossier Dispatched to {tr['company_name']}!")
+                                            st.toast(f"✅ AI Dossier Dispatched to {tr_comp}!", icon="🚀")
                                             st.balloons()
                                 st.divider()
 
@@ -891,7 +898,7 @@ def main_app_layout():
                         )
                         matches_source = (
                             source_filter == "All Sources"
-                            or source_filter.lower() in j.get("source_badge", "").lower()
+                            or source_filter.lower() in str(j.get("source_platform") or j.get("source_badge") or "").lower()
                         )
                         if matches_text and matches_source:
                             filtered_jobs.append(j)
@@ -905,7 +912,7 @@ def main_app_layout():
                     with jm2:
                         st.metric("Verified Deep-Links", f"{len(filtered_jobs)} / {len(filtered_jobs)}")
                     with jm3:
-                        avg_match = round(sum([j['match_percentage'] for j in filtered_jobs]) / max(len(filtered_jobs), 1), 1) if filtered_jobs else 0
+                        avg_match = round(sum([j.get('match_percentage', 85) for j in filtered_jobs]) / max(len(filtered_jobs), 1), 1) if filtered_jobs else 0
                         st.metric("Average Skill Alignment", f"{avg_match}%")
                     with jm4:
                         st.metric("Web Grounding Engine", "Google Search ✅")
@@ -921,55 +928,71 @@ def main_app_layout():
                     end_idx = start_idx + items_per_page
                     page_jobs = filtered_jobs[start_idx:end_idx]
                     
-                    for job in page_jobs:
+                    for idx_j, job in enumerate(page_jobs):
+                        j_id = str(job.get("job_id") or job.get("id") or f"JOB-{idx_j}").strip()
+                        j_role = str(job.get("role_title") or job.get("title") or "Specialist Role").strip()
+                        j_comp = str(job.get("company_name") or job.get("company") or "Enterprise Partner").strip()
+                        j_website = str(job.get("company_website") or job.get("apply_url") or "https://careers.google.com").strip()
+                        j_loc = str(job.get("location") or job.get("city") or "Delhi NCR / Remote").strip()
+                        j_sal = str(job.get("salary_range") or job.get("ctc_range") or job.get("salary") or "₹5.5L - ₹8.2L PA").strip()
+                        j_exp = str(job.get("experience_required") or "0-2 Years").strip()
+                        j_pct = int(job.get("match_percentage") or job.get("match_score") or 85)
+                        j_src = str(job.get("source_platform") or job.get("source_badge") or "Google Jobs Grounded").strip()
+                        j_desc = str(job.get("job_description") or "Detailed technical responsibilities and workplace terms.").strip()
+                        j_email = str(job.get("recruiter_email") or "careers@enterprise.com").strip()
+                        j_qual = str(job.get("qualification") or "Diploma / Vocational Cert").strip()
+                        j_terms = str(job.get("work_terms") or "Full-Time").strip()
+                        j_skills = job.get("skills_matched") or []
+
                         with st.container():
                             col_j1, col_j2, col_j3 = st.columns([3.2, 2.3, 2.5])
                             with col_j1:
-                                st.markdown(f"#### **{job.get('role_title', 'Specialist Role')}**")
-                                st.markdown(f"🏢 **Company:** `{job.get('company_name', 'Enterprise Partner')}` | 📍 **Location:** `{job.get('location', 'Delhi NCR')}`")
-                                st.caption(f"💰 **CTC Range:** {job.get('ctc_range') or job.get('salary_range', '₹5.5L - ₹8.0L PA')} | 🕒 Exp: {job.get('experience_required', '0-2 Years')}")
+                                st.markdown(f"#### **{j_role}**")
+                                st.markdown(f"🏢 **Company:** `{j_comp}` | 📍 **Location:** `{j_loc}`")
+                                st.caption(f"💰 **CTC Range:** {j_sal} | 🕒 Exp: {j_exp}")
                             with col_j2:
-                                st.markdown(f"🎯 **Skill Alignment:** `{job.get('match_percentage', 85)}% Match`")
-                                st.markdown(f"🌐 Source: <span class='badge-blue'>{job.get('source_platform') or job.get('source_badge', 'Google Jobs Grounded')}</span>", unsafe_allow_html=True)
-                                st.caption(f"Skills Matched: {', '.join(job.get('skills_matched', []))}")
+                                st.markdown(f"🎯 **Skill Alignment:** `{j_pct}% Match`")
+                                st.markdown(f"🌐 Source: <span class='badge-blue'>{j_src}</span>", unsafe_allow_html=True)
+                                if j_skills:
+                                    st.caption(f"Skills Matched: {', '.join(j_skills)}")
                             with col_j3:
-                                job_link = job.get('apply_url') or job.get('verified_search_url') or job.get('direct_application_url')
-                                if job_link:
-                                    st.link_button("🔗 View Official Job Post", job_link, use_container_width=True)
+                                job_link = job.get('apply_url') or job.get('verified_search_url') or job.get('direct_application_url') or "https://careers.google.com"
+                                st.link_button("🔗 View Official Job Post", job_link, use_container_width=True)
                                 
                                 if new_mode:
                                     st.markdown('<span class="badge-emerald" style="display:block; text-align:center; margin-top:4px;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
                                 else:
-                                    if st.button("🚀 1-Click Apply with AI Dossier", key=f"btn_apply_{job['job_id']}", type="primary", use_container_width=True):
+                                    if st.button("🚀 1-Click Apply with AI Dossier", key=f"btn_apply_{j_id}", type="primary", use_container_width=True):
                                         requests.post(f"{BACKEND_URL}/api/jobs/apply", json={
                                             "student_id": param_sid,
-                                            "company_name": job['company_name'],
-                                            "role_title": job['role_title'],
-                                            "match_percentage": job['match_percentage'],
+                                            "company_name": j_comp,
+                                            "role_title": j_role,
+                                            "match_percentage": j_pct,
                                             "dossier_sent_url": student_data.get("portfolio_url") or f"{PUBLIC_BASE_URL}/?page=student_dashboard&view=portfolio&sid={param_sid}"
                                         })
-                                        st.toast(f"✅ AI Dossier Dispatched to {job['company_name']}!", icon="🚀")
+                                        st.toast(f"✅ AI Dossier Dispatched to {j_comp}!", icon="🚀")
                                         st.balloons()
 
                             # Interactive Expandable Job Specs Drawer
-                            with st.expander(f"📋 View Full Job Specs & Recruiter Contact Details ({job.get('role_title')})", expanded=False):
+                            with st.expander(f"📋 View Complete Job & Company Specs ({j_role})", expanded=False):
                                 col_jd1, col_jd2 = st.columns(2)
                                 with col_jd1:
-                                    st.markdown(f"**Role Title:** {job.get('role_title')}")
-                                    st.markdown(f"**Company Name:** {job.get('company_name')}")
-                                    st.markdown(f"**Location:** {job.get('location')}")
-                                    st.markdown(f"**Compensation (CTC):** {job.get('ctc_range') or job.get('salary_range')}")
-                                    st.markdown(f"**Experience Requirement:** {job.get('experience_required', '0-2 Years')}")
+                                    st.markdown(f"**Role Title:** {j_role}")
+                                    st.markdown(f"**Company Name:** {j_comp} ([Website]({j_website}))")
+                                    st.markdown(f"**Location:** {j_loc}")
+                                    st.markdown(f"**Compensation (CTC):** {j_sal}")
+                                    st.markdown(f"**Experience Level:** {j_exp}")
                                 with col_jd2:
-                                    st.markdown(f"**Work Terms:** {job.get('work_terms', 'Full-Time')}")
-                                    st.markdown(f"**Grounded Source:** {job.get('source_platform', 'Google Jobs Grounded')}")
-                                    r_email = job.get('recruiter_email', 'careers@enterprise.com')
-                                    st.markdown(f"**Recruiter Contact:** [{r_email}](mailto:{r_email}?subject=Technical%20Application%20for%20{job.get('role_title')})")
-                                    skills_pills = " ".join([f'<span class="badge-blue">{s}</span>' for s in job.get('skills_matched', [])])
-                                    st.markdown(f"**Matched Skills:** {skills_pills}", unsafe_allow_html=True)
+                                    st.markdown(f"**Qualification:** {j_qual}")
+                                    st.markdown(f"**Work Terms:** {j_terms}")
+                                    st.markdown(f"**Grounded Source:** {j_src}")
+                                    st.markdown(f"**Recruiter Contact:** [{j_email}](mailto:{j_email}?subject=Technical%20Application%20for%20{j_role})")
+                                    if j_skills:
+                                        skills_pills = " ".join([f'<span class="badge-blue">{s}</span>' for s in j_skills])
+                                        st.markdown(f"**Matched Skills:** {skills_pills}", unsafe_allow_html=True)
 
                                 st.markdown("**Full Job Description & Workplace Terms:**")
-                                st.info(job.get('job_description', 'No full description provided.'))
+                                st.info(j_desc)
 
                             st.divider()
                             
