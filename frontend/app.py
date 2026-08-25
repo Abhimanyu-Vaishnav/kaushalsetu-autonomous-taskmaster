@@ -57,6 +57,9 @@ except ImportError:
 
 try:
     from backend.main import (
+        direct_get_agent_logs,
+        direct_create_student,
+        direct_delete_student,
         direct_get_students,
         direct_add_student,
         direct_create_course,
@@ -75,6 +78,9 @@ try:
     )
 except ImportError:
     from main import (
+        direct_get_agent_logs,
+        direct_create_student,
+        direct_delete_student,
         direct_get_students,
         direct_add_student,
         direct_create_course,
@@ -1990,26 +1996,28 @@ def main_app_layout():
             with col_al2:
                 st.button("🔄 Refresh Audit Logs", use_container_width=True)
 
-            try:
-                alres = requests.get(f"{BACKEND_URL}/api/agent/logs?branch_id={sel_branch['id']}", timeout=2)
-                if alres.status_code == 200:
-                    agent_logs = alres.json()["data"]
-                    if not agent_logs:
-                        st.info("No background activity logged for this branch yet.")
-                    else:
-                        for log in agent_logs:
-                            with st.container():
-                                col_l1, col_l2, col_l3 = st.columns([1.5, 3.5, 2])
-                                with col_l1:
-                                    st.caption(f"⏱️ `{log.get('timestamp', '')}`")
-                                with col_l2:
-                                    st.markdown(f"**[{log.get('action_type', 'ACTION')}]** {log.get('description', '')}")
-                                with col_l3:
-                                    if log.get('student_id'):
-                                        st.caption(f"Candidate: `{log['student_id']}`")
-                            st.divider()
-            except Exception as ex:
-                st.error(f"Error loading agent audit logs: {ex}")
+            logs_res = direct_get_agent_logs(branch_id=sel_branch['id'])
+            if logs_res.get("status") == "success" or logs_res.get("success"):
+                agent_logs = logs_res.get("logs") or logs_res.get("data") or []
+                if not agent_logs:
+                    st.info("ℹ️ No agent activity logged yet for this branch. Perform an action (like creating a course or registering a candidate) to see live logs.")
+                else:
+                    for log in agent_logs:
+                        with st.container():
+                            col_l1, col_l2, col_l3 = st.columns([1.5, 3.5, 2])
+                            with col_l1:
+                                st.caption(f"⏱️ `{log.get('timestamp', '')}`")
+                            with col_l2:
+                                act_name = log.get('action') or log.get('action_type', 'ACTION')
+                                details = log.get('details') or log.get('description', '')
+                                st.markdown(f"**[{act_name}]** {details}")
+                            with col_l3:
+                                s_id = log.get('student_id') or log.get('entity_id')
+                                if s_id:
+                                    st.caption(f"Candidate: `{s_id}`")
+                        st.divider()
+            else:
+                st.error(f"Error loading agent audit logs: {logs_res.get('message')}")
 
 # --- TOP-LEVEL ROOT ERROR BOUNDARY EXECUTION ---
 try:

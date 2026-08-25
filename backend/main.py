@@ -450,6 +450,87 @@ def direct_add_student(payload: dict):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+def direct_get_agent_logs(branch_id: str = None, limit: int = 50):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS agent_activity_logs (
+                id TEXT PRIMARY KEY,
+                institute_id TEXT DEFAULT 'INST-GLOBAL-01',
+                branch_id TEXT DEFAULT '',
+                student_id TEXT DEFAULT '',
+                action_type TEXT NOT NULL,
+                description TEXT NOT NULL,
+                metadata_json TEXT DEFAULT '{}',
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+
+        if branch_id and str(branch_id).strip():
+            c.execute("SELECT * FROM agent_activity_logs WHERE branch_id = ? ORDER BY timestamp DESC LIMIT ?", (str(branch_id).strip(), limit))
+        else:
+            c.execute("SELECT * FROM agent_activity_logs ORDER BY timestamp DESC LIMIT ?", (limit,))
+        rows = [dict(r) for r in c.fetchall()]
+        conn.close()
+        for r in rows:
+            if not r.get("action"):
+                r["action"] = r.get("action_type") or "AGENT_ACTION"
+            if not r.get("details"):
+                r["details"] = r.get("description") or "Operation recorded"
+            if not r.get("entity_id"):
+                r["entity_id"] = r.get("student_id") or r.get("id") or "N/A"
+        return {"status": "success", "success": True, "logs": rows, "data": rows}
+    except Exception as e:
+        return {"status": "error", "message": str(e), "logs": [], "data": []}
+
+def direct_create_student(payload: dict):
+    try:
+        import uuid
+        s_id = str(payload.get("id") or payload.get("student_id") or f"STU-{uuid.uuid4().hex[:6].upper()}").strip()
+        name = str(payload.get("name") or payload.get("full_name") or "").strip()
+        if not name:
+            return {"status": "error", "message": "Full name is required"}
+        dob = str(payload.get("dob") or "2000-01-01").strip()
+        email = str(payload.get("email") or "").strip()
+        phone = str(payload.get("phone") or "").strip()
+        track = str(payload.get("track") or payload.get("course_name") or "General Track").strip()
+        branch = str(payload.get("branch_center") or payload.get("branch_name") or "Delhi Nangloi").strip()
+        inst_id = str(payload.get("institute_id") or "INST-ROOT").strip()
+        branch_id = str(payload.get("branch_id") or "BR-MAIN").strip()
+
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            INSERT OR REPLACE INTO students (id, name, dob, email, phone, track, branch_center, institute_id, branch_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (s_id, name, dob, email, phone, track, branch, inst_id, branch_id))
+        
+        c.execute("""
+            INSERT INTO agent_activity_logs (id, action_type, description, student_id, branch_id, institute_id)
+            VALUES (?, 'ENROLL_STUDENT', ?, ?, ?, ?)
+        """, (f"LOG-{uuid.uuid4().hex[:8].upper()}", f"Enrolled candidate {name} ({s_id}) in {track}", s_id, branch_id, inst_id))
+
+        conn.commit()
+        conn.close()
+        return {"status": "success", "success": True, "message": "Student enrolled successfully!", "id": s_id, "student_id": s_id}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def direct_delete_student(student_id: str):
+    try:
+        sid = str(student_id).strip()
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("DELETE FROM students WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (sid, sid))
+        c.execute("DELETE FROM evaluations WHERE UPPER(student_id) = UPPER(?)", (sid,))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "success": True, "message": "Student record deleted."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 PORTFOLIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "portfolios")
 os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 
