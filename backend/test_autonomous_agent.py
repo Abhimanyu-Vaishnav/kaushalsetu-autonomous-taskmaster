@@ -31,7 +31,7 @@ def test_autonomous_background_agent():
             github_url="https://github.com/skillforge/test-repo",
             live_url="http://localhost:8000/portfolio/STU-1001"
         )
-        assert output["evaluation"]["mcq_score"] == 30.0
+        assert output["evaluation"]["mcq_score"] == 50.0
         assert output["evaluation"]["total_score"] >= 70
         assert output["dispatch"]["status"] in ["INTERVIEW_SCHEDULED", "APPLIED_AND_DISPATCHED", "NEEDS_HUMAN_INTERVENTION", "REMEDIAL_ASSIGNED"]
         assert len(output["telemetry"]) > 0

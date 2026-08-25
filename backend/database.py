@@ -628,14 +628,34 @@ def add_student(
         conn.commit()
     return get_student_by_id(student_id)
 
-def mark_student_exam_complete(student_id: str, github_url: str = "", portfolio_url: str = "") -> bool:
+def mark_student_exam_complete(
+    student_id: str,
+    github_url: str = "",
+    portfolio_url: str = "",
+    mcq_score: float = 0.0,
+    practical_score: float = 0.0,
+    aggregate_score: float = 0.0,
+    status_seal: str = "PASS (FOUNDATIONAL)"
+) -> bool:
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE students 
-            SET exam_completed = 1, portfolio_generated = 1, github_url = ?, portfolio_url = ?
+            SET exam_completed = 1, portfolio_generated = 1, github_url = ?, portfolio_url = ?,
+                mcq_score = ?, capstone_score = ?, aggregate_score = ?, status_seal = ?
             WHERE student_id = ?
-        """, (github_url, portfolio_url, student_id))
+        """, (github_url, portfolio_url, mcq_score, practical_score, aggregate_score, status_seal, student_id))
+        
+        try:
+            eval_id = f"EVAL-{uuid.uuid4().hex[:8].upper()}"
+            cursor.execute("""
+                INSERT OR REPLACE INTO evaluations (
+                    id, student_id, mcq_score, practical_score, aggregate_score, status_seal
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, (eval_id, student_id, mcq_score, practical_score, aggregate_score, status_seal))
+        except Exception:
+            pass
+
         conn.commit()
         return True
 

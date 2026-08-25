@@ -813,26 +813,29 @@ def main_app_layout():
 
                 # --- OFFICIAL MARKSHEET DOSSIER CARD ---
                 with st.container():
-                    raw_mcq = float(student_data.get("mcq_score") or 45.0)
-                    raw_capstone = float(student_data.get("capstone_score") or 42.0)
-                    total_mcq_pts = float(student_data.get("total_mcq_pts") or 50.0)
-                    total_capstone_pts = float(student_data.get("total_capstone_pts") or 50.0)
+                    raw_mcq = float(student_data.get("mcq_score", 0.0) or 0.0)
+                    raw_capstone = float(student_data.get("capstone_score", 0.0) or 0.0)
+                    total_mcq_pts = 50.0
+                    total_capstone_pts = 50.0
 
-                    mcq_pct = (raw_mcq / total_mcq_pts) * 100.0 if total_mcq_pts > 0 else 90.0
-                    capstone_pct = (raw_capstone / total_capstone_pts) * 100.0 if total_capstone_pts > 0 else 84.0
+                    mcq_pct = (raw_mcq / total_mcq_pts) * 100.0 if total_mcq_pts > 0 else 0.0
+                    capstone_pct = (raw_capstone / total_capstone_pts) * 100.0 if total_capstone_pts > 0 else 0.0
                     total_pts = total_mcq_pts + total_capstone_pts
                     obtained_pts = raw_mcq + raw_capstone
-                    aggregate_pct = (obtained_pts / total_pts) * 100.0 if total_pts > 0 else 87.0
+                    aggregate_pct = float(student_data.get("aggregate_score") or round((obtained_pts / total_pts) * 100.0, 1))
 
-                    if aggregate_pct >= 80.0:
-                        classification_seal = "DISTINCTION (PLACEMENT PRIORITY - TIER 1)"
-                        seal_icon = "🏆"
-                    elif aggregate_pct >= 60.0:
-                        classification_seal = "FIRST CLASS (ELIGIBLE FOR DISPATCH)"
-                        seal_icon = "🥇"
-                    else:
-                        classification_seal = "NEEDS REMEDIATION"
-                        seal_icon = "⚠️"
+                    classification_seal = student_data.get("status_seal") or ""
+                    if not classification_seal:
+                        if aggregate_pct >= 80.0:
+                            classification_seal = "DISTINCTION (PLACEMENT PRIORITY - TIER 1)"
+                        elif aggregate_pct >= 60.0:
+                            classification_seal = "FIRST CLASS (ELIGIBLE FOR DISPATCH)"
+                        elif aggregate_pct >= 40.0:
+                            classification_seal = "PASS (FOUNDATIONAL)"
+                        else:
+                            classification_seal = "NEEDS REMEDIATION (RETAKE REQUIRED)"
+
+                    seal_icon = "🏆" if "DISTINCTION" in classification_seal else ("🥇" if "FIRST CLASS" in classification_seal else ("🟢" if "PASS" in classification_seal else "⚠️"))
 
                     st.markdown(f"""
                     <div style="background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%); padding: 24px; border-radius: 16px; border: 2px solid #6366F1; color: white; margin-bottom:16px;">
@@ -859,23 +862,12 @@ def main_app_layout():
                     with m4:
                         st.metric("Classification Seal", classification_seal.split("(")[0].strip())
 
-                    st.progress(mcq_pct / 100.0, text=f"Objective Theory Score: {mcq_pct:.1f}% ({raw_mcq:.1f}/{total_mcq_pts:.0f} pts)")
-                    st.progress(capstone_pct / 100.0, text=f"Multimodal Practical Score: {capstone_pct:.1f}% ({raw_capstone:.1f}/{total_capstone_pts:.0f} pts)")
-                    st.progress(aggregate_pct / 100.0, text=f"Cumulative Aggregate Score: {aggregate_pct:.1f}%")
+                    st.progress(max(0.0, min(1.0, mcq_pct / 100.0)), text=f"Objective Theory Score: {mcq_pct:.1f}% ({raw_mcq:.1f}/{total_mcq_pts:.0f} pts)")
+                    st.progress(max(0.0, min(1.0, capstone_pct / 100.0)), text=f"Multimodal Practical Score: {capstone_pct:.1f}% ({raw_capstone:.1f}/{total_capstone_pts:.0f} pts)")
+                    st.progress(max(0.0, min(1.0, aggregate_pct / 100.0)), text=f"Cumulative Aggregate Score: {aggregate_pct:.1f}%")
 
-                st.divider()
-                col_sd1, col_sd2, col_sd3 = st.columns([2, 1, 1])
-                with col_sd1:
-                    portfolio_public_link = f"{PUBLIC_BASE_URL}/?page=student_dashboard&view=portfolio&sid={param_sid}"
-                    st.markdown(f"🌐 **Domain-Adaptive Verified Portfolio Dossier:** [{portfolio_public_link}]({portfolio_public_link})", unsafe_allow_html=True)
-                with col_sd2:
-                    cur_mode = bool(student_data.get("auto_apply_mode", 0))
-                    new_mode = st.toggle("🤖 Autonomous Auto-Apply Engine", value=cur_mode)
-                    if new_mode != cur_mode:
-                        requests.post(f"{BACKEND_URL}/api/students/auto-apply-mode", json={"student_id": param_sid, "auto_apply_mode": new_mode})
-                        st.toast(f"✅ Auto-Apply Engine set to {'ACTIVE' if new_mode else 'INACTIVE'}!", icon="🤖")
-                        st.rerun()
-                with col_sd3:
+                    st.divider()
+                    
                     import hashlib
                     raw_hash_payload = f"{student_data['student_id']}|{student_data.get('branch_name', 'MAIN')}|{aggregate_pct:.1f}%|VERIFIED"
                     computed_hash = "0x" + hashlib.sha256(raw_hash_payload.encode()).hexdigest()[:16]
@@ -889,6 +881,18 @@ def main_app_layout():
                         st.markdown(f"**Computed SHA-256 Digest:**")
                         st.code(computed_hash, language="text")
                         st.success("🟢 100% Tamper-Proof & Mathematically Verified")
+
+                col_sd1, col_sd2, col_sd3 = st.columns([2, 1, 1])
+                with col_sd1:
+                    portfolio_public_link = f"{PUBLIC_BASE_URL}/?page=student_dashboard&view=portfolio&sid={param_sid}"
+                    st.markdown(f"🌐 **Domain-Adaptive Verified Portfolio Dossier:** [{portfolio_public_link}]({portfolio_public_link})", unsafe_allow_html=True)
+                with col_sd2:
+                    cur_mode = bool(student_data.get("auto_apply_mode", 0))
+                    new_mode = st.toggle("🤖 Autonomous Auto-Apply Engine", value=cur_mode)
+                    if new_mode != cur_mode:
+                        requests.post(f"{BACKEND_URL}/api/students/auto-apply-mode", json={"student_id": param_sid, "auto_apply_mode": new_mode})
+                        st.toast(f"✅ Auto-Apply Engine set to {'ACTIVE' if new_mode else 'INACTIVE'}!", icon="🤖")
+                        st.rerun()
 
             with s_tab3:
                 st.markdown("### 🌐 Live Generated Domain-Adaptive Visual Portfolio")
@@ -928,24 +932,39 @@ def main_app_layout():
                         st.session_state.current_job_page = 1
                         st.rerun()
 
-                # Initial Fetch of Page 1 (30 items) if pool is empty
+                # Initial Fetch of Page 1 (30 items) with instant fallbacks to prevent hanging
                 if not st.session_state.job_listings_pool:
                     with st.spinner("🔍 KaushalSetu Agent is crawling live verified job postings across Google Jobs, Indeed & LinkedIn..."):
                         try:
                             mres = requests.post(f"{BACKEND_URL}/api/jobs/match", json={
                                 "student_id": param_sid,
-                                "track": student_data.get("course_name") or student_data.get("track"),
+                                "track": student_data.get("course_name") or student_data.get("track", "Full Stack Web Development"),
                                 "skills": student_data.get("skills_list") or [student_data.get("course_name")],
                                 "location": student_data.get("branch_name") or "Delhi NCR / India",
                                 "page": 1,
                                 "page_size": 30
                             }, timeout=10)
                             if mres.status_code == 200:
-                                st.session_state.job_listings_pool = mres.json().get("jobs", [])
+                                st.session_state.job_listings_pool = mres.json().get("jobs", []) or mres.json().get("data", [])
                         except Exception:
                             pass
 
+                        # Secondary Fallback if primary match API call fails
+                        if not st.session_state.job_listings_pool:
+                            try:
+                                jres = requests.get(f"{BACKEND_URL}/api/jobs/discover?course_name={student_data.get('course_name', 'Full Stack Web Development')}", timeout=5)
+                                if jres.status_code == 200:
+                                    st.session_state.job_listings_pool = jres.json().get("data", [])
+                            except Exception:
+                                pass
+
                 jobs = st.session_state.job_listings_pool
+                if not jobs:
+                    # Final safety fallback using local job catalog synthesizer
+                    from job_engine import search_live_jobs
+                    st.session_state.job_listings_pool = search_live_jobs(course_name=student_data.get("course_name", "Full Stack Web Development"))
+                    jobs = st.session_state.job_listings_pool
+
                 if not jobs:
                     st.info("Searching for live openings...")
                 else:
