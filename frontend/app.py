@@ -59,6 +59,8 @@ try:
     from backend.main import (
         direct_reset_database,
         direct_student_login,
+        direct_get_institutes,
+        direct_get_branches,
         direct_create_institute,
         direct_create_branch,
         normalize_dob
@@ -67,6 +69,8 @@ except ImportError:
     from main import (
         direct_reset_database,
         direct_student_login,
+        direct_get_institutes,
+        direct_get_branches,
         direct_create_institute,
         direct_create_branch,
         normalize_dob
@@ -1271,32 +1275,18 @@ def main_app_layout():
                 st.session_state["demo_preset"] = "PRESET_B"
                 st.info("Loaded Remedial Candidate Preset! Go to Student Workspace to test.")
 
-        # Fetch Institutes with resilient backend health check & auto-initialization
-        backend_connected = False
-        institutes = []
-        ires = safe_api_call("GET", "/api/institutes", timeout=8)
-        if ires and ires.status_code == 200:
-            backend_connected = True
-            institutes = ires.json().get("data", [])
-
-        if not backend_connected:
-            st.error("🔴 Could not connect to backend server. Ensure run_app.py is active.")
-            st.caption(f"Connecting to internal endpoint: `{INTERNAL_BACKEND_URL}`")
-            st.stop()
-
-        # Auto-initialize default foundation network if database is completely clean/empty
-        if backend_connected and not institutes:
-            r_auto = safe_api_call("POST", "/api/institutes/create", payload={
+        # Fetch Institutes with direct in-process database helper & auto-initialization
+        institutes = direct_get_institutes()
+        if not institutes:
+            direct_create_institute({
+                "id": "INST-ROOT",
                 "name": "KaushalSetu Vocational Foundation",
-                "code": "KAUSHALSETU-HQ",
+                "code": "KSVF-HQ",
                 "initial_branch_name": "Nangloi Center Node",
                 "initial_city": "New Delhi",
                 "placement_threshold": 70
-            }, timeout=5)
-            if r_auto and r_auto.status_code in [200, 201]:
-                ires2 = safe_api_call("GET", "/api/institutes", timeout=5)
-                if ires2 and ires2.status_code == 200:
-                    institutes = ires2.json().get("data", [])
+            })
+            institutes = direct_get_institutes()
 
         # --- MODAL DIALOGS FOR GOVERNANCE ---
         @st.dialog("🏢 Create New Institute & Initial Branch Node")
@@ -1678,17 +1668,10 @@ def main_app_layout():
                 st.session_state["selected_inst_id"] = sel_inst['id']
                 st.query_params["inst"] = sel_inst['id']
                 
-            branches = []
-            try:
-                bres = requests.get(f"{BACKEND_URL}/api/branches?institute_id={sel_inst['id']}", timeout=2)
-                if bres.status_code == 200:
-                    branches = bres.json()["data"]
-            except Exception:
-                pass
-
-            branch_opts = ["Select Center Branch..."] + [f"{b['branch_name']} ({b['city']})" for b in branches]
-            branch_id_map = {b['id']: f"{b['branch_name']} ({b['city']})" for b in branches}
-            label_branch_map = {f"{b['branch_name']} ({b['city']})": b for b in branches}
+            branches = direct_get_branches(institute_id=sel_inst['id'])
+            branch_opts = ["Select Center Branch..."] + [f"{b.get('name') or b.get('branch_name', 'Center')} ({b.get('location') or b.get('city', 'Delhi')})" for b in branches]
+            branch_id_map = {b['id']: f"{b.get('name') or b.get('branch_name', 'Center')} ({b.get('location') or b.get('city', 'Delhi')})" for b in branches}
+            label_branch_map = {f"{b.get('name') or b.get('branch_name', 'Center')} ({b.get('location') or b.get('city', 'Delhi')})": b for b in branches}
             
             default_branch_idx = 0
             cur_saved_branch = st.session_state.get("selected_branch_id")

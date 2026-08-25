@@ -131,6 +131,38 @@ def direct_student_login(student_id: str, dob_raw: str):
         return {"authenticated": True, "student": s}
     return {"authenticated": False, "message": "Date of Birth does not match."}
 
+def direct_get_institutes():
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT id, name, code, address, contact_email, contact_phone, placement_threshold FROM institutes ORDER BY created_at DESC")
+        rows = [dict(r) for r in c.fetchall()]
+        conn.close()
+        return rows
+    except Exception as e:
+        print(f"Error fetching institutes: {e}")
+        return []
+
+def direct_get_branches(institute_id: str = None):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        if institute_id:
+            c.execute("SELECT id, institute_id, name, branch_name, city, location, contact_person, phone FROM branches WHERE institute_id = ? ORDER BY created_at DESC", (str(institute_id).strip(),))
+        else:
+            c.execute("SELECT id, institute_id, name, branch_name, city, location, contact_person, phone FROM branches ORDER BY created_at DESC")
+        rows = [dict(r) for r in c.fetchall()]
+        conn.close()
+        for r in rows:
+            if not r.get("name"):
+                r["name"] = r.get("branch_name") or "Main Center"
+            if not r.get("location"):
+                r["location"] = r.get("city") or "Delhi"
+        return rows
+    except Exception as e:
+        print(f"Error fetching branches: {e}")
+        return []
+
 def direct_create_institute(payload: dict):
     try:
         name = str(payload.get("name") or payload.get("institute_name") or "").strip()
