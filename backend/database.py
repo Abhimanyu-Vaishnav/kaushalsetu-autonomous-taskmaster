@@ -7,9 +7,14 @@ from datetime import datetime, date
 from typing import List, Dict, Any, Optional, Union
 import shutil
 
-DATA_DIR = os.environ.get("DATA_DIR", "/app/data" if os.path.exists("/app") else os.path.dirname(os.path.abspath(__file__)))
-os.makedirs(DATA_DIR, exist_ok=True)
-DB_PATH = os.path.join(DATA_DIR, "kaushalsetu_prod.db")
+# /tmp is guaranteed writable in all Google Cloud Run container instances
+DB_PATH = os.environ.get(
+    "SQLITE_DB_PATH", 
+    os.environ.get("DATA_DIR", "/tmp/kaushalsetu_prod.db" if os.name != "nt" else os.path.join(os.path.dirname(os.path.abspath(__file__)), "kaushalsetu_prod.db"))
+)
+
+# Ensure parent directory exists
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 OLD_LOCAL_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kaushalsetu.db")
 LEGACY_SKILLFORGE_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skillforge.db")
@@ -30,6 +35,7 @@ if not os.path.exists(DB_PATH):
 
 def get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH, timeout=30.0, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
     conn.execute("PRAGMA busy_timeout=30000;")
     return conn
