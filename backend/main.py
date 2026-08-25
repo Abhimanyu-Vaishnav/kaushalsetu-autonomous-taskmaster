@@ -627,6 +627,17 @@ def api_verify_student_login(payload: Union[StudentLoginRequest, dict]):
         stu = verify_student_login(s_id, raw_dob)
 
         if stu:
+            exam_completed = bool(stu.get("exam_completed") or stu.get("mcq_score") or (stu.get("status_seal") and stu.get("status_seal") != "PENDING"))
+            try:
+                conn_chk = get_db_connection()
+                c_chk = conn_chk.cursor()
+                c_chk.execute("SELECT COUNT(*) FROM evaluations WHERE student_id = ? OR CAST(student_id AS TEXT) = ?", (str(s_id), str(s_id)))
+                if c_chk.fetchone()[0] > 0:
+                    exam_completed = True
+                conn_chk.close()
+            except Exception:
+                pass
+
             student_out = {
                 "id": stu.get("student_id") or stu.get("id") or s_id,
                 "student_id": stu.get("student_id") or stu.get("id") or s_id,
@@ -636,7 +647,8 @@ def api_verify_student_login(payload: Union[StudentLoginRequest, dict]):
                 "track": stu.get("course_name") or stu.get("track") or "General Track",
                 "course_name": stu.get("course_name") or stu.get("track") or "General Track",
                 "branch_name": stu.get("branch_name", "Main Center"),
-                "email": stu.get("email", "")
+                "email": stu.get("email", ""),
+                "exam_completed": exam_completed
             }
             return {
                 "authenticated": True,
@@ -644,7 +656,8 @@ def api_verify_student_login(payload: Union[StudentLoginRequest, dict]):
                 "status": "success",
                 "message": "Authentication successful",
                 "student": student_out,
-                "data": stu
+                "data": stu,
+                "exam_completed": exam_completed
             }
         else:
             return {
@@ -663,6 +676,16 @@ def api_verify_student_login(payload: Union[StudentLoginRequest, dict]):
             "message": f"Auth Server Exception: {str(e)}",
             "data": None
         }
+
+@app.post("/api/admin/reset-database")
+def api_reset_database():
+    try:
+        from database import reset_database_clean_slate, log_agent_activity
+        res = reset_database_clean_slate()
+        log_agent_activity("DATABASE_PURGED", "Admin executed clean-slate total database purge and schema re-initialization.")
+        return {"status": "success", "success": True, "message": "Database completely purged and clean schema initialized."}
+    except Exception as e:
+        return {"status": "error", "success": False, "message": str(e)}
 
 @app.put("/api/students/{student_id}")
 @app.post("/api/students/{student_id}/update")
