@@ -252,6 +252,95 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def main_app_layout():
+    # --- MODAL DIALOG FOR FEATURE GUIDE & AGENT ROLES & FAQ ---
+    @st.dialog("📘 KaushalSetu Platform Guide & Agent Intelligence Hub", width="large")
+    def modal_feature_guide():
+        m_tab1, m_tab2, m_tab3 = st.tabs([
+            "✨ End-to-End Module Documentation",
+            "⚡ Autonomous Agent ROI & Impact Matrix",
+            "❓ Interactive FAQ & System Architecture"
+        ])
+        
+        with m_tab1:
+            st.markdown("### 🤖 Autonomous Agent End-to-End Architecture & Workflow")
+            
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                st.markdown("""
+                <div style="background:#0F172A; border:1px solid #38BDF8; padding:16px; border-radius:12px; margin-bottom:14px;">
+                    <h4 style="color:#38BDF8; margin:0;">Module 1: Dynamic Vocational Curriculum Synthesis</h4>
+                    <p style="font-size:0.85rem; color:#CBD5E1; margin:6px 0 0 0;">
+                        Gemini 3.5 Pro ingests vocational topics or syllabus PDFs and synthesizes job-ready course modules, 10–20 difficulty-graded MCQs, and multimodal practical rubrics in under <b>10 seconds</b>.
+                    </p>
+                </div>
+                <div style="background:#0F172A; border:1px solid #A855F7; padding:16px; border-radius:12px; margin-bottom:14px;">
+                    <h4 style="color:#C084FC; margin:0;">Module 2: Multimodal Examination & Anti-Hallucination Grading</h4>
+                    <p style="font-size:0.85rem; color:#CBD5E1; margin:6px 0 0 0;">
+                        Evaluates practical diagnostic code, circuit schematics, and AST logic using Gemma (42ms fast screening) + Gemini Multimodal Vision with syllabus-grounded rubrics.
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_m2:
+                st.markdown("""
+                <div style="background:#0F172A; border:1px solid #34D399; padding:16px; border-radius:12px; margin-bottom:14px;">
+                    <h4 style="color:#34D399; margin:0;">Module 3: Cryptographic Ledger & Instant Verification</h4>
+                    <p style="font-size:0.85rem; color:#CBD5E1; margin:6px 0 0 0;">
+                        Seals candidate marksheet with SHA-256 cryptographic digests (`0x...`), preventing credential tampering and enabling zero-trust verification.
+                    </p>
+                </div>
+                <div style="background:#0F172A; border:1px solid #F59E0B; padding:16px; border-radius:12px;">
+                    <h4 style="color:#FBBF24; margin:0;">Module 4: Autonomous Live Web Job Match & Auto-Apply</h4>
+                    <p style="font-size:0.85rem; color:#CBD5E1; margin:6px 0 0 0;">
+                        Gemini Google Search Grounding scans live job boards (Google Jobs, Indeed, LinkedIn, Naukri) and dispatches verified dossiers to recruiters in 1-Click.
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+
+        with m_tab2:
+            st.markdown("### ⚡ Autonomous Agent ROI & Real-World Efficiency Gains")
+            st.markdown("""
+            | Workflow Metric / Task | Traditional Vocational Center | KaushalSetu Autonomous Agent Engine | Efficiency Gain / Impact |
+            | :--- | :--- | :--- | :--- |
+            | **Curriculum & Exam Synthesis** | 2 – 3 Weeks | **12 Seconds (Gemini 3.5 Pro)** | **⚡ 99.8% Time Saved** |
+            | **Practical Code & Circuit Grading** | 4 – 7 Days Manual Review | **Real-Time (Instant SHA-256 Ledger)** | **⚡ Zero Human Latency** |
+            | **Job Sourcing & Applications** | 15 – 20 Hours / Week per Student | **Continuous 30+ Live Crawler & Auto-Apply** | **⚡ 100% Automated Grounding** |
+            | **Cost per Candidate Assessment** | ₹2,500 / student (Manual Board) | **₹0.15 / student (Serverless Cloud)** | **⚡ 99.9% Cost Reduction** |
+            """)
+            st.success("🎉 Reduces 4.5 Hours of Manual Educator Labor to 3.2 Seconds per candidate batch!")
+
+        with m_tab3:
+            st.markdown("### ❓ Comprehensive Interactive FAQ Accordion")
+            
+            with st.expander("Q1: How does KaushalSetu ensure zero hallucinations in job matching?", expanded=True):
+                st.markdown("""
+                **Answer:** KaushalSetu uses **Gemini Google Search Tool Grounding** combined with strict candidate profile parameters (Track, Verified Skills, Region). Every job returned is crawled live from real search listings on Google Jobs, LinkedIn India, Indeed, and Naukri with verified application links.
+                """)
+                
+            with st.expander("Q2: Can an institute edit course modules or student records post-creation?"):
+                st.markdown("""
+                **Answer:** Yes. Institute admins have full CRUD controls to update course titles, modules, skills, candidate DOB, socials, and marks. Any modification automatically recalculates the SHA-256 cryptographic verification digest in real-time.
+                """)
+
+            with st.expander("Q3: How does state-aware post-exam routing work for students?"):
+                st.markdown("""
+                **Answer:** When a student logs in via Student ID and Date of Birth, KaushalSetu checks if an evaluation record exists. If the exam is completed, the student is routed directly to their Official Marksheet, Domain-Adaptive Portfolio Dossier, and Live Web Job Hub.
+                """)
+
+            with st.expander("Q4: How is candidate credential integrity cryptographically guaranteed?"):
+                st.markdown("""
+                **Answer:** Every candidate marksheet and generated portfolio is deterministically hashed using **SHA-256**:
+                `Payload: {student_id}|{branch_code}|{aggregate_score}|{timestamp}`.
+                Anyone can verify the 64-character hex digest using the built-in `🛡️ Verify Cryptographic Integrity` ledger modal.
+                """)
+
+            with st.expander("Q5: How does the domain-adaptive portfolio engine work?"):
+                st.markdown("""
+                **Answer:** The dossier generator inspects the student's enrolled course and dynamically injects tailored visual themes:
+                - **Software / Web Dev**: Dark Cyber Theme (`#0A0E17`) + Chart.js Skill Radar + GitHub cards.
+                - **Finance / Tally**: Corporate Emerald Theme (`#064E3B`) + GST balance sheet cards + ledger compliance seals.
+                - **Automotive / Hardware**: Industrial Titanium & Amber Theme (`#18181B`, `#F59E0B`) + ECU waveform canvas.
+                """)
+
     # --- SIDEBAR ADMIN UTILITIES ---
     with st.sidebar:
         st.markdown("### ⚙️ System Admin Utilities")
@@ -1070,94 +1159,6 @@ def main_app_layout():
 
     # ROUTE 3: ADMIN MULTI-TENANT WORKSPACE (?page=admin or default)
     else:
-        # --- MODAL DIALOG FOR FEATURE GUIDE & AGENT ROLES & FAQ ---
-        @st.dialog("📘 KaushalSetu Platform Guide & Agent Intelligence Hub", width="large")
-        def modal_feature_guide():
-            m_tab1, m_tab2, m_tab3 = st.tabs([
-                "✨ End-to-End Module Documentation",
-                "⚡ Autonomous Agent ROI & Impact Matrix",
-                "❓ Interactive FAQ & System Architecture"
-            ])
-            
-            with m_tab1:
-                st.markdown("### 🤖 Autonomous Agent End-to-End Architecture & Workflow")
-                
-                col_m1, col_m2 = st.columns(2)
-                with col_m1:
-                    st.markdown("""
-                    <div style="background:#0F172A; border:1px solid #38BDF8; padding:16px; border-radius:12px; margin-bottom:14px;">
-                        <h4 style="color:#38BDF8; margin:0;">Module 1: Dynamic Vocational Curriculum Synthesis</h4>
-                        <p style="font-size:0.85rem; color:#CBD5E1; margin:6px 0 0 0;">
-                            Gemini 3.5 Pro ingests vocational topics or syllabus PDFs and synthesizes job-ready course modules, 10–20 difficulty-graded MCQs, and multimodal practical rubrics in under <b>10 seconds</b>.
-                        </p>
-                    </div>
-                    <div style="background:#0F172A; border:1px solid #A855F7; padding:16px; border-radius:12px; margin-bottom:14px;">
-                        <h4 style="color:#C084FC; margin:0;">Module 2: Multimodal Examination & Anti-Hallucination Grading</h4>
-                        <p style="font-size:0.85rem; color:#CBD5E1; margin:6px 0 0 0;">
-                            Evaluates practical diagnostic code, circuit schematics, and AST logic using Gemma (42ms fast screening) + Gemini Multimodal Vision with syllabus-grounded rubrics.
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                with col_m2:
-                    st.markdown("""
-                    <div style="background:#0F172A; border:1px solid #34D399; padding:16px; border-radius:12px; margin-bottom:14px;">
-                        <h4 style="color:#34D399; margin:0;">Module 3: Cryptographic Ledger & Instant Verification</h4>
-                        <p style="font-size:0.85rem; color:#CBD5E1; margin:6px 0 0 0;">
-                            Seals candidate marksheet with SHA-256 cryptographic digests (`0x...`), preventing credential tampering and enabling zero-trust verification.
-                        </p>
-                    </div>
-                    <div style="background:#0F172A; border:1px solid #F59E0B; padding:16px; border-radius:12px;">
-                        <h4 style="color:#FBBF24; margin:0;">Module 4: Autonomous Live Web Job Match & Auto-Apply</h4>
-                        <p style="font-size:0.85rem; color:#CBD5E1; margin:6px 0 0 0;">
-                            Gemini Google Search Grounding scans live job boards (Google Jobs, Indeed, LinkedIn, Naukri) and dispatches verified dossiers to recruiters in 1-Click.
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-            with m_tab2:
-                st.markdown("### ⚡ Autonomous Agent ROI & Real-World Efficiency Gains")
-                st.markdown("""
-                | Workflow Metric / Task | Traditional Vocational Center | KaushalSetu Autonomous Agent Engine | Efficiency Gain / Impact |
-                | :--- | :--- | :--- | :--- |
-                | **Curriculum & Exam Synthesis** | 2 – 3 Weeks | **12 Seconds (Gemini 3.5 Pro)** | **⚡ 99.8% Time Saved** |
-                | **Practical Code & Circuit Grading** | 4 – 7 Days Manual Review | **Real-Time (Instant SHA-256 Ledger)** | **⚡ Zero Human Latency** |
-                | **Job Sourcing & Applications** | 15 – 20 Hours / Week per Student | **Continuous 30+ Live Crawler & Auto-Apply** | **⚡ 100% Automated Grounding** |
-                | **Cost per Candidate Assessment** | ₹2,500 / student (Manual Board) | **₹0.15 / student (Serverless Cloud)** | **⚡ 99.9% Cost Reduction** |
-                """)
-                st.success("🎉 Reduces 4.5 Hours of Manual Educator Labor to 3.2 Seconds per candidate batch!")
-
-            with m_tab3:
-                st.markdown("### ❓ Comprehensive Interactive FAQ Accordion")
-                
-                with st.expander("Q1: How does KaushalSetu ensure zero hallucinations in job matching?", expanded=True):
-                    st.markdown("""
-                    **Answer:** KaushalSetu uses **Gemini Google Search Tool Grounding** combined with strict candidate profile parameters (Track, Verified Skills, Region). Every job returned is crawled live from real search listings on Google Jobs, LinkedIn India, Indeed, and Naukri with verified application links.
-                    """)
-                    
-                with st.expander("Q2: Can an institute edit course modules or student records post-creation?"):
-                    st.markdown("""
-                    **Answer:** Yes. Institute admins have full CRUD controls to update course titles, modules, skills, candidate DOB, socials, and marks. Any modification automatically recalculates the SHA-256 cryptographic verification digest in real-time.
-                    """)
-
-                with st.expander("Q3: How does state-aware post-exam routing work for students?"):
-                    st.markdown("""
-                    **Answer:** When a student logs in via Student ID and Date of Birth, KaushalSetu checks if an evaluation record exists. If the exam is completed, the student is routed directly to their Official Marksheet, Domain-Adaptive Portfolio Dossier, and Live Web Job Hub.
-                    """)
-
-                with st.expander("Q4: How is candidate credential integrity cryptographically guaranteed?"):
-                    st.markdown("""
-                    **Answer:** Every candidate marksheet and generated portfolio is deterministically hashed using **SHA-256**:
-                    `Payload: {student_id}|{branch_code}|{aggregate_score}|{timestamp}`.
-                    Anyone can verify the 64-character hex digest using the built-in `🛡️ Verify Cryptographic Integrity` ledger modal.
-                    """)
-
-                with st.expander("Q5: How does the domain-adaptive portfolio engine work?"):
-                    st.markdown("""
-                    **Answer:** The dossier generator inspects the student's enrolled course and dynamically injects tailored visual themes:
-                    - **Software / Web Dev**: Dark Cyber Theme (`#0A0E17`) + Chart.js Skill Radar + GitHub cards.
-                    - **Finance / Tally**: Corporate Emerald Theme (`#064E3B`) + GST balance sheet cards + ledger compliance seals.
-                    - **Automotive / Hardware**: Industrial Titanium & Amber Theme (`#18181B`, `#F59E0B`) + ECU waveform canvas.
-                    """)
 
         # --- SLEEK MINIMALIST NAVIGATION & GOVERNANCE HEADER ---
         col_title, col_actions = st.columns([6, 4], vertical_alignment="center")
