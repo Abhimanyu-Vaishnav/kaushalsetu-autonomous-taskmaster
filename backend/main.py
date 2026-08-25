@@ -389,9 +389,9 @@ def direct_get_courses(branch_id: str = None, institute_id: str = None):
         conn = get_db()
         c = conn.cursor()
         if branch_id and str(branch_id).strip():
-            c.execute("SELECT * FROM courses WHERE branch_id = ? OR branch_id = '' ORDER BY created_at DESC", (str(branch_id).strip(),))
+            c.execute("SELECT * FROM courses WHERE branch_id = ? OR branch_id = '' OR branch_id IS NULL ORDER BY created_at DESC", (str(branch_id).strip(),))
         elif institute_id and str(institute_id).strip():
-            c.execute("SELECT * FROM courses WHERE institute_id = ? OR institute_id = '' ORDER BY created_at DESC", (str(institute_id).strip(),))
+            c.execute("SELECT * FROM courses WHERE institute_id = ? OR institute_id = '' OR institute_id IS NULL ORDER BY created_at DESC", (str(institute_id).strip(),))
         else:
             c.execute("SELECT * FROM courses ORDER BY created_at DESC")
         rows = [dict(r) for r in c.fetchall()]

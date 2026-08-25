@@ -1737,13 +1737,7 @@ def main_app_layout():
                 if st.button("➕ Create New Course", type="primary", use_container_width=True):
                     modal_create_course(sel_inst['id'], sel_branch['id'], sel_branch['branch_name'])
 
-            branch_courses = []
-            try:
-                cres = requests.get(f"{BACKEND_URL}/api/courses?branch_id={sel_branch['id']}", timeout=2)
-                if cres.status_code == 200:
-                    branch_courses = cres.json()["data"]
-            except Exception:
-                pass
+            branch_courses = direct_get_courses(branch_id=sel_branch['id'])
 
             if not branch_courses:
                 st.info("No custom courses registered for this branch node yet. Click **➕ Create New Course** to synthesize one!")

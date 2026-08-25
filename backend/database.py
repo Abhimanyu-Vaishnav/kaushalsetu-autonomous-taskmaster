@@ -91,6 +91,18 @@ def init_complete_db():
         except Exception:
             pass
 
+    if "branch_id" not in cols:
+        try:
+            c.execute("ALTER TABLE courses ADD COLUMN branch_id TEXT DEFAULT ''")
+        except Exception:
+            pass
+
+    if "institute_id" not in cols:
+        try:
+            c.execute("ALTER TABLE courses ADD COLUMN institute_id TEXT DEFAULT ''")
+        except Exception:
+            pass
+
     # Ensure other tables exist cleanly
     c.execute("""
         CREATE TABLE IF NOT EXISTS institutes (
