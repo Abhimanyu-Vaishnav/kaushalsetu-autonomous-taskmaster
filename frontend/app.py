@@ -42,10 +42,12 @@ def parse_list_or_json(val):
         return [s.strip(" '\"[]") for s in items if s.strip(" '\"[]")]
     return []
 
-# Add root directory to path for direct in-process engine imports
+# Add root and backend directories to path for direct in-process engine imports
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
+BACKEND_DIR = os.path.join(ROOT_DIR, "backend")
+for d in [BACKEND_DIR, ROOT_DIR]:
+    if d not in sys.path:
+        sys.path.insert(0, d)
 
 # Import backend engines directly (Zero HTTP required!)
 from backend.main import (

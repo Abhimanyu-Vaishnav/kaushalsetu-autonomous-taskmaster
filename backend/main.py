@@ -1,3 +1,13 @@
+import os
+import sys
+
+# Ensure both backend directory and root project directory are in sys.path for direct imports
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BACKEND_DIR)
+for d in [BACKEND_DIR, ROOT_DIR]:
+    if d not in sys.path:
+        sys.path.insert(0, d)
+
 from fastapi import FastAPI, HTTPException, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
@@ -7,35 +17,65 @@ from typing import List, Optional, Dict, Any, Union
 import re
 import csv
 import io
-import os
 import json
 import sqlite3
 import uuid
 from datetime import datetime, date
 
-from database import (
-    get_db_connection,
-    get_all_institutes,
-    get_institute_by_id,
-    get_institute_by_code,
-    create_institute,
-    get_branches_by_institute,
-    create_branch,
-    get_courses_by_branch,
-    create_course,
-    get_all_students,
-    get_student_by_id,
-    add_student,
-    set_student_consent,
-    get_assessments,
-    get_job_applications,
-    ensure_db_schema
-)
-from agent_engine import (
-    generate_assessment,
-    generate_verified_certificate
-)
-from recruiter_agent import AutonomousRecruiterAgent
+try:
+    from database import (
+        get_db_connection,
+        get_all_institutes,
+        get_institute_by_id,
+        get_institute_by_code,
+        create_institute,
+        get_branches_by_institute,
+        create_branch,
+        get_courses_by_branch,
+        create_course,
+        get_all_students,
+        get_student_by_id,
+        add_student,
+        set_student_consent,
+        get_assessments,
+        get_job_applications,
+        ensure_db_schema
+    )
+except ImportError:
+    from backend.database import (
+        get_db_connection,
+        get_all_institutes,
+        get_institute_by_id,
+        get_institute_by_code,
+        create_institute,
+        get_branches_by_institute,
+        create_branch,
+        get_courses_by_branch,
+        create_course,
+        get_all_students,
+        get_student_by_id,
+        add_student,
+        set_student_consent,
+        get_assessments,
+        get_job_applications,
+        ensure_db_schema
+    )
+
+try:
+    from agent_engine import (
+        generate_assessment,
+        generate_verified_certificate
+    )
+except ImportError:
+    from backend.agent_engine import (
+        generate_assessment,
+        generate_verified_certificate
+    )
+
+try:
+    from recruiter_agent import AutonomousRecruiterAgent
+except ImportError:
+    from backend.recruiter_agent import AutonomousRecruiterAgent
 
 # Ensure database schema is up-to-date on startup
 ensure_db_schema()
