@@ -57,6 +57,12 @@ except ImportError:
 
 try:
     from backend.main import (
+        direct_get_students,
+        direct_add_student,
+        direct_create_course,
+        direct_get_courses,
+        direct_update_course,
+        direct_delete_course,
         direct_get_placement_ledger,
         direct_dispatch_placement,
         direct_reset_database,
@@ -69,6 +75,12 @@ try:
     )
 except ImportError:
     from main import (
+        direct_get_students,
+        direct_add_student,
+        direct_create_course,
+        direct_get_courses,
+        direct_update_course,
+        direct_delete_course,
         direct_get_placement_ledger,
         direct_dispatch_placement,
         direct_reset_database,
@@ -1357,33 +1369,33 @@ def main_app_layout():
                             modules_str = ", ".join(modules_list) if isinstance(modules_list, list) else str(modules_list)
                             skills_str = ", ".join(skills_list) if isinstance(skills_list, list) else str(skills_list)
 
-                            r_mc = requests.post(f"{BACKEND_URL}/api/courses/create", json={
+                            res_data = direct_create_course({
                                 "institute_id": target_inst_id,
                                 "branch_id": target_branch_id,
+                                "title": mc_title.strip(),
                                 "course_name": mc_title.strip(),
                                 "course_description": mc_desc.strip(),
                                 "curriculum_summary": mc_desc.strip(),
+                                "modules": modules_list,
                                 "curriculum_sections": modules_str,
                                 "core_skills": skills_str,
+                                "skills": skills_list,
                                 "default_mcq_count": mc_mcqs
-                            }, timeout=12)
-                            if r_mc.status_code in [200, 201]:
-                                res_json = r_mc.json()
-                                c_data = res_json.get("data", {})
-                                c_name = c_data.get("course_name", mc_title)
-                                st.toast(f"🚀 Course '{c_name}' Synthesized & Created Successfully!", icon="✅")
+                            })
+                            if res_data.get("status") == "success" or res_data.get("success"):
+                                st.toast(f"🚀 Course '{mc_title.strip()}' Synthesized & Created Successfully!", icon="✅")
                                 st.session_state["courses_last_updated"] = time.time()
                                 st.rerun()
                             else:
-                                st.error(f"⚠️ Course creation failed: {r_mc.text}")
+                                st.error(f"⚠️ Course creation failed: {res_data.get('message')}")
                         except Exception as ex:
-                            st.error(f"⚠️ Network error while creating course: {str(ex)}")
+                            st.error(f"⚠️ Error while creating course: {str(ex)}")
 
         @st.dialog("✏️ Edit Vocational Course & Curriculum", width="large")
         def modal_edit_course(course_data):
-            st.markdown(f"Updating Course Record: **{course_data['course_name']}** (`ID: {course_data['id']}`)")
+            st.markdown(f"Updating Course Record: **{course_data.get('course_name') or course_data.get('title')}** (`ID: {course_data['id']}`)")
             with st.form(f"modal_edit_course_form_{course_data['id']}"):
-                ec_title = st.text_input("Course Title", value=course_data.get('course_name', ''))
+                ec_title = st.text_input("Course Title", value=course_data.get('course_name') or course_data.get('title', ''))
                 ec_desc = st.text_area("Course Description & Objective", value=course_data.get('course_description') or course_data.get('curriculum_summary', ''), height=80)
                 ec_sections = st.text_area("Curriculum Modules Breakdown (Comma or Line Separated)", value=course_data.get('curriculum_sections', ''), height=90)
                 ec_skills = st.text_input("Core Practical Skills (Comma Separated)", value=course_data.get('core_skills', ''))
@@ -1398,55 +1410,42 @@ def main_app_layout():
                 if sub_ec:
                     with st.spinner("Saving changes & updating course..."):
                         try:
-                            r_ec = requests.put(f"{BACKEND_URL}/api/courses/{course_data['id']}", json={
+                            res_data = direct_update_course(course_data['id'], {
                                 "course_id": course_data['id'],
+                                "title": ec_title,
                                 "course_name": ec_title,
                                 "course_description": ec_desc,
                                 "curriculum_summary": ec_desc,
                                 "curriculum_sections": ec_sections,
+                                "modules": ec_sections,
                                 "core_skills": ec_skills,
+                                "skills": ec_skills,
                                 "default_mcq_count": ec_mcqs
-                            }, timeout=10)
-                            if r_ec.status_code == 200:
-                                res_data = r_ec.json()
-                                if res_data.get("status") == "success" or res_data.get("success"):
-                                    st.toast("✅ Course updated successfully!", icon="🎉")
-                                    st.rerun()
-                                else:
-                                    st.error(f"Error updating course: {res_data.get('message')}")
+                            })
+                            if res_data.get("status") == "success" or res_data.get("success"):
+                                st.toast("✅ Course updated successfully!", icon="🎉")
+                                st.rerun()
                             else:
-                                try:
-                                    err_txt = r_ec.json().get("message") or r_ec.json().get("detail")
-                                except Exception:
-                                    err_txt = r_ec.text
-                                st.error(f"Server error ({r_ec.status_code}): {err_txt}")
+                                st.error(f"Error updating course: {res_data.get('message')}")
                         except Exception as ex:
                             st.error(f"Update request failed: {ex}")
 
         @st.dialog("🗑️ Confirm Course Deletion")
         def modal_confirm_delete_course(course_data):
-            st.warning(f"Are you sure you want to permanently delete **{course_data['course_name']}** (`ID: {course_data['id']}`)?")
+            st.warning(f"Are you sure you want to permanently delete **{course_data.get('course_name') or course_data.get('title')}** (`ID: {course_data['id']}`)?")
             st.caption("This action removes the course record and cleans up associated assessment entries.")
             col_cd1, col_cd2 = st.columns(2)
             with col_cd1:
                 if st.button("🔴 Confirm Delete", type="primary", use_container_width=True):
                     try:
-                        del_res = requests.delete(f"{BACKEND_URL}/api/courses/{course_data['id']}", timeout=10)
-                        if del_res.status_code == 200:
-                            res_data = del_res.json()
-                            if res_data.get("status") == "success" or res_data.get("success"):
-                                st.toast("✅ Course deleted successfully!", icon="🗑️")
-                                st.rerun()
-                            else:
-                                st.error(f"Error deleting course: {res_data.get('message')}")
+                        res_data = direct_delete_course(course_data['id'])
+                        if res_data.get("status") == "success" or res_data.get("success"):
+                            st.toast("✅ Course deleted successfully!", icon="🗑️")
+                            st.rerun()
                         else:
-                            try:
-                                err_txt = del_res.json().get("message") or del_res.json().get("detail")
-                            except Exception:
-                                err_txt = del_res.text
-                            st.error(f"Server error ({del_res.status_code}): {err_txt}")
+                            st.error(f"Error deleting course: {res_data.get('message')}")
                     except Exception as ex:
-                        st.error(f"Delete request failed: {ex}")
+                        st.error(f"Error deleting course: {ex}")
             with col_cd2:
                 if st.button("Cancel", use_container_width=True):
                     st.rerun()
@@ -1487,15 +1486,15 @@ def main_app_layout():
                         }
                         try:
                             with st.spinner("Enrolling candidate & synthesizing base profile..."):
-                                resp = requests.post(f"{BACKEND_URL}/api/students", json=payload, timeout=8)
-                            if resp.status_code in [200, 201]:
+                                resp = direct_add_student(payload)
+                            if resp.get("status") == "success" or resp.get("success"):
                                 st.toast(f"✅ Candidate {ms_name} Enrolled Successfully!", icon="🎉")
                                 st.session_state["roster_refresh_key"] = time.time()
                                 st.rerun()
                             else:
-                                st.error(f"❌ Registration Failed (Code {resp.status_code}): {resp.text}")
+                                st.error(f"❌ Registration Failed: {resp.get('message')}")
                         except Exception as err:
-                            st.error(f"❌ Connection Error: {str(err)}")
+                            st.error(f"❌ Enrollment Error: {str(err)}")
 
         @st.dialog("✏️ Edit Student Candidate Record", width="large")
         def modal_edit_student_record(student_data):
@@ -1819,23 +1818,20 @@ def main_app_layout():
                         if st.button("🚀 Commit & Import All Candidates to Branch", type="primary", use_container_width=True):
                             imported_count = 0
                             for _, row in df.iterrows():
-                                c_name_row = str(row.get("CourseName", list(course_opts.keys())[0]))
-                                c_id = course_opts.get(c_name_row, "CRS-GENERIC")
-                                r_b = requests.post(f"{BACKEND_URL}/api/students", json={
-                                    "institute_id": sel_inst["id"],
-                                    "branch_id": sel_branch["id"],
-                                    "course_id": c_id,
-                                    "branch_name": sel_branch["branch_name"],
-                                    "course_name": c_name_row,
-                                    "full_name": str(row.get("FullName", "Student")),
-                                    "dob": str(row.get("DOB", "2000-01-01")),
-                                    "email": str(row.get("Email", "bulk@skillforge-edu.org")),
-                                    "phone": str(row.get("Phone", "+91 9876543210")),
-                                    "bio": "Bulk imported roster candidate",
-                                    "fees_status": "PAID",
-                                    "consent": 1
-                                })
-                                if r_b.status_code in [200, 201]:
+                                r_b = direct_add_student({
+                                     "institute_id": sel_inst['id'],
+                                     "branch_id": sel_branch['id'],
+                                     "branch_name": sel_branch['branch_name'],
+                                     "full_name": row.get('FullName') or row.get('Name', 'Candidate'),
+                                     "dob": str(row.get('DOB', '2001-01-01')),
+                                     "email": str(row.get('Email', '')),
+                                     "phone": str(row.get('Phone', '')),
+                                     "course_name": str(row.get('CourseName', 'Vocational Track')),
+                                     "bio": "Bulk imported roster candidate",
+                                     "fees_status": "PAID",
+                                     "consent": 1
+                                 })
+                                if r_b.get("status") == "success" or r_b.get("success"):
                                     imported_count += 1
                             st.session_state["csv_uploader_key"] += 1
                             st.toast(f"✅ Successfully imported {imported_count} candidates into {sel_branch['branch_name']}! Uploader reset.", icon="🎉")

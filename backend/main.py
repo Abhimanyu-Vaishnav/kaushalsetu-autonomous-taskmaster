@@ -306,6 +306,150 @@ def direct_dispatch_placement(payload: dict):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+def direct_create_course(payload: dict):
+    try:
+        title = payload.get("title") or payload.get("course_name") or payload.get("course_title") or "Vocational Track"
+        topic = payload.get("topic") or title
+        branch_id = payload.get("branch_id") or ""
+        institute_id = payload.get("institute_id") or ""
+        modules = payload.get("modules") or payload.get("curriculum_sections") or []
+        mcqs = payload.get("mcqs") or []
+        capstone = payload.get("capstone_assignment") or payload.get("capstone") or payload.get("course_description") or ""
+        skills = payload.get("skills") or payload.get("core_skills") or []
+        desc = payload.get("course_description") or payload.get("curriculum_summary") or title
+
+        course_id = payload.get("id") or f"CRS-{uuid.uuid4().hex[:6].upper()}"
+
+        modules_json = json.dumps(modules) if isinstance(modules, (list, dict)) else str(modules)
+        mcqs_json = json.dumps(mcqs) if isinstance(mcqs, (list, dict)) else str(mcqs)
+        skills_json = json.dumps(skills) if isinstance(skills, (list, dict)) else str(skills)
+
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            INSERT OR REPLACE INTO courses 
+            (id, institute_id, branch_id, title, topic, modules, mcqs, capstone, course_description, curriculum_summary, curriculum_sections, core_skills)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (course_id, institute_id, branch_id, title, topic, modules_json, mcqs_json, capstone, desc, desc, modules_json, skills_json))
+        conn.commit()
+        conn.close()
+
+        return {"status": "success", "success": True, "message": "Course created successfully!", "course_id": course_id, "id": course_id, "data": {"id": course_id, "title": title, "course_name": title}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def direct_get_courses(branch_id: str = None, institute_id: str = None):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        if branch_id and str(branch_id).strip():
+            c.execute("SELECT * FROM courses WHERE branch_id = ? OR branch_id = '' ORDER BY created_at DESC", (str(branch_id).strip(),))
+        elif institute_id and str(institute_id).strip():
+            c.execute("SELECT * FROM courses WHERE institute_id = ? OR institute_id = '' ORDER BY created_at DESC", (str(institute_id).strip(),))
+        else:
+            c.execute("SELECT * FROM courses ORDER BY created_at DESC")
+        rows = [dict(r) for r in c.fetchall()]
+        conn.close()
+        for r in rows:
+            if not r.get("course_name"):
+                r["course_name"] = r.get("title") or "Vocational Track"
+            if not r.get("title"):
+                r["title"] = r.get("course_name") or "Vocational Track"
+        return rows
+    except Exception as e:
+        print(f"Error fetching courses: {e}")
+        return []
+
+def direct_update_course(course_id: str, payload: dict):
+    try:
+        title = payload.get("title") or payload.get("course_name") or "Vocational Track"
+        topic = payload.get("topic") or title
+        modules = payload.get("modules") or payload.get("curriculum_sections") or []
+        mcqs = payload.get("mcqs") or []
+        capstone = payload.get("capstone") or payload.get("course_description") or ""
+        desc = payload.get("course_description") or payload.get("curriculum_summary") or title
+        skills = payload.get("core_skills") or payload.get("skills") or []
+
+        modules_json = json.dumps(modules) if isinstance(modules, (list, dict)) else str(modules)
+        mcqs_json = json.dumps(mcqs) if isinstance(mcqs, (list, dict)) else str(mcqs)
+        skills_json = json.dumps(skills) if isinstance(skills, (list, dict)) else str(skills)
+
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            UPDATE courses 
+            SET title = ?, topic = ?, modules = ?, mcqs = ?, capstone = ?, course_description = ?, curriculum_summary = ?, curriculum_sections = ?, core_skills = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (title, topic, modules_json, mcqs_json, capstone, desc, desc, modules_json, skills_json, str(course_id)))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "success": True, "message": "Course updated successfully."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def direct_delete_course(course_id: str):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("DELETE FROM courses WHERE id = ?", (str(course_id),))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "success": True, "message": "Course deleted successfully."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def direct_get_students(branch_id: str = None, institute_id: str = None):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        if branch_id and str(branch_id).strip():
+            c.execute("SELECT * FROM students WHERE branch_id = ? OR branch_center LIKE ? ORDER BY created_at DESC", (str(branch_id).strip(), f"%{branch_id}%"))
+        elif institute_id and str(institute_id).strip():
+            c.execute("SELECT * FROM students WHERE institute_id = ? ORDER BY created_at DESC", (str(institute_id).strip(),))
+        else:
+            c.execute("SELECT * FROM students ORDER BY created_at DESC")
+        rows = [dict(r) for r in c.fetchall()]
+        conn.close()
+        for r in rows:
+            if not r.get("full_name"):
+                r["full_name"] = r.get("name") or "Candidate"
+            if not r.get("student_id"):
+                r["student_id"] = r.get("id") or "STU-1001"
+            if not r.get("course_name"):
+                r["course_name"] = r.get("track") or "Vocational Track"
+        return rows
+    except Exception as e:
+        print(f"Error fetching students: {e}")
+        return []
+
+def direct_add_student(payload: dict):
+    try:
+        from database import add_student
+        name = str(payload.get("full_name") or payload.get("name") or "").strip()
+        if not name:
+            return {"status": "error", "message": "Full name is required"}
+        email = str(payload.get("email") or "").strip()
+        phone = str(payload.get("phone") or "").strip()
+        dob = str(payload.get("dob") or "2000-01-01").strip()
+        inst_id = str(payload.get("institute_id") or "INST-ROOT").strip()
+        branch_id = str(payload.get("branch_id") or "BR-MAIN").strip()
+        course_name = str(payload.get("course_name") or payload.get("track") or "Vocational Track").strip()
+        b_name = str(payload.get("branch_name") or payload.get("branch_center") or "Main Center").strip()
+
+        res = add_student(
+            institute_id=inst_id,
+            branch_id=branch_id,
+            name=name,
+            dob=dob,
+            email=email,
+            phone=phone,
+            branch_center=b_name,
+            track=course_name
+        )
+        return {"status": "success", "success": True, "message": "Student added successfully", "data": res, "student_id": res.get("student_id") if isinstance(res, dict) else ""}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 PORTFOLIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "portfolios")
 os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 
