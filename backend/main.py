@@ -308,17 +308,25 @@ def direct_dispatch_placement(payload: dict):
 
 def direct_create_course(payload: dict):
     try:
-        title = payload.get("title") or payload.get("course_name") or payload.get("course_title") or "Vocational Track"
-        topic = payload.get("topic") or title
-        branch_id = payload.get("branch_id") or ""
-        institute_id = payload.get("institute_id") or ""
+        import uuid, json
+        
+        c_name = str(
+            payload.get("course_name") 
+            or payload.get("title") 
+            or payload.get("course_title") 
+            or "Vocational Technical Track"
+        ).strip()
+
+        topic = str(payload.get("topic") or c_name).strip()
+        branch_id = str(payload.get("branch_id") or "").strip()
+        institute_id = str(payload.get("institute_id") or "").strip()
         modules = payload.get("modules") or payload.get("curriculum_sections") or []
         mcqs = payload.get("mcqs") or []
-        capstone = payload.get("capstone_assignment") or payload.get("capstone") or payload.get("course_description") or ""
+        capstone = str(payload.get("capstone_assignment") or payload.get("capstone") or payload.get("course_description") or "").strip()
         skills = payload.get("skills") or payload.get("core_skills") or []
-        desc = payload.get("course_description") or payload.get("curriculum_summary") or title
+        desc = str(payload.get("course_description") or payload.get("curriculum_summary") or c_name).strip()
 
-        course_id = payload.get("id") or f"CRS-{uuid.uuid4().hex[:6].upper()}"
+        course_id = str(payload.get("id") or f"CRS-{uuid.uuid4().hex[:6].upper()}").strip()
 
         modules_json = json.dumps(modules) if isinstance(modules, (list, dict)) else str(modules)
         mcqs_json = json.dumps(mcqs) if isinstance(mcqs, (list, dict)) else str(mcqs)
@@ -328,15 +336,15 @@ def direct_create_course(payload: dict):
         c = conn.cursor()
         c.execute("""
             INSERT OR REPLACE INTO courses 
-            (id, institute_id, branch_id, title, topic, modules, mcqs, capstone, course_description, curriculum_summary, curriculum_sections, core_skills)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (course_id, institute_id, branch_id, title, topic, modules_json, mcqs_json, capstone, desc, desc, modules_json, skills_json))
+            (id, institute_id, branch_id, title, course_name, topic, modules, mcqs, capstone, skills, course_description, curriculum_summary, curriculum_sections, core_skills)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (course_id, institute_id, branch_id, c_name, c_name, topic, modules_json, mcqs_json, capstone, skills_json, desc, desc, modules_json, skills_json))
         conn.commit()
         conn.close()
 
-        return {"status": "success", "success": True, "message": "Course created successfully!", "course_id": course_id, "id": course_id, "data": {"id": course_id, "title": title, "course_name": title}}
+        return {"status": "success", "success": True, "message": "Course created successfully!", "course_id": course_id, "id": course_id, "title": c_name, "course_name": c_name, "data": {"id": course_id, "title": c_name, "course_name": c_name}}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"Course creation failed: {str(e)}"}
 
 def direct_get_courses(branch_id: str = None, institute_id: str = None):
     try:

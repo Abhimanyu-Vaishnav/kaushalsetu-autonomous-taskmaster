@@ -310,11 +310,13 @@ def ensure_db_schema():
             # Migrate courses table columns
             course_cols = [row[1] for row in cursor.execute("PRAGMA table_info(courses)").fetchall()]
             course_cols_to_add = {
-                "title": "TEXT DEFAULT ''",
+                "title": "TEXT DEFAULT 'Untitled Course'",
+                "course_name": "TEXT DEFAULT 'Untitled Course'",
                 "topic": "TEXT DEFAULT ''",
-                "modules": "TEXT DEFAULT ''",
-                "mcqs": "TEXT DEFAULT ''",
+                "modules": "TEXT DEFAULT '[]'",
+                "mcqs": "TEXT DEFAULT '[]'",
                 "capstone": "TEXT DEFAULT ''",
+                "skills": "TEXT DEFAULT '[]'",
                 "course_description": "TEXT DEFAULT ''",
                 "curriculum_summary": "TEXT DEFAULT ''",
                 "curriculum_sections": "TEXT DEFAULT ''",

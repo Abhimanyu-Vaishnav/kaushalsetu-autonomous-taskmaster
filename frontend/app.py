@@ -1757,7 +1757,7 @@ def main_app_layout():
                         <div style="background:#0F172A; border:1px solid #1E293B; border-radius:12px; padding:18px; margin-bottom:12px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
                                 <div>
-                                    <h3 style="color:#F9FAFB; margin:0; font-size:1.15rem; display:inline-block;">📖 {c['course_name']}</h3>
+                                    <h3 style="color:#F9FAFB; margin:0; font-size:1.15rem; display:inline-block;">📖 {c.get('title') or c.get('course_name') or 'Vocational Track'}</h3>
                                     &nbsp;<span class="badge-blue" style="font-size:0.75rem;">ID: {c['id']}</span>
                                 </div>
                                 <div>
