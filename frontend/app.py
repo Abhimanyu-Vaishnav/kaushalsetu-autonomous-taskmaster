@@ -1144,18 +1144,6 @@ def main_app_layout():
                     **Answer:** When a student logs in via Student ID and Date of Birth, KaushalSetu checks if an evaluation record exists. If the exam is completed, the student is routed directly to their Official Marksheet, Domain-Adaptive Portfolio Dossier, and Live Web Job Hub.
                     """)
 
-                with st.expander("Q4: Is the candidate portfolio globally accessible without localhost dependency?"):
-                    st.markdown("""
-                    **Answer:** Yes. Portfolio links automatically resolve using `PUBLIC_BASE_URL` (e.g. Google Cloud Run HTTPS endpoints), allowing recruiters anywhere in the world to inspect verified candidate credentials.
-                    """)
-                    - **`🧠 Gemini 3.5 Multimodal Reasoning`**: Executes high-order visual circuit grading, code analysis, and syllabus-grounded rubric evaluation.
-                    """)
-                    
-                with st.expander("Q3: How does the live job search avoid hallucinated URLs?"):
-                    st.markdown("""
-                    **Answer:** SkillForge integrates **Google Search Tool Grounding** directly into the job discovery agent. Every returned requisition is backed by real web search queries across Google Jobs, Indeed, and Naukri with verifiable direct application links.
-                    """)
-
                 with st.expander("Q4: How is candidate credential integrity cryptographically guaranteed?"):
                     st.markdown("""
                     **Answer:** Every candidate marksheet and generated portfolio is deterministically hashed using **SHA-256**:
