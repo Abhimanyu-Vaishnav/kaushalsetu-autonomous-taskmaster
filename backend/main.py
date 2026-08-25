@@ -531,13 +531,54 @@ def api_add_student(req: StudentCreateReq):
     log_agent_activity("STUDENT_ENROLLED", f"Enrolled candidate {stu['full_name']} ({stu['student_id']}) to {stu['branch_name']}", institute_id=stu['institute_id'], branch_id=stu['branch_id'], student_id=stu['student_id'])
     return {"success": True, "status": "success", "data": stu}
 
+def normalize_dob(dob_raw: Any) -> str:
+    """Normalizes DOB string (YYYY-MM-DD, DD-MM-YYYY, YYYY/MM/DD, etc.) into YYYY-MM-DD format."""
+    if not dob_raw:
+        return ""
+    cleaned = re.sub(r'[\s/.]+', '-', str(dob_raw).strip())
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d/%m/%Y", "%m-%d-%Y", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(cleaned, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return cleaned
+
+@app.post("/api/auth/student-login")
 @app.post("/api/student/verify-login")
-def api_verify_student_login(req: StudentLoginReq):
+def api_verify_student_login(payload: dict):
+    student_id = str(payload.get("student_id") or payload.get("id") or "").strip()
+    raw_dob = str(payload.get("dob") or "").strip()
+    normalized_dob = normalize_dob(raw_dob)
+
+    if not student_id or not raw_dob:
+        return {
+            "authenticated": False,
+            "success": False,
+            "status": "error",
+            "message": "Student ID and Date of Birth are required.",
+            "data": None
+        }
+
     from database import verify_student_login
-    stu = verify_student_login(req.student_id, req.dob)
-    if not stu:
-        raise HTTPException(status_code=401, detail=f"Authentication failed. Student ID or Date of Birth ('{req.dob}') does not match official record.")
-    return {"success": True, "data": stu}
+    stu = verify_student_login(student_id, normalized_dob)
+
+    if stu:
+        return {
+            "authenticated": True,
+            "success": True,
+            "status": "success",
+            "message": "Authentication successful",
+            "student": stu,
+            "data": stu
+        }
+    else:
+        return {
+            "authenticated": False,
+            "success": False,
+            "status": "error",
+            "message": f"Authentication failed. Student ID '{student_id}' or Date of Birth ('{raw_dob}') does not match official record.",
+            "data": None
+        }
 
 @app.post("/api/student/update-profile")
 def api_update_student_profile(req: StudentUpdateProfileReq):

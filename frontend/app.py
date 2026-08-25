@@ -1,4 +1,5 @@
 import os
+import re
 import streamlit as st
 import streamlit.components.v1 as components
 import requests
@@ -7,6 +8,18 @@ import time
 import base64
 import io
 import datetime
+
+def normalize_dob(dob_raw):
+    """Normalizes any incoming DOB string (YYYY-MM-DD, DD-MM-YYYY, YYYY/MM/DD, etc.) into YYYY-MM-DD format."""
+    if not dob_raw:
+        return ""
+    cleaned = re.sub(r'[\s/.]+', '-', str(dob_raw).strip())
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d/%m/%Y", "%m-%d-%Y", "%m/%d/%Y"):
+        try:
+            return datetime.datetime.strptime(cleaned, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return cleaned
 
 # 1. Internal API Communication (Streamlit -> FastAPI inside container)
 BACKEND_API_BASE = os.environ.get("BACKEND_INTERNAL_URL", "http://127.0.0.1:8000").rstrip("/")
@@ -262,31 +275,44 @@ def main_app_layout():
                     
                 if submit_auth:
                     try:
-                        dob_str = auth_dob.strftime("%Y-%m-%d")
-                        auth_res = requests.post(f"{BACKEND_URL}/api/student/verify-login", json={
-                            "student_id": auth_sid.strip(),
-                            "dob": dob_str
-                        }, timeout=5)
-                        
+                        formatted_dob = normalize_dob(auth_dob)
+                        auth_res = requests.post(
+                            f"{BACKEND_URL}/api/auth/student-login",
+                            json={"student_id": auth_sid.strip(), "dob": formatted_dob},
+                            timeout=5
+                        )
                         if auth_res.status_code == 200:
-                            s_data = auth_res.json()["data"]
-                            st.session_state["authenticated_student"] = s_data
-                            st.session_state["student_logged_in"] = True
-                            
-                            # Auto-synthesize assessment for student's course
-                            e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
-                                "topic": s_data['course_name'],
-                                "difficulty": "Intermediate"
-                            })
-                            if e_res.status_code == 200:
-                                st.session_state["current_exam"] = e_res.json()["data"]
-                                st.session_state["mcq_step"] = 0
-                                st.session_state["mcq_answers_dict"] = {}
-                            st.success(f"✅ Credentials & Date of Birth Verified! Welcome {s_data['full_name']}.")
-                            st.rerun()
+                            data = auth_res.json()
+                            if data.get("authenticated") or data.get("success"):
+                                s_data = data.get("student") or data.get("data")
+                                st.session_state["authenticated_student"] = s_data
+                                st.session_state["student_logged_in"] = True
+                                
+                                # Auto-synthesize assessment for student's course
+                                try:
+                                    e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
+                                        "topic": s_data.get('course_name', 'Vocational Training'),
+                                        "difficulty": "Intermediate"
+                                    }, timeout=10)
+                                    if e_res.status_code == 200:
+                                        st.session_state["current_exam"] = e_res.json().get("data")
+                                        st.session_state["mcq_step"] = 0
+                                        st.session_state["mcq_answers_dict"] = {}
+                                except Exception:
+                                    pass
+                                st.success(f"✅ Credentials & Date of Birth Verified! Welcome {s_data.get('full_name', 'Candidate')}.")
+                                st.rerun()
+                            else:
+                                err_msg = data.get("message", "Authentication failed: Invalid Student ID or Date of Birth.")
+                                st.error(f"❌ {err_msg}")
                         else:
-                            err_detail = auth_res.json().get("detail", "Authentication failed. Incorrect Student ID or Date of Birth.")
-                            st.error(f"❌ {err_detail}")
+                            try:
+                                err_text = auth_res.json().get("message") or auth_res.json().get("detail")
+                            except Exception:
+                                err_text = auth_res.text or "Invalid credentials"
+                            st.error(f"Login failed (Status {auth_res.status_code}): {err_text}")
+                    except requests.exceptions.JSONDecodeError:
+                        st.error("Authentication server returned an invalid response. Check backend logs.")
                     except Exception as e:
                         st.error(f"Authentication error: {e}")
                 st.stop()

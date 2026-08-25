@@ -560,21 +560,39 @@ def approve_retest(student_id: str) -> bool:
         conn.commit()
         return True
 
+def normalize_dob(dob_raw: Any) -> str:
+    """Normalizes any incoming DOB string (YYYY-MM-DD, DD-MM-YYYY, YYYY/MM/DD, etc.) into YYYY-MM-DD format."""
+    if not dob_raw:
+        return ""
+    cleaned = re.sub(r'[\s/.]+', '-', str(dob_raw).strip())
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%Y/%m/%d", "%d/%m/%Y", "%m-%d-%Y", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(cleaned, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return cleaned
+
 def verify_student_login(login_id_or_email: str, dob_input: str) -> Optional[Dict[str, Any]]:
-    """Strict Student DOB Authentication. Accepts Student ID or Email and exact YYYY-MM-DD DOB."""
+    """Strict Student DOB Authentication with robust DOB normalization."""
     clean_id = str(login_id_or_email or "").strip()
-    clean_dob = str(dob_input or "").strip()
-    if not clean_id or not clean_dob:
+    norm_input_dob = normalize_dob(dob_input)
+    if not clean_id or not norm_input_dob:
         return None
     
     with get_db_connection() as conn:
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("""
             SELECT * FROM students 
-            WHERE (LOWER(student_id) = LOWER(?) OR LOWER(email) = LOWER(?)) AND dob = ?
-        """, (clean_id, clean_id, clean_dob))
-        row = cursor.fetchone()
-        return dict(row) if row else None
+            WHERE (LOWER(student_id) = LOWER(?) OR LOWER(email) = LOWER(?))
+        """, (clean_id, clean_id))
+        rows = cursor.fetchall()
+        for row in rows:
+            student_dict = dict(row)
+            db_norm_dob = normalize_dob(student_dict.get("dob", ""))
+            if db_norm_dob == norm_input_dob or student_dict.get("dob") == norm_input_dob or student_dict.get("dob") == str(dob_input).strip():
+                return student_dict
+        return None
 
 def update_student_profile(
     student_id: str,
