@@ -59,12 +59,16 @@ try:
     from backend.main import (
         direct_reset_database,
         direct_student_login,
+        direct_create_institute,
+        direct_create_branch,
         normalize_dob
     )
 except ImportError:
     from main import (
         direct_reset_database,
         direct_student_login,
+        direct_create_institute,
+        direct_create_branch,
         normalize_dob
     )
 
@@ -1306,16 +1310,18 @@ def main_app_layout():
                 mi_thresh = st.slider("Minimum Placement Score % Threshold", 50, 95, 70)
                 sub_mi = st.form_submit_button("🚀 Create Institute & Branch", type="primary", use_container_width=True)
                 if sub_mi:
-                    r_mi = requests.post(f"{BACKEND_URL}/api/institutes/create", json={
+                    res_data = direct_create_institute({
                         "name": mi_name,
                         "code": mi_code,
                         "initial_branch_name": mi_bname,
                         "initial_city": mi_city,
                         "placement_threshold": mi_thresh
                     })
-                    if r_mi.status_code == 200:
-                        st.success("✅ Institute Network Created Successfully!")
+                    if res_data.get("status") == "success" or res_data.get("success"):
+                        st.toast("✅ Institute Network Created Successfully!", icon="🎉")
                         st.rerun()
+                    else:
+                        st.error(res_data.get("message", "Failed to create institute"))
 
         @st.dialog("📍 Add New Branch Node to Institute")
         def modal_create_branch(target_inst_id, target_inst_name):
@@ -1325,14 +1331,18 @@ def main_app_layout():
                 mb_city = st.text_input("City Location", value="Delhi NCR")
                 sub_mb = st.form_submit_button("➕ Save Branch Node", type="primary", use_container_width=True)
                 if sub_mb:
-                    r_mb = requests.post(f"{BACKEND_URL}/api/branches/create", json={
+                    res_data = direct_create_branch({
                         "institute_id": target_inst_id,
+                        "name": mb_name,
                         "branch_name": mb_name,
-                        "city": mb_city
+                        "city": mb_city,
+                        "location": mb_city
                     })
-                    if r_mb.status_code == 200:
-                        st.success(f"✅ Branch Added to {target_inst_name}!")
+                    if res_data.get("status") == "success" or res_data.get("success"):
+                        st.toast(f"✅ Branch Added to {target_inst_name}!", icon="📍")
                         st.rerun()
+                    else:
+                        st.error(res_data.get("message", "Failed to create branch"))
 
         @st.dialog("📚 Context-Rich Course Synthesizer")
         def modal_create_course(target_inst_id, target_branch_id, target_branch_name):

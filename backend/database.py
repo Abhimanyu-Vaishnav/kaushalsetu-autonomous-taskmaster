@@ -328,6 +328,35 @@ def ensure_db_schema():
                     except Exception:
                         pass
 
+            # Migrate institutes table columns
+            inst_cols = [row[1] for row in cursor.execute("PRAGMA table_info(institutes)").fetchall()]
+            inst_cols_to_add = {
+                "address": "TEXT DEFAULT ''",
+                "contact_email": "TEXT DEFAULT ''",
+                "contact_phone": "TEXT DEFAULT ''"
+            }
+            for col, col_type in inst_cols_to_add.items():
+                if col not in inst_cols:
+                    try:
+                        cursor.execute(f"ALTER TABLE institutes ADD COLUMN {col} {col_type}")
+                    except Exception:
+                        pass
+
+            # Migrate branches table columns
+            b_cols = [row[1] for row in cursor.execute("PRAGMA table_info(branches)").fetchall()]
+            b_cols_to_add = {
+                "name": "TEXT DEFAULT ''",
+                "location": "TEXT DEFAULT ''",
+                "contact_person": "TEXT DEFAULT ''",
+                "phone": "TEXT DEFAULT ''"
+            }
+            for col, col_type in b_cols_to_add.items():
+                if col not in b_cols:
+                    try:
+                        cursor.execute(f"ALTER TABLE branches ADD COLUMN {col} {col_type}")
+                    except Exception:
+                        pass
+
             conn.commit()
     except Exception as ex:
         print(f"[SCHEMA MIGRATION WARNING] {ex}")

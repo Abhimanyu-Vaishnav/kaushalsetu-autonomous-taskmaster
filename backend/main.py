@@ -131,6 +131,62 @@ def direct_student_login(student_id: str, dob_raw: str):
         return {"authenticated": True, "student": s}
     return {"authenticated": False, "message": "Date of Birth does not match."}
 
+def direct_create_institute(payload: dict):
+    try:
+        name = str(payload.get("name") or payload.get("institute_name") or "").strip()
+        if not name:
+            return {"status": "error", "message": "Institute name is required"}
+        inst_id = str(payload.get("id") or f"INST-{uuid.uuid4().hex[:6].upper()}").strip()
+        code = str(payload.get("code") or f"INST-{int(time.time())%10000 if 'time' in globals() else 1001}").strip()
+        address = str(payload.get("address") or payload.get("location") or "").strip()
+        email = str(payload.get("contact_email") or payload.get("email") or "").strip()
+        phone = str(payload.get("contact_phone") or payload.get("phone") or "").strip()
+        initial_branch = str(payload.get("initial_branch_name") or payload.get("branch_name") or "Main Center Node").strip()
+        initial_city = str(payload.get("initial_city") or payload.get("city") or "New Delhi").strip()
+        thresh = int(payload.get("placement_threshold") or 70)
+
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            INSERT OR REPLACE INTO institutes (id, name, code, address, contact_email, contact_phone, placement_threshold)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (inst_id, name, code, address, email, phone, thresh))
+        
+        branch_id = f"BR-{uuid.uuid4().hex[:6].upper()}"
+        c.execute("""
+            INSERT OR REPLACE INTO branches (id, institute_id, name, branch_name, city, location)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (branch_id, inst_id, initial_branch, initial_branch, initial_city, initial_city))
+        
+        conn.commit()
+        conn.close()
+        return {"status": "success", "success": True, "message": "Institute created successfully", "id": inst_id, "data": {"id": inst_id, "name": name, "code": code}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def direct_create_branch(payload: dict):
+    try:
+        name = str(payload.get("name") or payload.get("branch_name") or "").strip()
+        if not name:
+            return {"status": "error", "message": "Branch name is required"}
+        branch_id = str(payload.get("id") or f"BR-{uuid.uuid4().hex[:6].upper()}").strip()
+        inst_id = str(payload.get("institute_id") or "INST-GLOBAL-01").strip()
+        city = str(payload.get("city") or payload.get("location") or "Delhi").strip()
+        contact_person = str(payload.get("contact_person") or "").strip()
+        phone = str(payload.get("phone") or "").strip()
+
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            INSERT OR REPLACE INTO branches (id, institute_id, name, branch_name, city, location, contact_person, phone)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (branch_id, inst_id, name, name, city, city, contact_person, phone))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "success": True, "message": "Branch created successfully", "id": branch_id, "data": {"id": branch_id, "name": name, "city": city}}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 PORTFOLIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "portfolios")
 os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 
