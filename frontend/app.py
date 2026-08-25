@@ -57,6 +57,8 @@ except ImportError:
 
 try:
     from backend.main import (
+        direct_get_placement_ledger,
+        direct_dispatch_placement,
         direct_reset_database,
         direct_student_login,
         direct_get_institutes,
@@ -67,6 +69,8 @@ try:
     )
 except ImportError:
     from main import (
+        direct_get_placement_ledger,
+        direct_dispatch_placement,
         direct_reset_database,
         direct_student_login,
         direct_get_institutes,
@@ -1936,15 +1940,12 @@ def main_app_layout():
                                 modal_edit_student_record(stu)
                         with col_st5:
                             if st.button("🗑️ Remove", key=f"btn_delete_student_{stu['student_id']}", type="secondary", use_container_width=True):
-                                try:
-                                    del_s_res = requests.delete(f"{BACKEND_URL}/api/student/{stu['student_id']}", timeout=5)
-                                    if del_s_res.status_code == 200:
-                                        st.toast(f"Candidate {stu['full_name']} removed from roster.", icon="🗑️")
-                                        st.rerun()
-                                    else:
-                                        st.error(f"Error removing candidate: {del_s_res.text}")
-                                except Exception as ex:
-                                    st.error(f"Failed to remove candidate: {ex}")
+                                del_s_res = safe_api_call("DELETE", f"/api/student/{stu['student_id']}")
+                                if del_s_res and del_s_res.status_code in [200, 204]:
+                                    st.toast(f"Candidate {stu['full_name']} removed from roster.", icon="🗑️")
+                                    st.rerun()
+                                else:
+                                    st.error("Error removing candidate")
                         st.divider()
 
         # --- TAB 3: AUTONOMOUS PLACEMENT & LIVE LEDGER ---
@@ -1962,28 +1963,27 @@ def main_app_layout():
             </div>
             """, unsafe_allow_html=True)
             
-            try:
-                lres = requests.get(f"{BACKEND_URL}/api/placements/ledger?branch_id={sel_branch['id']}", timeout=2)
-                if lres.status_code == 200:
-                    ledger = lres.json()["data"]
-                    if not ledger:
-                        st.info("No active placement applications recorded for this branch yet.")
-                    else:
-                        for entry in ledger:
-                            with st.container():
-                                col_lg1, col_lg2, col_lg3 = st.columns([3, 2, 2])
-                                with col_lg1:
-                                    st.markdown(f"#### **{entry['company_name']}**")
-                                    st.markdown(f"Role: **{entry['role_title']}** | Student: `{entry['student_id']}`")
-                                with col_lg2:
-                                    st.markdown(f"🎯 Match Score: `{entry.get('match_percentage', 90)}%`")
-                                    st.markdown('<span class="badge-blue">💼 APPLICATION DISPATCHED</span>', unsafe_allow_html=True)
-                                with col_lg3:
-                                    dossier_link = entry.get('dossier_sent_url') or f"{BACKEND_URL}/portfolio/{entry['student_id']}"
-                                    st.markdown(f'<a href="{dossier_link}" target="_blank" style="text-decoration:none;"><button style="background:#0F172A; color:#38BDF8; border:1px solid #0284C7; border-radius:6px; padding:6px 10px; font-size:0.8rem; font-weight:600; cursor:pointer; width:100%;">🌐 View Portfolio Dossier</button></a>', unsafe_allow_html=True)
-                                st.divider()
-            except Exception as ex:
-                st.error(f"Error loading placement ledger: {ex}")
+            ledger_res = direct_get_placement_ledger(branch_id=sel_branch['id'])
+            if ledger_res.get("status") == "success" or ledger_res.get("success"):
+                ledger = ledger_res.get("ledger") or ledger_res.get("data") or []
+                if not ledger:
+                    st.info("ℹ️ No placement dispatches logged yet for this center. Turn on Autonomous Auto-Apply in the Student Hub to trigger real-time dispatches.")
+                else:
+                    for entry in ledger:
+                        with st.container():
+                            col_lg1, col_lg2, col_lg3 = st.columns([3, 2, 2])
+                            with col_lg1:
+                                st.markdown(f"#### **{entry.get('company_name', 'Hiring Partner')}**")
+                                st.markdown(f"Role: **{entry.get('role_title', 'Specialist')}** | Candidate: **{entry.get('student_name', 'Student')}** (`{entry.get('student_id')}`)")
+                            with col_lg2:
+                                st.markdown(f"🎯 Match Score: `{entry.get('match_percentage', 90)}%` | Seal: `HEX-{entry.get('ledger_hash', 'A8F9')}`")
+                                st.markdown('<span class="badge-blue">🚀 DISPATCHED & SIGNED</span>', unsafe_allow_html=True)
+                            with col_lg3:
+                                dossier_link = entry.get('dossier_url') or build_portfolio_dossier_url(entry.get('student_id', ''))
+                                st.markdown(f'<a href="{dossier_link}" target="_blank" style="text-decoration:none;"><button style="background:#0F172A; color:#38BDF8; border:1px solid #0284C7; border-radius:6px; padding:6px 10px; font-size:0.8rem; font-weight:600; cursor:pointer; width:100%;">🌐 View Signed Portfolio Dossier</button></a>', unsafe_allow_html=True)
+                            st.divider()
+            else:
+                st.error(f"Error loading placement ledger: {ledger_res.get('message')}")
 
         # --- TAB 4: REAL-TIME AGENT OPERATIONAL AUDIT LOG ---
         with tabs[3]:

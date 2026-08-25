@@ -219,6 +219,93 @@ def direct_create_branch(payload: dict):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+def direct_get_placement_ledger(branch_id: str = None, institute_id: str = None):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS placement_ledger (
+                id TEXT PRIMARY KEY,
+                student_id TEXT,
+                student_name TEXT,
+                track TEXT,
+                branch_id TEXT,
+                company_name TEXT,
+                role_title TEXT,
+                match_percentage INTEGER,
+                status TEXT DEFAULT 'DISPATCHED',
+                dossier_url TEXT,
+                ledger_hash TEXT,
+                dispatched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+
+        if branch_id and str(branch_id).strip():
+            c.execute("SELECT * FROM placement_ledger WHERE branch_id = ? ORDER BY dispatched_at DESC", (str(branch_id).strip(),))
+        elif institute_id and str(institute_id).strip():
+            c.execute("SELECT * FROM placement_ledger WHERE branch_id IN (SELECT id FROM branches WHERE institute_id = ?) ORDER BY dispatched_at DESC", (str(institute_id).strip(),))
+        else:
+            c.execute("SELECT * FROM placement_ledger ORDER BY dispatched_at DESC")
+        
+        rows = [dict(r) for r in c.fetchall()]
+        conn.close()
+        return {"status": "success", "success": True, "ledger": rows, "data": rows}
+    except Exception as e:
+        return {"status": "error", "message": str(e), "ledger": [], "data": []}
+
+def direct_dispatch_placement(payload: dict):
+    try:
+        import hashlib
+        import uuid
+        s_id = str(payload.get("student_id") or "").strip()
+        s_name = str(payload.get("student_name") or payload.get("full_name") or "Candidate").strip()
+        track = str(payload.get("track") or payload.get("course_name") or "General Track").strip()
+        branch_id = str(payload.get("branch_id") or "BR-MAIN").strip()
+        company = str(payload.get("company_name") or "Hiring Partner").strip()
+        role = str(payload.get("role_title") or "Specialist").strip()
+        match_pct = int(payload.get("match_percentage") or 85)
+        dossier_url = str(payload.get("dossier_url") or "").strip()
+
+        raw_sign = f"{s_id}|{company}|{role}|{datetime.now().isoformat()}"
+        ledger_hash = hashlib.sha256(raw_sign.encode()).hexdigest()[:16].upper()
+        entry_id = f"PLC-{uuid.uuid4().hex[:8].upper()}"
+
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS placement_ledger (
+                id TEXT PRIMARY KEY,
+                student_id TEXT,
+                student_name TEXT,
+                track TEXT,
+                branch_id TEXT,
+                company_name TEXT,
+                role_title TEXT,
+                match_percentage INTEGER,
+                status TEXT DEFAULT 'DISPATCHED',
+                dossier_url TEXT,
+                ledger_hash TEXT,
+                dispatched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        c.execute("""
+            INSERT INTO placement_ledger 
+            (id, student_id, student_name, track, branch_id, company_name, role_title, match_percentage, status, dossier_url, ledger_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'DISPATCHED', ?, ?)
+        """, (entry_id, s_id, s_name, track, branch_id, company, role, match_pct, dossier_url, ledger_hash))
+
+        c.execute("""
+            INSERT INTO agent_activity_logs (id, action_type, description)
+            VALUES (?, 'AUTO_PLACEMENT_DISPATCH', ?)
+        """, (f"LOG-{uuid.uuid4().hex[:8].upper()}", f"Dispatched dossier for {s_name} ({s_id}) to {company} for role {role} (Seal: {ledger_hash})"))
+
+        conn.commit()
+        conn.close()
+        return {"status": "success", "success": True, "ledger_id": entry_id, "ledger_hash": ledger_hash}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 PORTFOLIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "portfolios")
 os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 
