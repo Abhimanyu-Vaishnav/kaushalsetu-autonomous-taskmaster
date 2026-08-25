@@ -41,6 +41,23 @@ def parse_list_or_json(val):
         return [s.strip(" '\"[]") for s in items if s.strip(" '\"[]")]
     return []
 
+# Add root directory to path for direct in-process engine imports
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+# Import backend engines directly (Zero HTTP required!)
+from backend.main import (
+    direct_reset_database,
+    direct_student_login,
+    get_db,
+    DB_PATH
+)
+
+def perform_student_login(s_id: str, dob_val: str):
+    """Direct in-memory student authentication helper."""
+    return direct_student_login(s_id, dob_val)
+
 # 1. Global backend loopback inside the Cloud Run container
 INTERNAL_BACKEND_URL = os.environ.get("INTERNAL_BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
 BACKEND_URL = INTERNAL_BACKEND_URL
@@ -49,22 +66,36 @@ APP_HOST = PUBLIC_BASE_URL
 FRONTEND_URL = PUBLIC_BASE_URL
 
 def safe_api_call(method: str, endpoint: str, payload: dict = None, timeout: int = 12):
-    """Executes resilient internal API call with up to 3 automatic retries."""
-    url = f"{INTERNAL_BACKEND_URL}{endpoint}"
-    for attempt in range(3):
-        try:
-            m = method.upper()
-            if m == "POST":
-                return requests.post(url, json=payload, timeout=timeout)
-            elif m == "DELETE":
-                return requests.delete(url, timeout=timeout)
-            elif m == "PUT":
-                return requests.put(url, json=payload, timeout=timeout)
-            else:
-                return requests.get(url, timeout=timeout)
-        except Exception:
-            time.sleep(1)
-    return None
+    """Executes resilient in-process API call directly via FastAPI TestClient without network overhead or port dependencies."""
+    try:
+        from backend.main import app
+        from fastapi.testclient import TestClient
+        client = TestClient(app)
+        m = method.upper()
+        if m == "POST":
+            return client.post(endpoint, json=payload)
+        elif m == "PUT":
+            return client.put(endpoint, json=payload)
+        elif m == "DELETE":
+            return client.delete(endpoint)
+        else:
+            return client.get(endpoint)
+    except Exception:
+        url = f"{INTERNAL_BACKEND_URL}{endpoint}"
+        for attempt in range(2):
+            try:
+                m = method.upper()
+                if m == "POST":
+                    return requests.post(url, json=payload, timeout=timeout)
+                elif m == "DELETE":
+                    return requests.delete(url, timeout=timeout)
+                elif m == "PUT":
+                    return requests.put(url, json=payload, timeout=timeout)
+                else:
+                    return requests.get(url, timeout=timeout)
+            except Exception:
+                time.sleep(0.5)
+        return None
 
 def build_portfolio_dossier_url(student_id: str, existing_url: str = "") -> str:
     """Constructs user-facing absolute portfolio dossier URL relative to active deployment domain."""
@@ -349,17 +380,14 @@ def main_app_layout():
         if st.button("📘 Open Platform Guide & Agent Hub", use_container_width=True):
             modal_feature_guide()
 
-        if st.sidebar.button("🧹 Purge All Data & Reset DB", key="purge_all_db_btn", use_container_width=True):
-            try:
-                res = requests.post(f"{INTERNAL_BACKEND_URL}/api/admin/reset-database", timeout=15)
-                if res.status_code == 200:
-                    st.session_state.clear()
-                    st.toast("Database purged and freshly initialized on Cloud!", icon="✅")
-                    st.rerun()
-                else:
-                    st.sidebar.error(f"Failed to reset: {res.text}")
-            except Exception as err:
-                st.sidebar.error(f"Error resetting database: {err}")
+        if st.sidebar.button("🧹 Purge All Data & Reset DB", key="purge_btn_final", use_container_width=True):
+            res = direct_reset_database()
+            if res.get("status") == "success" or res.get("success"):
+                st.session_state.clear()
+                st.toast("Database purged and refreshed on Cloud!", icon="✅")
+                st.rerun()
+            else:
+                st.sidebar.error(res.get("message", "Database reset failed"))
         st.divider()
 
     # --- BIDIRECTIONAL STATE PERSISTENCE ENGINE ---
@@ -410,43 +438,29 @@ def main_app_layout():
                 if submit_auth:
                     try:
                         formatted_dob = normalize_dob(auth_dob)
-                        auth_res = requests.post(
-                            f"{BACKEND_URL}/api/auth/student-login",
-                            json={"student_id": auth_sid.strip(), "dob": formatted_dob},
-                            timeout=5
-                        )
-                        if auth_res.status_code == 200:
-                            data = auth_res.json()
-                            if data.get("authenticated") or data.get("success"):
-                                s_data = data.get("student") or data.get("data")
-                                st.session_state["authenticated_student"] = s_data
-                                st.session_state["student_logged_in"] = True
-                                
-                                # Auto-synthesize assessment for student's course
-                                try:
-                                    e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
-                                        "topic": s_data.get('course_name', 'Vocational Training'),
-                                        "difficulty": "Intermediate"
-                                    }, timeout=10)
-                                    if e_res.status_code == 200:
-                                        st.session_state["current_exam"] = e_res.json().get("data")
-                                        st.session_state["mcq_step"] = 0
-                                        st.session_state["mcq_answers_dict"] = {}
-                                except Exception:
-                                    pass
-                                st.success(f"✅ Credentials & Date of Birth Verified! Welcome {s_data.get('full_name', 'Candidate')}.")
-                                st.rerun()
-                            else:
-                                err_msg = data.get("message", "Authentication failed: Invalid Student ID or Date of Birth.")
-                                st.error(f"❌ {err_msg}")
-                        else:
+                        data = perform_student_login(auth_sid.strip(), formatted_dob)
+                        if data.get("authenticated") or data.get("success"):
+                            s_data = data.get("student") or data.get("data")
+                            st.session_state["authenticated_student"] = s_data
+                            st.session_state["student_logged_in"] = True
+                            
+                            # Auto-synthesize assessment for student's course
                             try:
-                                err_text = auth_res.json().get("message") or auth_res.json().get("detail")
+                                e_res = safe_api_call("POST", "/api/assessment/generate", payload={
+                                    "topic": s_data.get('course_name', 'Vocational Training'),
+                                    "difficulty": "Intermediate"
+                                }, timeout=10)
+                                if e_res and e_res.status_code == 200:
+                                    st.session_state["current_exam"] = e_res.json().get("data")
+                                    st.session_state["mcq_step"] = 0
+                                    st.session_state["mcq_answers_dict"] = {}
                             except Exception:
-                                err_text = auth_res.text or "Invalid credentials"
-                            st.error(f"Login failed (Status {auth_res.status_code}): {err_text}")
-                    except requests.exceptions.JSONDecodeError:
-                        st.error("Authentication server returned an invalid response. Check backend logs.")
+                                pass
+                            st.success(f"✅ Credentials & Date of Birth Verified! Welcome {s_data.get('full_name', 'Candidate')}.")
+                            st.rerun()
+                        else:
+                            err_msg = data.get("message", "Authentication failed: Invalid Student ID or Date of Birth.")
+                            st.error(f"❌ {err_msg}")
                     except Exception as e:
                         st.error(f"Authentication error: {e}")
                 st.stop()

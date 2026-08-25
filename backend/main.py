@@ -58,6 +58,33 @@ app.add_middleware(
 def health_check():
     return {"status": "ok", "service": "kaushalsetu-backend", "time": datetime.now().isoformat()}
 
+def get_db():
+    from database import get_db_connection
+    return get_db_connection()
+
+def direct_reset_database():
+    try:
+        from database import reset_database_clean_slate
+        reset_database_clean_slate()
+        return {"status": "success", "message": "Database reset cleanly."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def direct_student_login(student_id: str, dob_raw: str):
+    from database import get_db_connection, normalize_dob
+    norm_dob = normalize_dob(dob_raw)
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM students WHERE UPPER(student_id) = UPPER(?) OR UPPER(id) = UPPER(?)", (student_id.strip(), student_id.strip()))
+    row = c.fetchone()
+    conn.close()
+    if not row:
+        return {"authenticated": False, "message": "Student ID not found."}
+    s = dict(row)
+    if not s.get("dob") or normalize_dob(s.get("dob")) == norm_dob:
+        return {"authenticated": True, "student": s}
+    return {"authenticated": False, "message": "Date of Birth does not match."}
+
 PORTFOLIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "portfolios")
 os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 
