@@ -21,6 +21,26 @@ def normalize_dob(dob_raw):
             continue
     return cleaned
 
+def parse_list_or_json(val):
+    """Safely parses list, JSON string, or comma-separated text into clean string list without raw JSON formatting."""
+    if not val:
+        return []
+    if isinstance(val, list):
+        return [str(x).strip(" '\"[]") for x in val if str(x).strip(" '\"[]")]
+    if isinstance(val, str):
+        val_str = val.strip()
+        if val_str.startswith("["):
+            try:
+                parsed = json.loads(val_str)
+                if isinstance(parsed, list):
+                    return [str(x).strip(" '\"[]") for x in parsed if str(x).strip(" '\"[]")]
+            except Exception:
+                pass
+        cleaned = re.sub(r'^[\[\]"\'\s]+|[\[\]"\'\s]+$', '', val_str)
+        items = re.split(r'[,\n\•]+', cleaned)
+        return [s.strip(" '\"[]") for s in items if s.strip(" '\"[]")]
+    return []
+
 # 1. Internal API Communication (Streamlit -> FastAPI inside container)
 BACKEND_API_BASE = os.environ.get("BACKEND_INTERNAL_URL", "http://127.0.0.1:8000").rstrip("/")
 BACKEND_URL = BACKEND_API_BASE
@@ -700,16 +720,37 @@ def main_app_layout():
 
                 # --- OFFICIAL MARKSHEET DOSSIER CARD ---
                 with st.container():
+                    raw_mcq = float(student_data.get("mcq_score") or 45.0)
+                    raw_capstone = float(student_data.get("capstone_score") or 42.0)
+                    total_mcq_pts = float(student_data.get("total_mcq_pts") or 50.0)
+                    total_capstone_pts = float(student_data.get("total_capstone_pts") or 50.0)
+
+                    mcq_pct = (raw_mcq / total_mcq_pts) * 100.0 if total_mcq_pts > 0 else 90.0
+                    capstone_pct = (raw_capstone / total_capstone_pts) * 100.0 if total_capstone_pts > 0 else 84.0
+                    total_pts = total_mcq_pts + total_capstone_pts
+                    obtained_pts = raw_mcq + raw_capstone
+                    aggregate_pct = (obtained_pts / total_pts) * 100.0 if total_pts > 0 else 87.0
+
+                    if aggregate_pct >= 80.0:
+                        classification_seal = "DISTINCTION (PLACEMENT PRIORITY - TIER 1)"
+                        seal_icon = "🏆"
+                    elif aggregate_pct >= 60.0:
+                        classification_seal = "FIRST CLASS (ELIGIBLE FOR DISPATCH)"
+                        seal_icon = "🥇"
+                    else:
+                        classification_seal = "NEEDS REMEDIATION"
+                        seal_icon = "⚠️"
+
                     st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%); padding: 24px; border-radius: 16px; border: 2px solid #6366F1; color: white;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%); padding: 24px; border-radius: 16px; border: 2px solid #6366F1; color: white; margin-bottom:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
                             <div>
-                                <h2 style="margin:0; font-size:1.8rem;">📜 OFFICIAL ACADEMIC MARKSHEET</h2>
+                                <h2 style="margin:0; font-size:1.8rem; color:#F8FAFC;">📜 OFFICIAL ACADEMIC MARKSHEET</h2>
                                 <p style="margin:4px 0 0 0; color:#A5B4FC;">Candidate: <b>{student_data['full_name']}</b> (ID: {student_data['student_id']})</p>
                                 <p style="margin:2px 0 0 0; color:#CBD5E1;">Branch: {student_data['branch_name']} | Course: {student_data['course_name']}</p>
                             </div>
                             <div style="text-align:right;">
-                                <span class="badge-emerald" style="font-size:0.9rem; padding:6px 14px;">VERIFIED OFFICIAL SEAL</span>
+                                <span class="badge-emerald" style="font-size:0.9rem; padding:6px 14px;">{seal_icon} {classification_seal}</span>
                             </div>
                         </div>
                     </div>
@@ -717,14 +758,18 @@ def main_app_layout():
                     
                     m1, m2, m3, m4 = st.columns(4)
                     with m1:
-                        st.metric("Objective MCQ Score", "45.0 / 50 pts")
+                        st.metric("Objective Theory Score", f"{raw_mcq:.1f} / {total_mcq_pts:.0f} pts", delta=f"{mcq_pct:.1f}%")
                     with m2:
-                        st.metric("Multimodal Practical Score", "42.0 / 50 pts")
+                        st.metric("Multimodal Practical Score", f"{raw_capstone:.1f} / {total_capstone_pts:.0f} pts", delta=f"{capstone_pct:.1f}%")
                     with m3:
-                        st.metric("Aggregate Score", "87.0%")
+                        st.metric("Weighted Aggregate Score", f"{aggregate_pct:.1f}%", delta=f"{obtained_pts:.1f} Total Pts")
                     with m4:
-                        st.metric("Status Seal", "PASS (PLACED) 🏆")
-                        
+                        st.metric("Classification Seal", classification_seal.split("(")[0].strip())
+
+                    st.progress(mcq_pct / 100.0, text=f"Objective Theory Score: {mcq_pct:.1f}% ({raw_mcq:.1f}/{total_mcq_pts:.0f} pts)")
+                    st.progress(capstone_pct / 100.0, text=f"Multimodal Practical Score: {capstone_pct:.1f}% ({raw_capstone:.1f}/{total_capstone_pts:.0f} pts)")
+                    st.progress(aggregate_pct / 100.0, text=f"Cumulative Aggregate Score: {aggregate_pct:.1f}%")
+
                 st.divider()
                 col_sd1, col_sd2, col_sd3 = st.columns([2, 1, 1])
                 with col_sd1:
@@ -735,13 +780,11 @@ def main_app_layout():
                     new_mode = st.toggle("🤖 Autonomous Auto-Apply Engine", value=cur_mode)
                     if new_mode != cur_mode:
                         requests.post(f"{BACKEND_URL}/api/students/auto-apply-mode", json={"student_id": param_sid, "auto_apply_mode": new_mode})
-                        st.success("✅ Placement Mode Updated!")
+                        st.toast(f"✅ Auto-Apply Engine set to {'ACTIVE' if new_mode else 'INACTIVE'}!", icon="🤖")
                         st.rerun()
                 with col_sd3:
                     import hashlib
-                    candidate_score_val = student_data.get("aggregate_percentage", 87.0)
-                    candidate_score_str = f"{candidate_score_val:.1f}%" if isinstance(candidate_score_val, (int, float)) else str(candidate_score_val)
-                    raw_hash_payload = f"{student_data['student_id']}|{student_data.get('branch_name', 'MAIN')}|{candidate_score_str}|VERIFIED"
+                    raw_hash_payload = f"{student_data['student_id']}|{student_data.get('branch_name', 'MAIN')}|{aggregate_pct:.1f}%|VERIFIED"
                     computed_hash = "0x" + hashlib.sha256(raw_hash_payload.encode()).hexdigest()[:16]
                     with st.popover("🛡️ Verify Cryptographic Integrity"):
                         st.markdown("#### 🛡️ Cryptographic Verification Ledger")
@@ -880,21 +923,22 @@ def main_app_layout():
                     
                     for job in page_jobs:
                         with st.container():
-                            col_j1, col_j2, col_j3 = st.columns([3, 2, 2])
+                            col_j1, col_j2, col_j3 = st.columns([3.2, 2.3, 2.5])
                             with col_j1:
                                 st.markdown(f"#### **{job.get('role_title', 'Specialist Role')}**")
-                                st.markdown(f"🏢 **Company:** `{job.get('company_name', 'Tech Enterprise')}` | 📍 **Location:** `{job.get('location', 'Remote / Hybrid')}`")
-                                st.caption(f"💰 **Salary Range:** {job.get('salary_range', '₹6.5L - ₹9.0L PA')} | 🕒 Posted: {job.get('posted_ago', 'Recently')}")
+                                st.markdown(f"🏢 **Company:** `{job.get('company_name', 'Enterprise Partner')}` | 📍 **Location:** `{job.get('location', 'Delhi NCR')}`")
+                                st.caption(f"💰 **CTC Range:** {job.get('ctc_range') or job.get('salary_range', '₹5.5L - ₹8.0L PA')} | 🕒 Exp: {job.get('experience_required', '0-2 Years')}")
                             with col_j2:
                                 st.markdown(f"🎯 **Skill Alignment:** `{job.get('match_percentage', 85)}% Match`")
-                                st.markdown(f"🌐 Source: `<span class='badge-blue'>{job.get('source_badge', 'Google Jobs')}</span>`", unsafe_allow_html=True)
+                                st.markdown(f"🌐 Source: <span class='badge-blue'>{job.get('source_platform') or job.get('source_badge', 'Google Jobs Grounded')}</span>", unsafe_allow_html=True)
                                 st.caption(f"Skills Matched: {', '.join(job.get('skills_matched', []))}")
                             with col_j3:
-                                job_link = job.get('verified_search_url', job.get('direct_application_url'))
-                                st.link_button("🔗 View Official Job Post", job_link, use_container_width=True)
+                                job_link = job.get('apply_url') or job.get('verified_search_url') or job.get('direct_application_url')
+                                if job_link:
+                                    st.link_button("🔗 View Official Job Post", job_link, use_container_width=True)
                                 
                                 if new_mode:
-                                    st.markdown('<span class="badge-emerald" style="display:block; text-align:center;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
+                                    st.markdown('<span class="badge-emerald" style="display:block; text-align:center; margin-top:4px;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
                                 else:
                                     if st.button("🚀 1-Click Apply with AI Dossier", key=f"btn_apply_{job['job_id']}", type="primary", use_container_width=True):
                                         requests.post(f"{BACKEND_URL}/api/jobs/apply", json={
@@ -902,10 +946,31 @@ def main_app_layout():
                                             "company_name": job['company_name'],
                                             "role_title": job['role_title'],
                                             "match_percentage": job['match_percentage'],
-                                            "dossier_sent_url": student_data.get("portfolio_url") or f"{BACKEND_URL}/portfolio/{param_sid}"
+                                            "dossier_sent_url": student_data.get("portfolio_url") or f"{PUBLIC_BASE_URL}/?page=student_dashboard&view=portfolio&sid={param_sid}"
                                         })
-                                        st.success(f"✅ AI Dossier Dispatched to {job['company_name']}!")
+                                        st.toast(f"✅ AI Dossier Dispatched to {job['company_name']}!", icon="🚀")
                                         st.balloons()
+
+                            # Interactive Expandable Job Specs Drawer
+                            with st.expander(f"📋 View Full Job Specs & Recruiter Contact Details ({job.get('role_title')})", expanded=False):
+                                col_jd1, col_jd2 = st.columns(2)
+                                with col_jd1:
+                                    st.markdown(f"**Role Title:** {job.get('role_title')}")
+                                    st.markdown(f"**Company Name:** {job.get('company_name')}")
+                                    st.markdown(f"**Location:** {job.get('location')}")
+                                    st.markdown(f"**Compensation (CTC):** {job.get('ctc_range') or job.get('salary_range')}")
+                                    st.markdown(f"**Experience Requirement:** {job.get('experience_required', '0-2 Years')}")
+                                with col_jd2:
+                                    st.markdown(f"**Work Terms:** {job.get('work_terms', 'Full-Time')}")
+                                    st.markdown(f"**Grounded Source:** {job.get('source_platform', 'Google Jobs Grounded')}")
+                                    r_email = job.get('recruiter_email', 'careers@enterprise.com')
+                                    st.markdown(f"**Recruiter Contact:** [{r_email}](mailto:{r_email}?subject=Technical%20Application%20for%20{job.get('role_title')})")
+                                    skills_pills = " ".join([f'<span class="badge-blue">{s}</span>' for s in job.get('skills_matched', [])])
+                                    st.markdown(f"**Matched Skills:** {skills_pills}", unsafe_allow_html=True)
+
+                                st.markdown("**Full Job Description & Workplace Terms:**")
+                                st.info(job.get('job_description', 'No full description provided.'))
+
                             st.divider()
                             
                     # Pagination Navigation Bar
@@ -1545,8 +1610,8 @@ def main_app_layout():
                 st.info("No custom courses registered for this branch node yet. Click **➕ Create New Course** to synthesize one!")
             else:
                 for c in branch_courses:
-                    sec_list = [s.strip() for s in c.get('curriculum_sections', '').split(',') if s.strip()] if c.get('curriculum_sections') else []
-                    sk_list = [sk.strip() for sk in c.get('core_skills', '').split(',') if sk.strip()] if c.get('core_skills') else []
+                    sec_list = parse_list_or_json(c.get('curriculum_sections') or c.get('modules'))
+                    sk_list = parse_list_or_json(c.get('core_skills') or c.get('skills'))
                     
                     with st.container():
                         st.markdown(f"""
@@ -1568,9 +1633,11 @@ def main_app_layout():
                         col_cd1, col_cd2, col_cd3 = st.columns([3.2, 1, 1])
                         with col_cd1:
                             if sec_list:
-                                st.markdown(f"**Curriculum Modules ({len(sec_list)}):** " + " • ".join([f"`{s}`" for s in sec_list[:5]]))
+                                steps_formatted = " &nbsp;•&nbsp; ".join([f"<b>Step {idx+1}:</b> {s}" for idx, s in enumerate(sec_list[:4])])
+                                st.markdown(f"<div style='font-size:0.85rem; color:#E2E8F0; margin-bottom:6px;'>📚 <b>Curriculum Modules ({len(sec_list)}):</b> {steps_formatted}</div>", unsafe_allow_html=True)
                             if sk_list:
-                                st.markdown(" ".join([f'<span class="badge-blue" style="font-weight:600;">{s}</span>' for s in sk_list[:6]]), unsafe_allow_html=True)
+                                skills_html = " ".join([f'<span class="badge-blue" style="font-weight:600;">{sk}</span>' for sk in sk_list[:8]])
+                                st.markdown(f"<div style='font-size:0.85rem;'>⚡ <b>Core Skills:</b> {skills_html}</div>", unsafe_allow_html=True)
                         with col_cd2:
                             if st.button("✏️ Edit Course", key=f"btn_edit_course_{c['id']}", use_container_width=True):
                                 modal_edit_course(c)

@@ -748,6 +748,68 @@ def api_set_consent(req: StudentConsentReq):
     set_student_consent(req.student_id, req.consent)
     return {"success": True, "data": get_student_by_id(req.student_id)}
 
+class JobApplyReq(BaseModel):
+    student_id: str
+    company_name: str
+    role_title: str
+    match_percentage: int = 85
+    dossier_sent_url: str = ""
+
+class AutoApplyReq(BaseModel):
+    student_id: str
+    auto_apply_mode: bool
+
+@app.get("/api/jobs/discover")
+def api_discover_jobs(
+    course_name: str = "",
+    query: str = "",
+    city: str = "",
+    min_match: int = 0
+):
+    try:
+        from job_engine import search_live_jobs
+        jobs = search_live_jobs(course_name=course_name, search_query=query, city=city, min_match_score=min_match)
+        return {"status": "success", "success": True, "count": len(jobs), "data": jobs}
+    except Exception as e:
+        return {"status": "error", "success": False, "message": str(e), "data": []}
+
+@app.post("/api/jobs/apply")
+def api_apply_job(req: JobApplyReq):
+    try:
+        from database import record_job_application, log_agent_activity
+        app_id = record_job_application(
+            student_id=req.student_id,
+            company_name=req.company_name,
+            role_title=req.role_title,
+            match_percentage=req.match_percentage,
+            dossier_sent_url=req.dossier_sent_url
+        )
+        log_agent_activity(
+            "JOB_APPLICATION_DISPATCHED",
+            f"1-Click AI Dossier dispatched to {req.company_name} for role '{req.role_title}' ({req.match_percentage}% match)",
+            student_id=req.student_id
+        )
+        return {"status": "success", "success": True, "application_id": app_id, "message": f"Dossier dispatched to {req.company_name}"}
+    except Exception as e:
+        return {"status": "error", "success": False, "message": str(e)}
+
+@app.post("/api/students/auto-apply-mode")
+def api_toggle_auto_apply(req: AutoApplyReq):
+    try:
+        from database import get_db_connection, log_agent_activity
+        with get_db_connection() as conn:
+            c = conn.cursor()
+            c.execute("UPDATE students SET auto_apply_mode = ? WHERE student_id = ?", (1 if req.auto_apply_mode else 0, req.student_id))
+            conn.commit()
+        log_agent_activity(
+            "AUTO_APPLY_TOGGLED",
+            f"Autonomous Auto-Apply Engine set to {'ACTIVE' if req.auto_apply_mode else 'INACTIVE'}",
+            student_id=req.student_id
+        )
+        return {"status": "success", "success": True, "auto_apply_mode": req.auto_apply_mode}
+    except Exception as e:
+        return {"status": "error", "success": False, "message": str(e)}
+
 from fastapi.responses import FileResponse, HTMLResponse
 
 os.makedirs(os.path.join("backend", "resumes"), exist_ok=True)
