@@ -1123,6 +1123,62 @@ def main_app_layout():
                         except Exception as ex:
                             st.error(f"⚠️ Network error while creating course: {str(ex)}")
 
+        @st.dialog("✏️ Edit Vocational Course & Curriculum", width="large")
+        def modal_edit_course(course_data):
+            st.markdown(f"Updating Course Record: **{course_data['course_name']}** (`ID: {course_data['id']}`)")
+            with st.form(f"modal_edit_course_form_{course_data['id']}"):
+                ec_title = st.text_input("Course Title", value=course_data.get('course_name', ''))
+                ec_desc = st.text_area("Course Description & Objective", value=course_data.get('course_description') or course_data.get('curriculum_summary', ''), height=80)
+                ec_sections = st.text_area("Curriculum Modules Breakdown (Comma or Line Separated)", value=course_data.get('curriculum_sections', ''), height=90)
+                ec_skills = st.text_input("Core Practical Skills (Comma Separated)", value=course_data.get('core_skills', ''))
+                ec_mcqs = st.number_input("Default MCQ Question Count", min_value=5, max_value=50, value=int(course_data.get('default_mcq_count', 10)))
+                
+                col_esub1, col_esub2 = st.columns(2)
+                with col_esub1:
+                    sub_ec = st.form_submit_button("💾 Save Changes", type="primary", use_container_width=True)
+                with col_esub2:
+                    cancel_ec = st.form_submit_button("❌ Cancel", use_container_width=True)
+                    
+                if sub_ec:
+                    with st.spinner("Saving changes & updating course..."):
+                        try:
+                            r_ec = requests.put(f"{BACKEND_URL}/api/courses/{course_data['id']}", json={
+                                "course_id": course_data['id'],
+                                "course_name": ec_title,
+                                "course_description": ec_desc,
+                                "curriculum_summary": ec_desc,
+                                "curriculum_sections": ec_sections,
+                                "core_skills": ec_skills,
+                                "default_mcq_count": ec_mcqs
+                            }, timeout=10)
+                            if r_ec.status_code == 200:
+                                st.toast("✅ Course updated successfully!", icon="🎉")
+                                st.rerun()
+                            else:
+                                st.error(f"Failed to update course: {r_ec.text}")
+                        except Exception as ex:
+                            st.error(f"Error updating course: {ex}")
+
+        @st.dialog("🗑️ Confirm Course Deletion")
+        def modal_confirm_delete_course(course_data):
+            st.warning(f"Are you sure you want to permanently delete **{course_data['course_name']}** (`ID: {course_data['id']}`)?")
+            st.caption("This action removes the course record and cleans up associated assessment entries.")
+            col_cd1, col_cd2 = st.columns(2)
+            with col_cd1:
+                if st.button("🔴 Confirm Delete", type="primary", use_container_width=True):
+                    try:
+                        del_res = requests.delete(f"{BACKEND_URL}/api/courses/{course_data['id']}", timeout=5)
+                        if del_res.status_code == 200:
+                            st.toast("✅ Course deleted successfully", icon="🗑️")
+                            st.rerun()
+                        else:
+                            st.error(f"Error deleting course: {del_res.text}")
+                    except Exception as ex:
+                        st.error(f"Error deleting course: {ex}")
+            with col_cd2:
+                if st.button("Cancel", use_container_width=True):
+                    st.rerun()
+
         @st.dialog("👤 Enroll New Candidate")
         def modal_add_student(target_inst_id, target_branch_id, target_branch_name, course_options_dict):
             st.markdown(f"Direct Candidate Enrollment for **{target_branch_name}**")
@@ -1362,22 +1418,39 @@ def main_app_layout():
                 st.info("No custom courses registered for this branch node yet. Click **➕ Create New Course** to synthesize one!")
             else:
                 for c in branch_courses:
-                    with st.expander(f"📖 **{c['course_name']}** (`ID: {c['id']}`)", expanded=True):
-                        col_cd1, col_cd2 = st.columns([3, 1])
+                    sec_list = [s.strip() for s in c.get('curriculum_sections', '').split(',') if s.strip()] if c.get('curriculum_sections') else []
+                    sk_list = [sk.strip() for sk in c.get('core_skills', '').split(',') if sk.strip()] if c.get('core_skills') else []
+                    
+                    with st.container():
+                        st.markdown(f"""
+                        <div style="background:#0F172A; border:1px solid #1E293B; border-radius:12px; padding:18px; margin-bottom:12px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+                                <div>
+                                    <h3 style="color:#F9FAFB; margin:0; font-size:1.15rem; display:inline-block;">📖 {c['course_name']}</h3>
+                                    &nbsp;<span class="badge-blue" style="font-size:0.75rem;">ID: {c['id']}</span>
+                                </div>
+                                <div>
+                                    <span class="badge-emerald">Track Active</span> &nbsp;
+                                    <span class="badge-amber">{c.get('default_mcq_count', 10)} MCQs</span>
+                                </div>
+                            </div>
+                            <p style="color:#9CA3AF; font-size:0.88rem; margin:4px 0 12px 0;">{c.get('course_description') or c.get('curriculum_summary', 'No summary provided.')}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        col_cd1, col_cd2, col_cd3 = st.columns([3.2, 1, 1])
                         with col_cd1:
-                            st.markdown(f"**Course Description:** {c.get('course_description') or c.get('curriculum_summary', 'N/A')}")
-                            if c.get('curriculum_sections'):
-                                st.markdown("**Curriculum Breakdown / Modules:**")
-                                sec_list = [s.strip() for s in c['curriculum_sections'].split(',') if s.strip()]
-                                for sec in sec_list:
-                                    st.markdown(f"- 🔹 `{sec}`")
-                            if c.get('core_skills'):
-                                st.markdown("**Core Practical Skills:**")
-                                skills = [sk.strip() for sk in c['core_skills'].split(',') if sk.strip()]
-                                st.markdown(" ".join([f'<span class="badge-blue" style="font-weight:600;">{s}</span>' for s in skills]), unsafe_allow_html=True)
+                            if sec_list:
+                                st.markdown(f"**Curriculum Modules ({len(sec_list)}):** " + " • ".join([f"`{s}`" for s in sec_list[:5]]))
+                            if sk_list:
+                                st.markdown(" ".join([f'<span class="badge-blue" style="font-weight:600;">{s}</span>' for s in sk_list[:6]]), unsafe_allow_html=True)
                         with col_cd2:
-                            st.metric("Default MCQ Count", f"{c.get('default_mcq_count', 10)} Questions")
-                            st.caption(f"Created: {c.get('created_at', '')[:10]}")
+                            if st.button("✏️ Edit Course", key=f"btn_edit_course_{c['id']}", use_container_width=True):
+                                modal_edit_course(c)
+                        with col_cd3:
+                            if st.button("🗑️ Delete", key=f"btn_delete_course_{c['id']}", type="secondary", use_container_width=True):
+                                modal_confirm_delete_course(c)
+                        st.divider()
 
         # --- TAB 2: STUDENT ROSTER & AI EXAM DISPATCH ---
         with tabs[1]:

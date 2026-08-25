@@ -423,6 +423,44 @@ def create_course(
         "default_mcq_count": default_mcq_count
     }
 
+def get_course_by_id(course_id: str) -> Optional[Dict[str, Any]]:
+    with get_db_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM courses WHERE id = ?", (course_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+def update_course(
+    course_id: str,
+    course_name: str,
+    curriculum_summary: str = "",
+    course_description: str = "",
+    curriculum_sections: str = "",
+    core_skills: str = "",
+    default_mcq_count: int = 10
+) -> Optional[Dict[str, Any]]:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE courses 
+            SET course_name = ?, curriculum_summary = ?, course_description = ?, curriculum_sections = ?, core_skills = ?, default_mcq_count = ?
+            WHERE id = ?
+        """, (course_name, curriculum_summary, course_description, curriculum_sections, core_skills, default_mcq_count, course_id))
+        conn.commit()
+    return get_course_by_id(course_id)
+
+def delete_course(course_id: str) -> bool:
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM assessments WHERE course_id = ?", (course_id,))
+        except Exception:
+            pass
+        cursor.execute("DELETE FROM courses WHERE id = ?", (course_id,))
+        conn.commit()
+        return True
+
 def get_all_students(institute_id: Optional[str] = None, branch_id: Optional[str] = None) -> List[Dict[str, Any]]:
     with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row

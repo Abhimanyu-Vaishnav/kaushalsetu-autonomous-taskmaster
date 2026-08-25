@@ -85,6 +85,15 @@ class CourseCreateReq(BaseModel):
     core_skills: Union[str, List[str], Any] = ""
     default_mcq_count: int = 10
 
+class CourseUpdateReq(BaseModel):
+    course_id: Optional[str] = None
+    course_name: str
+    curriculum_summary: Optional[str] = ""
+    course_description: Optional[str] = ""
+    curriculum_sections: Optional[Union[str, List[str]]] = ""
+    core_skills: Optional[Union[str, List[str]]] = ""
+    default_mcq_count: Optional[int] = 10
+
 class StudentCreateReq(BaseModel):
     institute_id: str
     branch_id: str
@@ -391,6 +400,38 @@ def api_create_course(req: CourseCreateReq):
     )
     log_agent_activity("COURSE_AI_SYNTHESIZED", f"Gemini 3.5 Auto-Corrected & Synthesized course '{final_title}'", institute_id=req.institute_id, branch_id=req.branch_id)
     return {"success": True, "status": "success", "data": course, "enriched": enriched}
+
+@app.put("/api/courses/{course_id}")
+@app.post("/api/courses/update")
+def api_update_course(course_id: Optional[str] = None, req: Optional[CourseUpdateReq] = None):
+    from database import update_course, log_agent_activity
+    target_id = course_id or (req.course_id if req else None)
+    if not target_id:
+        raise HTTPException(status_code=400, detail="Missing course_id parameter")
+    
+    c_name = req.course_name if req else "Updated Course"
+    
+    sections_str = json.dumps(req.curriculum_sections) if isinstance(req.curriculum_sections, list) else str(req.curriculum_sections or "")
+    skills_str = json.dumps(req.core_skills) if isinstance(req.core_skills, list) else str(req.core_skills or "")
+    
+    updated = update_course(
+        target_id,
+        c_name,
+        req.curriculum_summary or req.course_description or "",
+        req.course_description or req.curriculum_summary or "",
+        sections_str,
+        skills_str,
+        req.default_mcq_count or 10
+    )
+    log_agent_activity("COURSE_UPDATED", f"Updated course '{c_name}' ({target_id})")
+    return {"status": "success", "message": "Course updated successfully", "course": updated, "data": updated}
+
+@app.delete("/api/courses/{course_id}")
+def api_delete_course(course_id: str):
+    from database import delete_course, log_agent_activity
+    delete_course(course_id)
+    log_agent_activity("COURSE_DELETED", f"Deleted course {course_id}")
+    return {"status": "success", "message": f"Course {course_id} deleted successfully"}
 
 # 2. Student Enrollment & CSV Bulk Upload
 @app.get("/api/students")
