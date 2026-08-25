@@ -188,9 +188,33 @@ st.markdown("""
 
     /* Layout Padding & Container Reset */
     .block-container {
-        padding-top: 1.8rem !important;
-        padding-bottom: 3rem !important;
-        max-width: 95% !important;
+        padding: 1rem 1rem 3rem 1rem !important;
+        max-width: 98% !important;
+    }
+    
+    /* Responsive Viewport & Mobile Optimization */
+    @media (max-width: 768px) {
+        .stColumns > div {
+            min-width: 100% !important;
+            margin-bottom: 0.75rem !important;
+        }
+        h1, .main-header { font-size: 1.5rem !important; }
+        h2 { font-size: 1.25rem !important; }
+        h3 { font-size: 1.1rem !important; }
+        .sub-header { font-size: 0.85rem !important; }
+        .stButton > button {
+            width: 100% !important;
+            padding: 0.6rem !important;
+            margin-bottom: 0.5rem !important;
+        }
+    }
+    
+    /* Smooth Glassmorphic Aesthetics */
+    div[data-testid="stExpander"], div[data-testid="stMetricValue"], .modern-card {
+        background: rgba(17, 24, 39, 0.75) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 12px !important;
+        backdrop-filter: blur(8px) !important;
     }
     div[data-testid="stVerticalBlock"] > div:empty,
     div[data-testid="stVerticalBlockBorderWrapper"]:has(> div:empty) {
@@ -1251,6 +1275,67 @@ def main_app_layout():
                         except Exception as err:
                             st.error(f"❌ Connection Error: {str(err)}")
 
+        @st.dialog("✏️ Edit Student Candidate Record", width="large")
+        def modal_edit_student_record(student_data):
+            st.markdown(f"Updating Institutional Candidate Record: **{student_data['full_name']}** (`ID: {student_data['student_id']}`)")
+            with st.form(f"modal_edit_student_record_form_{student_data['student_id']}"):
+                col_m1, col_m2 = st.columns(2)
+                with col_m1:
+                    st.markdown("##### 👤 Personal & Academic Identity")
+                    m_name = st.text_input("Full Name", value=student_data.get('full_name', ''))
+                    m_dob = st.text_input("Date of Birth (YYYY-MM-DD)", value=student_data.get('dob', '2000-01-01'))
+                    m_email = st.text_input("Email Address", value=student_data.get('email', ''))
+                    m_phone = st.text_input("Phone Number", value=student_data.get('phone', ''))
+                    m_track = st.text_input("Vocational Track / Course", value=student_data.get('course_name', ''))
+                    m_city = st.text_input("Branch City / Location", value=student_data.get('city') or student_data.get('branch_name', ''))
+                with col_m2:
+                    st.markdown("##### 🌐 Social & Professional Footprint")
+                    m_github = st.text_input("GitHub Profile URL", value=student_data.get('github_url', ''))
+                    m_linkedin = st.text_input("LinkedIn Profile URL", value=student_data.get('linkedin_url', ''))
+                    m_website = st.text_input("Portfolio / Personal Website URL", value=student_data.get('website_url', ''))
+                    m_twitter = st.text_input("Twitter / X Handle URL", value=student_data.get('twitter_url', ''))
+                    m_role = st.text_input("Target Role Preference", value=student_data.get('target_role_preference', ''))
+                    m_exp_years = st.number_input("Field Experience (Years)", min_value=0, max_value=30, value=int(student_data.get('work_experience_years', 0)))
+
+                m_bio = st.text_area("Candidate Bio & Practical Highlights", value=student_data.get('bio') or student_data.get('experience_summary', ''), height=70)
+                
+                col_s1, col_s2 = st.columns(2)
+                with col_s1:
+                    sub_save = st.form_submit_button("💾 Save Candidate Record", type="primary", use_container_width=True)
+                with col_s2:
+                    sub_cancel = st.form_submit_button("❌ Cancel", use_container_width=True)
+
+                if sub_save:
+                    with st.spinner("Saving changes & updating candidate record..."):
+                        try:
+                            up_res = requests.put(f"{BACKEND_URL}/api/students/{student_data['student_id']}", json={
+                                "student_id": student_data['student_id'],
+                                "full_name": m_name.strip(),
+                                "name": m_name.strip(),
+                                "dob": m_dob.strip(),
+                                "email": m_email.strip(),
+                                "phone": m_phone.strip(),
+                                "course_name": m_track.strip(),
+                                "track": m_track.strip(),
+                                "city": m_city.strip(),
+                                "branch_center": m_city.strip(),
+                                "github_url": m_github.strip(),
+                                "linkedin_url": m_linkedin.strip(),
+                                "website_url": m_website.strip(),
+                                "twitter_url": m_twitter.strip(),
+                                "target_role_preference": m_role.strip(),
+                                "work_experience_years": m_exp_years,
+                                "bio": m_bio.strip(),
+                                "experience_summary": m_bio.strip()
+                            }, timeout=10)
+                            if up_res.status_code == 200:
+                                st.toast("✅ Candidate profile updated successfully!", icon="🎉")
+                                st.rerun()
+                            else:
+                                st.error(f"Error updating candidate record: {up_res.text}")
+                        except Exception as ex:
+                            st.error(f"Failed to update candidate record: {ex}")
+
         # --- SLEEK 1-CLICK FAST-FORWARD JUDGE DEMO CONTROL STRIP ---
         st.markdown("""
         <div class="modern-card" style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%); border: 1px solid #6366F1; margin-bottom: 16px;">
@@ -1617,7 +1702,7 @@ def main_app_layout():
                 
                 for stu in page_students:
                     with st.container():
-                        col_st1, col_st2, col_st3, col_st4 = st.columns([2.5, 2, 2, 1.5])
+                        col_st1, col_st2, col_st3, col_st4, col_st5 = st.columns([2.5, 1.8, 1.8, 1.2, 1.2])
                         with col_st1:
                             st.markdown(f"##### **{stu['full_name']}** (`{stu['student_id']}`)")
                             st.caption(f"Course: **{stu['course_name']}** | Email: `{stu['email']}`")
@@ -1634,35 +1719,19 @@ def main_app_layout():
                             exam_url = f"{FRONTEND_URL}/?page=exam&sid={stu['student_id']}&branch={sel_branch['id']}"
                             st.markdown(f'<a href="{exam_url}" target="_blank" style="text-decoration:none;"><button style="background:#2563EB; color:white; border:none; border-radius:6px; padding:6px 12px; font-weight:600; cursor:pointer; width:100%;">🎓 Launch Exam</button></a>', unsafe_allow_html=True)
                         with col_st4:
-                            with st.popover("⚙️ Manage"):
-                                st.markdown(f"**Manage {stu['full_name']}**")
-                                with st.form(key=f"edit_form_{stu['student_id']}"):
-                                    ed_name = st.text_input("Full Name", value=stu['full_name'])
-                                    ed_email = st.text_input("Email", value=stu['email'])
-                                    ed_phone = st.text_input("Phone", value=stu.get('phone', ''))
-                                    ed_role = st.text_input("Target Role", value=stu.get('target_role_preference', ''))
-                                    ed_fee = st.selectbox("Fees Status", ["PAID", "PENDING", "SCHOLARSHIP"], index=0)
-                                    sub_ed = st.form_submit_button("💾 Save Profile", type="primary")
-                                    if sub_ed:
-                                        requests.post(f"{BACKEND_URL}/api/student/update-profile", json={
-                                            "student_id": stu['student_id'],
-                                            "full_name": ed_name,
-                                            "email": ed_email,
-                                            "phone": ed_phone,
-                                            "bio": stu.get('bio', ''),
-                                            "github_url": stu.get('github_url', ''),
-                                            "skills_list": stu.get('skills_list', ''),
-                                            "target_role_preference": ed_role,
-                                            "past_companies_text": stu.get('past_companies_text', ''),
-                                            "work_experience_years": int(stu.get('work_experience_years', 0))
-                                        })
-                                        st.success("✅ Profile Updated!")
+                            if st.button("✏️ Edit", key=f"btn_edit_student_{stu['student_id']}", use_container_width=True):
+                                modal_edit_student_record(stu)
+                        with col_st5:
+                            if st.button("🗑️ Remove", key=f"btn_delete_student_{stu['student_id']}", type="secondary", use_container_width=True):
+                                try:
+                                    del_s_res = requests.delete(f"{BACKEND_URL}/api/student/{stu['student_id']}", timeout=5)
+                                    if del_s_res.status_code == 200:
+                                        st.toast(f"Candidate {stu['full_name']} removed from roster.", icon="🗑️")
                                         st.rerun()
-                                st.divider()
-                                if st.button("🗑️ Delete Student Record", key=f"del_btn_{stu['student_id']}", type="primary"):
-                                    requests.delete(f"{BACKEND_URL}/api/student/{stu['student_id']}")
-                                    st.success(f"Deleted {stu['full_name']}")
-                                    st.rerun()
+                                    else:
+                                        st.error(f"Error removing candidate: {del_s_res.text}")
+                                except Exception as ex:
+                                    st.error(f"Failed to remove candidate: {ex}")
                         st.divider()
 
         # --- TAB 3: AUTONOMOUS PLACEMENT & LIVE LEDGER ---

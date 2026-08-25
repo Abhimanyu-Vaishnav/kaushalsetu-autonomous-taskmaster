@@ -139,6 +139,28 @@ class StudentUpdateProfileReq(BaseModel):
     past_companies_text: str = ""
     work_experience_years: int = 0
 
+class StudentAdminUpdateReq(BaseModel):
+    name: Optional[str] = None
+    full_name: Optional[str] = None
+    dob: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    track: Optional[str] = None
+    course_name: Optional[str] = None
+    branch_center: Optional[str] = None
+    branch_name: Optional[str] = None
+    city: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    website_url: Optional[str] = None
+    twitter_url: Optional[str] = None
+    mcq_score: Optional[float] = None
+    capstone_score: Optional[float] = None
+    practical_score: Optional[float] = None
+    experience_summary: Optional[str] = None
+    bio: Optional[str] = None
+    work_experience_years: Optional[int] = 0
+
 class StudentConsentReq(BaseModel):
     student_id: str
     consent: bool
@@ -615,6 +637,55 @@ def api_verify_student_login(payload: Union[StudentLoginRequest, dict]):
             "message": f"Auth Server Exception: {str(e)}",
             "data": None
         }
+
+@app.put("/api/students/{student_id}")
+@app.post("/api/students/{student_id}/update")
+def api_update_student_record(student_id: str, payload: Union[StudentAdminUpdateReq, dict]):
+    from database import update_student_profile, get_student_by_id, log_agent_activity, normalize_dob
+    if isinstance(payload, BaseModel):
+        p_dict = payload.model_dump()
+    else:
+        p_dict = payload or {}
+
+    clean_name = p_dict.get("full_name") or p_dict.get("name") or "Enrolled Candidate"
+    clean_dob = normalize_dob(p_dict.get("dob") or "")
+    clean_email = p_dict.get("email", "")
+    clean_phone = p_dict.get("phone", "")
+    clean_city = p_dict.get("city") or p_dict.get("branch_center") or ""
+    clean_bio = p_dict.get("bio") or p_dict.get("experience_summary") or ""
+    clean_github = p_dict.get("github_url", "")
+    clean_linkedin = p_dict.get("linkedin_url", "")
+    clean_website = p_dict.get("website_url", "")
+    clean_twitter = p_dict.get("twitter_url", "")
+    clean_exp_years = int(p_dict.get("work_experience_years", 0))
+
+    stu = update_student_profile(
+        student_id=student_id,
+        full_name=clean_name,
+        email=clean_email,
+        phone=clean_phone,
+        bio=clean_bio,
+        github_url=clean_github,
+        skills_list=p_dict.get("skills_list", ""),
+        target_role_preference=p_dict.get("target_role_preference", ""),
+        past_companies_text=p_dict.get("past_companies_text") or clean_bio,
+        work_experience_years=clean_exp_years,
+        dob=clean_dob,
+        city=clean_city,
+        linkedin_url=clean_linkedin,
+        website_url=clean_website,
+        twitter_url=clean_twitter
+    )
+
+    try:
+        from dossier_generator import generate_candidate_dossier_html
+        if stu:
+            generate_candidate_dossier_html(stu)
+    except Exception as ex:
+        print(f"[DOSSIER REGEN WARNING] {ex}")
+
+    log_agent_activity("STUDENT_RECORD_UPDATED", f"Institutional Admin updated candidate record for {clean_name} ({student_id})", student_id=student_id)
+    return {"status": "success", "success": True, "message": "Candidate profile updated successfully", "data": stu, "student": stu}
 
 @app.post("/api/student/update-profile")
 def api_update_student_profile(req: StudentUpdateProfileReq):

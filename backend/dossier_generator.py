@@ -406,7 +406,7 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
                 <h3 class="text-lg font-bold text-white flex items-center gap-2 font-heading">
                     <i class="fa-solid fa-chart-pie text-sky-400"></i> Autonomous Competency Radar Matrix
                 </h3>
-                <div class="w-full h-64 flex items-center justify-center">
+                <div class="relative w-full h-72 md:h-80 flex items-center justify-center">
                     <canvas id="skillsRadarCanvas"></canvas>
                 </div>
             </div>
@@ -497,6 +497,8 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
                 }}]
             }},
             options: {{
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {{
                     r: {{
                         angleLines: {{ color: 'rgba(255, 255, 255, 0.1)' }},
