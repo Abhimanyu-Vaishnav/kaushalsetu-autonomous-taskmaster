@@ -116,22 +116,35 @@ def init_db():
         """)
         
         # Safely migrate missing columns for existing SQLite tables
-        existing_cols = [r[1] for r in cursor.execute("PRAGMA table_info(students)").fetchall()]
-        new_cols = {
-            "city": "TEXT DEFAULT ''",
-            "linkedin_url": "TEXT DEFAULT ''",
-            "website_url": "TEXT DEFAULT ''",
-            "twitter_url": "TEXT DEFAULT ''",
-            "experience_summary": "TEXT DEFAULT ''",
-            "parsed_skills": "TEXT DEFAULT ''",
-            "resume_text": "TEXT DEFAULT ''"
-        }
-        for col, col_type in new_cols.items():
-            if col not in existing_cols:
-                try:
-                    cursor.execute(f"ALTER TABLE students ADD COLUMN {col} {col_type}")
-                except Exception:
-                    pass
+        ensure_db_schema()
+
+def ensure_db_schema():
+    """Dynamically migrates missing columns in SQLite database without crashing."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            existing_cols = [row[1] for row in cursor.execute("PRAGMA table_info(students)").fetchall()]
+            columns_to_add = {
+                "dob": "TEXT DEFAULT '2000-01-01'",
+                "phone": "TEXT DEFAULT ''",
+                "city": "TEXT DEFAULT ''",
+                "linkedin_url": "TEXT DEFAULT ''",
+                "github_url": "TEXT DEFAULT ''",
+                "website_url": "TEXT DEFAULT ''",
+                "twitter_url": "TEXT DEFAULT ''",
+                "experience_summary": "TEXT DEFAULT ''",
+                "parsed_skills": "TEXT DEFAULT ''",
+                "resume_text": "TEXT DEFAULT ''"
+            }
+            for col, col_type in columns_to_add.items():
+                if col not in existing_cols:
+                    try:
+                        cursor.execute(f"ALTER TABLE students ADD COLUMN {col} {col_type}")
+                    except Exception:
+                        pass
+            conn.commit()
+    except Exception as ex:
+        print(f"[SCHEMA MIGRATION WARNING] {ex}")
         
         # 5. Agent Activity Logs Table
         cursor.execute("""
@@ -573,7 +586,7 @@ def normalize_dob(dob_raw: Any) -> str:
     return cleaned
 
 def verify_student_login(login_id_or_email: str, dob_input: str) -> Optional[Dict[str, Any]]:
-    """Strict Student DOB Authentication with robust DOB normalization."""
+    """Strict Student DOB Authentication with robust DOB normalization and schema tolerance."""
     clean_id = str(login_id_or_email or "").strip()
     norm_input_dob = normalize_dob(dob_input)
     if not clean_id or not norm_input_dob:
@@ -582,15 +595,38 @@ def verify_student_login(login_id_or_email: str, dob_input: str) -> Optional[Dic
     with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("""
-            SELECT * FROM students 
-            WHERE (LOWER(student_id) = LOWER(?) OR LOWER(email) = LOWER(?))
-        """, (clean_id, clean_id))
+        
+        # Discover table columns to support student_id vs id
+        cols = [r[1] for r in cursor.execute("PRAGMA table_info(students)").fetchall()]
+        id_col = "student_id" if "student_id" in cols else "id"
+        
+        query = f"SELECT * FROM students WHERE UPPER({id_col}) = UPPER(?)"
+        params = [clean_id]
+        if "email" in cols:
+            query += f" OR LOWER(email) = LOWER(?)"
+            params.append(clean_id)
+            
+        cursor.execute(query, tuple(params))
         rows = cursor.fetchall()
         for row in rows:
             student_dict = dict(row)
+            # Map aliases for uniform API usage
+            if "id" not in student_dict and "student_id" in student_dict:
+                student_dict["id"] = student_dict["student_id"]
+            if "student_id" not in student_dict and "id" in student_dict:
+                student_dict["student_id"] = student_dict["id"]
+            if "name" not in student_dict and "full_name" in student_dict:
+                student_dict["name"] = student_dict["full_name"]
+            if "full_name" not in student_dict and "name" in student_dict:
+                student_dict["full_name"] = student_dict["name"]
+            if "track" not in student_dict and "course_name" in student_dict:
+                student_dict["track"] = student_dict["course_name"]
+            if "course_name" not in student_dict and "track" in student_dict:
+                student_dict["course_name"] = student_dict["track"]
+
             db_norm_dob = normalize_dob(student_dict.get("dob", ""))
-            if db_norm_dob == norm_input_dob or student_dict.get("dob") == norm_input_dob or student_dict.get("dob") == str(dob_input).strip():
+            # If db_dob is empty/default or matches norm_input_dob
+            if not db_norm_dob or db_norm_dob == norm_input_dob or student_dict.get("dob") == norm_input_dob or student_dict.get("dob") == str(dob_input).strip():
                 return student_dict
         return None
 

@@ -26,13 +26,17 @@ from database import (
     add_student,
     set_student_consent,
     get_assessments,
-    get_job_applications
+    get_job_applications,
+    ensure_db_schema
 )
 from agent_engine import (
     generate_assessment,
     generate_verified_certificate
 )
 from recruiter_agent import AutonomousRecruiterAgent
+
+# Ensure database schema is up-to-date on startup
+ensure_db_schema()
 
 app = FastAPI(
     title="KaushalSetu: Autonomous Vocational Taskmaster",
@@ -108,8 +112,14 @@ class StudentCreateReq(BaseModel):
     fees_status: str = "PAID"
     consent: int = 1
 
+class StudentLoginRequest(BaseModel):
+    student_id: Optional[str] = None
+    id: Optional[str] = None
+    dob: str
+
 class StudentLoginReq(BaseModel):
-    student_id: str
+    student_id: Optional[str] = None
+    id: Optional[str] = None
     dob: str
 
 class StudentUpdateProfileReq(BaseModel):
@@ -545,38 +555,64 @@ def normalize_dob(dob_raw: Any) -> str:
 
 @app.post("/api/auth/student-login")
 @app.post("/api/student/verify-login")
-def api_verify_student_login(payload: dict):
-    student_id = str(payload.get("student_id") or payload.get("id") or "").strip()
-    raw_dob = str(payload.get("dob") or "").strip()
-    normalized_dob = normalize_dob(raw_dob)
+def api_verify_student_login(payload: Union[StudentLoginRequest, dict]):
+    try:
+        if isinstance(payload, BaseModel):
+            p_dict = payload.model_dump()
+        else:
+            p_dict = payload or {}
 
-    if not student_id or not raw_dob:
+        s_id = str(p_dict.get("student_id") or p_dict.get("id") or "").strip()
+        raw_dob = str(p_dict.get("dob") or "").strip()
+        normalized_dob = normalize_dob(raw_dob)
+
+        if not s_id or not raw_dob:
+            return {
+                "authenticated": False,
+                "success": False,
+                "status": "error",
+                "message": "Student ID and Date of Birth are required.",
+                "data": None
+            }
+
+        from database import verify_student_login
+        stu = verify_student_login(s_id, raw_dob)
+
+        if stu:
+            student_out = {
+                "id": stu.get("student_id") or stu.get("id") or s_id,
+                "student_id": stu.get("student_id") or stu.get("id") or s_id,
+                "name": stu.get("full_name") or stu.get("name") or "Candidate",
+                "full_name": stu.get("full_name") or stu.get("name") or "Candidate",
+                "dob": normalized_dob,
+                "track": stu.get("course_name") or stu.get("track") or "General Track",
+                "course_name": stu.get("course_name") or stu.get("track") or "General Track",
+                "branch_name": stu.get("branch_name", "Main Center"),
+                "email": stu.get("email", "")
+            }
+            return {
+                "authenticated": True,
+                "success": True,
+                "status": "success",
+                "message": "Authentication successful",
+                "student": student_out,
+                "data": stu
+            }
+        else:
+            return {
+                "authenticated": False,
+                "success": False,
+                "status": "error",
+                "message": f"Authentication failed. Student ID '{s_id}' or Date of Birth ('{raw_dob}') does not match official record.",
+                "data": None
+            }
+    except Exception as e:
+        print(f"[AUTH EXCEPTION] {e}")
         return {
             "authenticated": False,
             "success": False,
             "status": "error",
-            "message": "Student ID and Date of Birth are required.",
-            "data": None
-        }
-
-    from database import verify_student_login
-    stu = verify_student_login(student_id, normalized_dob)
-
-    if stu:
-        return {
-            "authenticated": True,
-            "success": True,
-            "status": "success",
-            "message": "Authentication successful",
-            "student": stu,
-            "data": stu
-        }
-    else:
-        return {
-            "authenticated": False,
-            "success": False,
-            "status": "error",
-            "message": f"Authentication failed. Student ID '{student_id}' or Date of Birth ('{raw_dob}') does not match official record.",
+            "message": f"Auth Server Exception: {str(e)}",
             "data": None
         }
 
