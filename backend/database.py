@@ -178,23 +178,40 @@ def init_db():
         )
         """)
         
-        # 9. Autonomous Job Applications Ledger Table
+        # 9. Job Applications Ledger Table
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS job_applications (
             id TEXT PRIMARY KEY,
             student_id TEXT NOT NULL,
             company_name TEXT NOT NULL,
             role_title TEXT NOT NULL,
-            match_percentage INTEGER NOT NULL,
+            match_percentage INTEGER DEFAULT 85,
             dossier_sent_url TEXT DEFAULT '',
-            status TEXT NOT NULL,
-            interview_details TEXT DEFAULT '',
-            student_notified INTEGER DEFAULT 1,
-            branch_notified INTEGER DEFAULT 1,
-            metric_hash TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(student_id) REFERENCES students(student_id)
+            status TEXT DEFAULT 'DISPATCHED',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
+        """)
+
+        # 10. Crawled Live Jobs Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS crawled_jobs (
+            id TEXT PRIMARY KEY,
+            student_id TEXT,
+            role_title TEXT,
+            company_name TEXT,
+            company_website TEXT,
+            location TEXT,
+            salary_range TEXT,
+            experience_required TEXT,
+            qualification TEXT,
+            job_description TEXT,
+            recruiter_email TEXT,
+            skills_matched TEXT,
+            match_percentage INTEGER,
+            apply_url TEXT,
+            source_platform TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
         """)
         
         # Ensure unique candidate email index

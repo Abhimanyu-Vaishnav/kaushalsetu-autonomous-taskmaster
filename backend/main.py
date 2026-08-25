@@ -759,6 +759,37 @@ class AutoApplyReq(BaseModel):
     student_id: str
     auto_apply_mode: bool
 
+class JobMatchReq(BaseModel):
+    student_id: Optional[str] = "STU-1001"
+    track: Optional[str] = "Full Stack Web Development"
+    skills: Optional[List[str]] = None
+    location: Optional[str] = "Delhi NCR / India"
+    page: int = 1
+    page_size: int = 30
+
+@app.post("/api/jobs/match")
+def api_match_jobs(req: JobMatchReq):
+    try:
+        from job_engine import crawl_live_grounded_jobs
+        crawled_list = crawl_live_grounded_jobs(
+            track=req.track or "Full Stack Web Development",
+            skills=req.skills,
+            location=req.location or "Delhi NCR / India",
+            page=req.page,
+            page_size=req.page_size
+        )
+        return {
+            "status": "success",
+            "success": True,
+            "page": req.page,
+            "page_size": req.page_size,
+            "count": len(crawled_list),
+            "jobs": crawled_list,
+            "data": crawled_list
+        }
+    except Exception as e:
+        return {"status": "error", "success": False, "message": str(e), "jobs": [], "data": []}
+
 @app.get("/api/jobs/discover")
 def api_discover_jobs(
     course_name: str = "",

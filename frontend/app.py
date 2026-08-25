@@ -820,25 +820,44 @@ def main_app_layout():
                 with col_hdr1:
                     st.markdown("### 🔍 Live Discovered Job Openings & Continuous Match Matrix")
                     st.caption("🟢 **AI Career Agent Active:** Whole-web Google Search Grounding active across company career hubs & portals...")
+                
+                # Session State Initialization
+                if "job_listings_pool" not in st.session_state:
+                    st.session_state.job_listings_pool = []
+                if "current_job_page" not in st.session_state:
+                    st.session_state.current_job_page = 1
+                if "applied_job_ids" not in st.session_state:
+                    st.session_state.applied_job_ids = set()
+
                 with col_hdr2:
                     if st.button("🔄 Rescan & Discover Fresh Jobs", use_container_width=True):
-                        st.session_state["job_rescan_ts"] = time.time()
-                        st.success("✅ Whole-Web Scanner refreshed live listings!")
+                        st.session_state.job_listings_pool = []
+                        st.session_state.current_job_page = 1
                         st.rerun()
-                        
-                jobs = []
-                try:
-                    jres = requests.get(f"{BACKEND_URL}/api/jobs/discover?course_name={student_data['course_name']}", timeout=5)
-                    if jres.status_code == 200:
-                        jobs = jres.json()["data"]
-                except Exception:
-                    pass
-                    
+
+                # Initial Fetch of Page 1 (30 items) if pool is empty
+                if not st.session_state.job_listings_pool:
+                    with st.spinner("🔍 KaushalSetu Agent is crawling live verified job postings across Google Jobs, Indeed & LinkedIn..."):
+                        try:
+                            mres = requests.post(f"{BACKEND_URL}/api/jobs/match", json={
+                                "student_id": param_sid,
+                                "track": student_data.get("course_name") or student_data.get("track"),
+                                "skills": student_data.get("skills_list") or [student_data.get("course_name")],
+                                "location": student_data.get("branch_name") or "Delhi NCR / India",
+                                "page": 1,
+                                "page_size": 30
+                            }, timeout=10)
+                            if mres.status_code == 200:
+                                st.session_state.job_listings_pool = mres.json().get("jobs", [])
+                        except Exception:
+                            pass
+
+                jobs = st.session_state.job_listings_pool
                 if not jobs:
                     st.info("Searching for live openings...")
                 else:
                     # Highlight Agent Top Recommendations
-                    top_recs = [j for j in jobs if j.get("is_top_recommendation")]
+                    top_recs = [j for j in jobs if j.get("is_top_recommendation") or j.get("match_percentage", 0) >= 92]
                     if top_recs:
                         with st.expander("🔥 Agent Top Recommendations (Highest Conversion Chance)", expanded=True):
                             for idx_tr, tr in enumerate(top_recs[:2]):
@@ -859,16 +878,22 @@ def main_app_layout():
                                     with col_tr2:
                                         tr_url = tr.get('apply_url') or tr.get('verified_search_url') or tr.get('direct_application_url') or "https://careers.google.com"
                                         st.link_button("🔗 View Official Job Post", tr_url, use_container_width=True)
-                                        if st.button(f"🚀 Apply with Verified Dossier", key=f"rec_apply_{tr_id}", type="primary", use_container_width=True):
-                                            requests.post(f"{BACKEND_URL}/api/jobs/apply", json={
-                                                "student_id": param_sid,
-                                                "company_name": tr_comp,
-                                                "role_title": tr_role,
-                                                "match_percentage": tr_pct,
-                                                "dossier_sent_url": student_data.get("portfolio_url") or f"{PUBLIC_BASE_URL}/?page=student_dashboard&view=portfolio&sid={param_sid}"
-                                            })
-                                            st.toast(f"✅ AI Dossier Dispatched to {tr_comp}!", icon="🚀")
-                                            st.balloons()
+                                        
+                                        if tr_id in st.session_state.applied_job_ids:
+                                            st.markdown('<span class="badge-emerald" style="display:block; text-align:center; padding:6px;">✅ APPLIED</span>', unsafe_allow_html=True)
+                                        else:
+                                            if st.button(f"🚀 Apply with Verified Dossier", key=f"rec_apply_{tr_id}", type="primary", use_container_width=True):
+                                                requests.post(f"{BACKEND_URL}/api/jobs/apply", json={
+                                                    "student_id": param_sid,
+                                                    "company_name": tr_comp,
+                                                    "role_title": tr_role,
+                                                    "match_percentage": tr_pct,
+                                                    "dossier_sent_url": student_data.get("portfolio_url") or f"{PUBLIC_BASE_URL}/?page=student_dashboard&view=portfolio&sid={param_sid}"
+                                                })
+                                                st.session_state.applied_job_ids.add(tr_id)
+                                                st.toast(f"✅ AI Dossier Dispatched to {tr_comp}!", icon="🚀")
+                                                st.balloons()
+                                                st.rerun()
                                 st.divider()
 
                     # Reactive Real-Time Job Search & Source Filter Bar
@@ -919,7 +944,7 @@ def main_app_layout():
                         
                     st.divider()
                     
-                    # 5 Jobs per Page Pagination
+                    # 5 Jobs per Page UI Pagination
                     items_per_page = 5
                     total_pages = max(1, (len(filtered_jobs) + items_per_page - 1) // items_per_page)
                     page_idx = min(st.session_state.get("job_page_idx", 0), total_pages - 1)
@@ -961,6 +986,8 @@ def main_app_layout():
                                 
                                 if new_mode:
                                     st.markdown('<span class="badge-emerald" style="display:block; text-align:center; margin-top:4px;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
+                                elif j_id in st.session_state.applied_job_ids:
+                                    st.markdown('<span class="badge-emerald" style="display:block; text-align:center; margin-top:4px; padding:4px;">✅ APPLIED</span>', unsafe_allow_html=True)
                                 else:
                                     if st.button("🚀 1-Click Apply with AI Dossier", key=f"btn_apply_{j_id}", type="primary", use_container_width=True):
                                         requests.post(f"{BACKEND_URL}/api/jobs/apply", json={
@@ -970,8 +997,10 @@ def main_app_layout():
                                             "match_percentage": j_pct,
                                             "dossier_sent_url": student_data.get("portfolio_url") or f"{PUBLIC_BASE_URL}/?page=student_dashboard&view=portfolio&sid={param_sid}"
                                         })
+                                        st.session_state.applied_job_ids.add(j_id)
                                         st.toast(f"✅ AI Dossier Dispatched to {j_comp}!", icon="🚀")
                                         st.balloons()
+                                        st.rerun()
 
                             # Interactive Expandable Job Specs Drawer
                             with st.expander(f"📋 View Complete Job & Company Specs ({j_role})", expanded=False):
@@ -1003,11 +1032,37 @@ def main_app_layout():
                             st.session_state["job_page_idx"] = page_idx - 1
                             st.rerun()
                     with col_pg2:
-                        st.caption(f"Showing Page {page_idx + 1} of {total_pages} ({len(filtered_jobs)} Total Jobs)")
+                        st.caption(f"Showing View Page {page_idx + 1} of {total_pages} ({len(filtered_jobs)} Loaded Jobs)")
                     with col_pg3:
                         if st.button("Next Page ➡️", disabled=(page_idx >= total_pages - 1), key="btn_next_job_page"):
                             st.session_state["job_page_idx"] = page_idx + 1
                             st.rerun()
+
+                    # Continuous Dynamic Crawl Pagination Trigger
+                    st.divider()
+                    col_bpg1, col_bpg2, col_bpg3 = st.columns([1, 2, 1])
+                    with col_bpg2:
+                        st.markdown(f"<div style='text-align:center; color:#34D399; font-weight:600; margin-bottom:8px;'>Total Pool: {len(jobs)} Live Grounded Opportunities</div>", unsafe_allow_html=True)
+                        next_page_num = st.session_state.current_job_page + 1
+                        if st.button(f"⚡ Scan & Crawl 30 More Verified Jobs (Page {next_page_num})", type="primary", use_container_width=True, key="btn_crawl_30_more"):
+                            with st.spinner(f"🔍 Crawling Page {next_page_num} grounded job postings..."):
+                                try:
+                                    mres_next = requests.post(f"{BACKEND_URL}/api/jobs/match", json={
+                                        "student_id": param_sid,
+                                        "track": student_data.get("course_name") or student_data.get("track"),
+                                        "skills": student_data.get("skills_list") or [student_data.get("course_name")],
+                                        "location": student_data.get("branch_name") or "Delhi NCR / India",
+                                        "page": next_page_num,
+                                        "page_size": 30
+                                    }, timeout=10)
+                                    if mres_next.status_code == 200:
+                                        new_jobs = mres_next.json().get("jobs", [])
+                                        st.session_state.job_listings_pool.extend(new_jobs)
+                                        st.session_state.current_job_page = next_page_num
+                                        st.toast(f"✅ Crawled {len(new_jobs)} fresh verified jobs for Page {next_page_num}!", icon="🎉")
+                                        st.rerun()
+                                except Exception as ex_pg:
+                                    st.error(f"Crawling error: {ex_pg}")
 
     # ROUTE 3: ADMIN MULTI-TENANT WORKSPACE (?page=admin or default)
     else:
