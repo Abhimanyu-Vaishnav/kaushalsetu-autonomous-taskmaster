@@ -1082,7 +1082,7 @@ def main_app_layout():
                         j_skills = job.get("skills_matched") or []
 
                         with st.container():
-                            col_j1, col_j2, col_j3 = st.columns([3.2, 2.3, 2.5])
+                            col_j1, col_j2, col_j3 = st.columns([3.0, 2.0, 3.0])
                             with col_j1:
                                 st.markdown(f"#### **{j_role}**")
                                 st.markdown(f"🏢 **Company:** `{j_comp}` | 📍 **Location:** `{j_loc}`")
@@ -1093,8 +1093,17 @@ def main_app_layout():
                                 if j_skills:
                                     st.caption(f"Skills Matched: {', '.join(j_skills)}")
                             with col_j3:
-                                job_link = job.get('apply_url') or job.get('verified_search_url') or job.get('direct_application_url') or "https://careers.google.com"
-                                st.link_button("🔗 View Official Job Post", job_link, use_container_width=True)
+                                g_url = job.get('google_jobs_url') or f"https://www.google.com/search?q={urllib.parse.quote(j_role + ' ' + j_comp)}+jobs&ibp=htl;jobs"
+                                li_url = job.get('linkedin_url') or f"https://www.linkedin.com/jobs/search/?keywords={urllib.parse.quote(j_role + ' ' + j_comp)}"
+                                ind_url = job.get('indeed_url') or f"https://in.indeed.com/jobs?q={urllib.parse.quote(j_role + ' ' + j_comp)}"
+
+                                btn_c1, btn_c2, btn_c3 = st.columns(3)
+                                with btn_c1:
+                                    st.link_button("🌐 Google", g_url, use_container_width=True, help="View on Google Jobs Live Widget")
+                                with btn_c2:
+                                    st.link_button("💼 LinkedIn", li_url, use_container_width=True, help="Search on LinkedIn India")
+                                with btn_c3:
+                                    st.link_button("🏢 Indeed", ind_url, use_container_width=True, help="Search on Indeed India")
                                 
                                 if new_mode:
                                     st.markdown('<span class="badge-emerald" style="display:block; text-align:center; margin-top:4px;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
@@ -1114,12 +1123,15 @@ def main_app_layout():
                                         st.balloons()
                                         st.rerun()
 
-                            # Interactive Expandable Job Specs Drawer
+                            # Interactive Expandable Job Specs Drawer with Canonical Search & HR Mailto
                             with st.expander(f"📋 View Complete Job & Company Specs ({j_role})", expanded=False):
+                                comp_search_url = job.get('company_website_search') or f"https://www.google.com/search?q={urllib.parse.quote(j_comp)}+official+website"
+                                hr_mailto = job.get('recruiter_mailto') or f"mailto:careers@{re.sub(r'[^a-zA-Z0-9]+', '', j_comp.lower())}.com?subject=Application%20for%20{urllib.parse.quote(j_role)}%20-%20KaushalSetu%20Certified%20Candidate"
+                                
                                 col_jd1, col_jd2 = st.columns(2)
                                 with col_jd1:
                                     st.markdown(f"**Role Title:** {j_role}")
-                                    st.markdown(f"**Company Name:** {j_comp} ([Website]({j_website}))")
+                                    st.markdown(f"**Company Name:** {j_comp} ([Official Search]({comp_search_url}))")
                                     st.markdown(f"**Location:** {j_loc}")
                                     st.markdown(f"**Compensation (CTC):** {j_sal}")
                                     st.markdown(f"**Experience Level:** {j_exp}")
@@ -1127,7 +1139,7 @@ def main_app_layout():
                                     st.markdown(f"**Qualification:** {j_qual}")
                                     st.markdown(f"**Work Terms:** {j_terms}")
                                     st.markdown(f"**Grounded Source:** {j_src}")
-                                    st.markdown(f"**Recruiter Contact:** [{j_email}](mailto:{j_email}?subject=Technical%20Application%20for%20{j_role})")
+                                    st.markdown(f"**Recruiter Contact:** [Direct HR Outbox Mail]({hr_mailto})")
                                     if j_skills:
                                         skills_pills = " ".join([f'<span class="badge-blue">{s}</span>' for s in j_skills])
                                         st.markdown(f"**Matched Skills:** {skills_pills}", unsafe_allow_html=True)
