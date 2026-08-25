@@ -1202,12 +1202,20 @@ def main_app_layout():
                                 "default_mcq_count": ec_mcqs
                             }, timeout=10)
                             if r_ec.status_code == 200:
-                                st.toast("✅ Course updated successfully!", icon="🎉")
-                                st.rerun()
+                                res_data = r_ec.json()
+                                if res_data.get("status") == "success" or res_data.get("success"):
+                                    st.toast("✅ Course updated successfully!", icon="🎉")
+                                    st.rerun()
+                                else:
+                                    st.error(f"Error updating course: {res_data.get('message')}")
                             else:
-                                st.error(f"Failed to update course: {r_ec.text}")
+                                try:
+                                    err_txt = r_ec.json().get("message") or r_ec.json().get("detail")
+                                except Exception:
+                                    err_txt = r_ec.text
+                                st.error(f"Server error ({r_ec.status_code}): {err_txt}")
                         except Exception as ex:
-                            st.error(f"Error updating course: {ex}")
+                            st.error(f"Update request failed: {ex}")
 
         @st.dialog("🗑️ Confirm Course Deletion")
         def modal_confirm_delete_course(course_data):
@@ -1217,14 +1225,22 @@ def main_app_layout():
             with col_cd1:
                 if st.button("🔴 Confirm Delete", type="primary", use_container_width=True):
                     try:
-                        del_res = requests.delete(f"{BACKEND_URL}/api/courses/{course_data['id']}", timeout=5)
+                        del_res = requests.delete(f"{BACKEND_URL}/api/courses/{course_data['id']}", timeout=10)
                         if del_res.status_code == 200:
-                            st.toast("✅ Course deleted successfully", icon="🗑️")
-                            st.rerun()
+                            res_data = del_res.json()
+                            if res_data.get("status") == "success" or res_data.get("success"):
+                                st.toast("✅ Course deleted successfully!", icon="🗑️")
+                                st.rerun()
+                            else:
+                                st.error(f"Error deleting course: {res_data.get('message')}")
                         else:
-                            st.error(f"Error deleting course: {del_res.text}")
+                            try:
+                                err_txt = del_res.json().get("message") or del_res.json().get("detail")
+                            except Exception:
+                                err_txt = del_res.text
+                            st.error(f"Server error ({del_res.status_code}): {err_txt}")
                     except Exception as ex:
-                        st.error(f"Error deleting course: {ex}")
+                        st.error(f"Delete request failed: {ex}")
             with col_cd2:
                 if st.button("Cancel", use_container_width=True):
                     st.rerun()

@@ -440,7 +440,8 @@ def get_course_by_id(course_id: str) -> Optional[Dict[str, Any]]:
     with get_db_connection() as conn:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM courses WHERE id = ?", (course_id,))
+        target_str = str(course_id)
+        cursor.execute("SELECT * FROM courses WHERE id = ? OR CAST(id AS TEXT) = ?", (target_str, target_str))
         row = cursor.fetchone()
         return dict(row) if row else None
 
@@ -449,28 +450,41 @@ def update_course(
     course_name: str,
     curriculum_summary: str = "",
     course_description: str = "",
-    curriculum_sections: str = "",
-    core_skills: str = "",
+    curriculum_sections: Union[str, List[Any], Dict[str, Any]] = "",
+    core_skills: Union[str, List[Any], Dict[str, Any]] = "",
     default_mcq_count: int = 10
 ) -> Optional[Dict[str, Any]]:
+    sections_json = json.dumps(curriculum_sections) if isinstance(curriculum_sections, (list, dict)) else str(curriculum_sections or "")
+    skills_json = json.dumps(core_skills) if isinstance(core_skills, (list, dict)) else str(core_skills or "")
+    target_str = str(course_id)
+
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             UPDATE courses 
             SET course_name = ?, curriculum_summary = ?, course_description = ?, curriculum_sections = ?, core_skills = ?, default_mcq_count = ?
-            WHERE id = ?
-        """, (course_name, curriculum_summary, course_description, curriculum_sections, core_skills, default_mcq_count, course_id))
+            WHERE id = ? OR CAST(id AS TEXT) = ?
+        """, (course_name, curriculum_summary, course_description, sections_json, skills_json, default_mcq_count, target_str, target_str))
         conn.commit()
     return get_course_by_id(course_id)
 
 def delete_course(course_id: str) -> bool:
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        try:
-            cursor.execute("DELETE FROM assessments WHERE course_id = ?", (course_id,))
-        except Exception:
-            pass
-        cursor.execute("DELETE FROM courses WHERE id = ?", (course_id,))
+        target_str = str(course_id)
+        # 1. Nullify / cleanup references in dependent tables before deleting to avoid constraint violations
+        for t_query in [
+            "UPDATE students SET course_name = 'General Track' WHERE course_id = ? OR CAST(course_id AS TEXT) = ?",
+            "DELETE FROM assessments WHERE course_id = ? OR CAST(course_id AS TEXT) = ?",
+            "DELETE FROM evaluations WHERE course_id = ? OR CAST(course_id AS TEXT) = ?"
+        ]:
+            try:
+                cursor.execute(t_query, (target_str, target_str))
+            except Exception:
+                pass
+
+        # 2. Delete the actual course record
+        cursor.execute("DELETE FROM courses WHERE id = ? OR CAST(id AS TEXT) = ?", (target_str, target_str))
         conn.commit()
         return True
 

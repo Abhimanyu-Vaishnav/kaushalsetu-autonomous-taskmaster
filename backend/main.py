@@ -435,35 +435,59 @@ def api_create_course(req: CourseCreateReq):
 
 @app.put("/api/courses/{course_id}")
 @app.post("/api/courses/update")
-def api_update_course(course_id: Optional[str] = None, req: Optional[CourseUpdateReq] = None):
-    from database import update_course, log_agent_activity
-    target_id = course_id or (req.course_id if req else None)
-    if not target_id:
-        raise HTTPException(status_code=400, detail="Missing course_id parameter")
-    
-    c_name = req.course_name if req else "Updated Course"
-    
-    sections_str = json.dumps(req.curriculum_sections) if isinstance(req.curriculum_sections, list) else str(req.curriculum_sections or "")
-    skills_str = json.dumps(req.core_skills) if isinstance(req.core_skills, list) else str(req.core_skills or "")
-    
-    updated = update_course(
-        target_id,
-        c_name,
-        req.curriculum_summary or req.course_description or "",
-        req.course_description or req.curriculum_summary or "",
-        sections_str,
-        skills_str,
-        req.default_mcq_count or 10
-    )
-    log_agent_activity("COURSE_UPDATED", f"Updated course '{c_name}' ({target_id})")
-    return {"status": "success", "message": "Course updated successfully", "course": updated, "data": updated}
+def api_update_course(course_id: Optional[str] = None, payload: Optional[Union[CourseUpdateReq, dict]] = None):
+    try:
+        if isinstance(payload, BaseModel):
+            p_dict = payload.model_dump()
+        else:
+            p_dict = payload or {}
+
+        target_id = str(course_id or p_dict.get("course_id") or p_dict.get("id") or "").strip()
+        if not target_id:
+            return {"status": "error", "success": False, "message": "Missing course_id parameter."}
+
+        c_name = str(p_dict.get("course_name") or p_dict.get("title") or p_dict.get("course_title") or "Untitled Course").strip()
+        topic = str(p_dict.get("topic") or "").strip()
+        c_desc = str(p_dict.get("course_description") or p_dict.get("curriculum_summary") or topic or "").strip()
+        
+        modules = p_dict.get("curriculum_sections") or p_dict.get("modules") or []
+        skills = p_dict.get("core_skills") or []
+        mcqs = p_dict.get("mcqs") or []
+        mcq_cnt = int(p_dict.get("default_mcq_count") or p_dict.get("num_mcqs") or (len(mcqs) if isinstance(mcqs, list) and mcqs else 10))
+
+        from database import update_course, log_agent_activity
+        updated = update_course(
+            course_id=target_id,
+            course_name=c_name,
+            curriculum_summary=c_desc,
+            course_description=c_desc,
+            curriculum_sections=modules,
+            core_skills=skills,
+            default_mcq_count=mcq_cnt
+        )
+
+        log_agent_activity("COURSE_UPDATED", f"Updated course '{c_name}' ({target_id})")
+        return {"status": "success", "success": True, "message": "Course updated successfully.", "course": updated, "data": updated}
+    except Exception as e:
+        print(f"[COURSE UPDATE EXCEPTION] {e}")
+        return {"status": "error", "success": False, "message": f"Failed to update course: {str(e)}"}
 
 @app.delete("/api/courses/{course_id}")
 def api_delete_course(course_id: str):
-    from database import delete_course, log_agent_activity
-    delete_course(course_id)
-    log_agent_activity("COURSE_DELETED", f"Deleted course {course_id}")
-    return {"status": "success", "message": f"Course {course_id} deleted successfully"}
+    try:
+        target_id = str(course_id).strip()
+        from database import delete_course, get_course_by_id, log_agent_activity
+        
+        existing = get_course_by_id(target_id)
+        if not existing:
+            return {"status": "error", "success": False, "message": f"Course {target_id} not found."}
+
+        delete_course(target_id)
+        log_agent_activity("COURSE_DELETED", f"Deleted course {target_id}")
+        return {"status": "success", "success": True, "message": f"Course {target_id} deleted successfully."}
+    except Exception as e:
+        print(f"[COURSE DELETE EXCEPTION] {e}")
+        return {"status": "error", "success": False, "message": f"Failed to delete course: {str(e)}"}
 
 # 2. Student Enrollment & CSV Bulk Upload
 @app.get("/api/students")
