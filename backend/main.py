@@ -99,13 +99,22 @@ class StudentCreateReq(BaseModel):
     fees_status: str = "PAID"
     consent: int = 1
 
+class StudentLoginReq(BaseModel):
+    student_id: str
+    dob: str
+
 class StudentUpdateProfileReq(BaseModel):
     student_id: str
     full_name: str
     email: str
     phone: str = ""
+    dob: str = ""
+    city: str = ""
     bio: str = ""
     github_url: str = ""
+    linkedin_url: str = ""
+    website_url: str = ""
+    twitter_url: str = ""
     skills_list: str = ""
     target_role_preference: str = ""
     past_companies_text: str = ""
@@ -481,12 +490,21 @@ def api_add_student(req: StudentCreateReq):
     log_agent_activity("STUDENT_ENROLLED", f"Enrolled candidate {stu['full_name']} ({stu['student_id']}) to {stu['branch_name']}", institute_id=stu['institute_id'], branch_id=stu['branch_id'], student_id=stu['student_id'])
     return {"success": True, "status": "success", "data": stu}
 
+@app.post("/api/student/verify-login")
+def api_verify_student_login(req: StudentLoginReq):
+    from database import verify_student_login
+    stu = verify_student_login(req.student_id, req.dob)
+    if not stu:
+        raise HTTPException(status_code=401, detail=f"Authentication failed. Student ID or Date of Birth ('{req.dob}') does not match official record.")
+    return {"success": True, "data": stu}
+
 @app.post("/api/student/update-profile")
 def api_update_student_profile(req: StudentUpdateProfileReq):
     from database import update_student_profile, log_agent_activity
     stu = update_student_profile(
         req.student_id, req.full_name, req.email, req.phone, req.bio,
-        req.github_url, req.skills_list, req.target_role_preference, req.past_companies_text, req.work_experience_years
+        req.github_url, req.skills_list, req.target_role_preference, req.past_companies_text, req.work_experience_years,
+        req.dob, req.city, req.linkedin_url, req.website_url, req.twitter_url
     )
     log_agent_activity("PROFILE_UPDATED", f"Candidate {req.full_name} updated career preferences & skills", student_id=req.student_id)
     return {"success": True, "data": stu}

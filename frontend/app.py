@@ -262,10 +262,14 @@ def main_app_layout():
                     
                 if submit_auth:
                     try:
-                        s_res = requests.get(f"{BACKEND_URL}/api/student/{auth_sid.strip()}", timeout=2)
-                        if s_res.status_code == 200:
-                            s_data = s_res.json()["data"]
-                            dob_str = str(auth_dob)
+                        dob_str = auth_dob.strftime("%Y-%m-%d")
+                        auth_res = requests.post(f"{BACKEND_URL}/api/student/verify-login", json={
+                            "student_id": auth_sid.strip(),
+                            "dob": dob_str
+                        }, timeout=5)
+                        
+                        if auth_res.status_code == 200:
+                            s_data = auth_res.json()["data"]
                             st.session_state["authenticated_student"] = s_data
                             st.session_state["student_logged_in"] = True
                             
@@ -278,10 +282,11 @@ def main_app_layout():
                                 st.session_state["current_exam"] = e_res.json()["data"]
                                 st.session_state["mcq_step"] = 0
                                 st.session_state["mcq_answers_dict"] = {}
-                            st.success(f"✅ Credentials Verified! Welcome {s_data['full_name']}.")
+                            st.success(f"✅ Credentials & Date of Birth Verified! Welcome {s_data['full_name']}.")
                             st.rerun()
                         else:
-                            st.error(f"❌ Student ID '{auth_sid}' not found in registered roster.")
+                            err_detail = auth_res.json().get("detail", "Authentication failed. Incorrect Student ID or Date of Birth.")
+                            st.error(f"❌ {err_detail}")
                     except Exception as e:
                         st.error(f"Authentication error: {e}")
                 st.stop()
@@ -571,7 +576,7 @@ def main_app_layout():
                 val_skills = st.session_state.get(f"parsed_skills_{param_sid}") or student_data.get('skills_list', 'Diagnostics, System Testing, Quality Audit')
                 val_exp = st.session_state.get(f"parsed_exp_{param_sid}") if f"parsed_exp_{param_sid}" in st.session_state else int(student_data.get('work_experience_years', 0))
                 val_past = st.session_state.get(f"parsed_past_{param_sid}") or student_data.get('past_companies_text', 'Trained through institutional vocational curriculum.')
-                val_bio = st.session_state.get(f"parsed_bio_{param_sid}") or student_data.get('bio', 'Vocational graduate certified by SkillForge Autonomous Engine.')
+                val_bio = st.session_state.get(f"parsed_bio_{param_sid}") or student_data.get('bio', 'Vocational graduate certified by KaushalSetu Engine.')
 
                 with st.form("student_profile_edit_dossier_form"):
                     col_p1, col_p2 = st.columns(2)
@@ -582,8 +587,13 @@ def main_app_layout():
                         st.text_input("Registered Branch Node (Locked)", value=student_data.get('branch_name', ''), disabled=True, help="🔒 Institutional Verified Data")
                         prof_email = st.text_input("Email Address", value=student_data.get('email', ''))
                         prof_phone = st.text_input("Phone Number", value=student_data.get('phone', ''))
+                        prof_dob = st.text_input("Date of Birth (YYYY-MM-DD)", value=student_data.get('dob', '2000-01-01'))
+                        prof_city = st.text_input("Location / City", value=student_data.get('city', student_data.get('branch_name', '')))
                     with col_p2:
                         prof_github = st.text_input("GitHub Profile URL", value=val_github)
+                        prof_linkedin = st.text_input("LinkedIn Profile URL", value=student_data.get('linkedin_url', ''))
+                        prof_website = st.text_input("Portfolio / Personal Website URL", value=student_data.get('website_url', ''))
+                        prof_twitter = st.text_input("Twitter / X Handle URL", value=student_data.get('twitter_url', ''))
                         prof_roles = st.text_input("Target Role & Salary CTC Preference", value=val_roles)
                         prof_skills = st.text_input("Technical & Practical Skills Tags", value=val_skills)
                         prof_exp = st.number_input("Years of Field Experience", min_value=0, max_value=30, value=int(val_exp))
@@ -598,14 +608,19 @@ def main_app_layout():
                                 "full_name": student_data['full_name'],
                                 "email": prof_email,
                                 "phone": prof_phone,
+                                "dob": prof_dob.strip(),
+                                "city": prof_city.strip(),
                                 "bio": prof_bio,
                                 "github_url": prof_github,
+                                "linkedin_url": prof_linkedin,
+                                "website_url": prof_website,
+                                "twitter_url": prof_twitter,
                                 "skills_list": prof_skills,
                                 "target_role_preference": prof_roles,
                                 "past_companies_text": prof_past,
                                 "work_experience_years": prof_exp
                             })
-                        st.toast("✅ Profile Synced with Resume & GitHub! Portfolio regenerated.", icon="🎉")
+                        st.toast("✅ Profile Synced with Social Links & Resume! Portfolio regenerated.", icon="🎉")
                         st.balloons()
                         st.rerun()
 

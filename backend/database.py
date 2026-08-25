@@ -83,19 +83,26 @@ def init_db():
             dob TEXT DEFAULT '2002-01-01',
             email TEXT NOT NULL,
             phone TEXT DEFAULT '',
+            city TEXT DEFAULT '',
             bio TEXT DEFAULT '',
             github_url TEXT DEFAULT '',
+            linkedin_url TEXT DEFAULT '',
+            website_url TEXT DEFAULT '',
+            twitter_url TEXT DEFAULT '',
             portfolio_url TEXT DEFAULT '',
             project_zip_path TEXT DEFAULT '',
             resume_pdf_path TEXT DEFAULT '',
             work_experience_years INTEGER DEFAULT 0,
             past_companies_text TEXT DEFAULT '',
+            experience_summary TEXT DEFAULT '',
             skills_list TEXT DEFAULT '',
+            parsed_skills TEXT DEFAULT '',
+            resume_text TEXT DEFAULT '',
             target_role_preference TEXT DEFAULT '',
             fees_status TEXT DEFAULT 'PAID',
             consent_given INTEGER DEFAULT 0,
             consent_for_job_dispatch INTEGER DEFAULT 0,
-            auto_apply_mode INTEGER DEFAULT 0,     -- Default 0 (OFF) as requested
+            auto_apply_mode INTEGER DEFAULT 0,
             exam_completed INTEGER DEFAULT 0,
             portfolio_generated INTEGER DEFAULT 0,
             retest_requested INTEGER DEFAULT 0,
@@ -107,6 +114,24 @@ def init_db():
             FOREIGN KEY(course_id) REFERENCES courses(id)
         )
         """)
+        
+        # Safely migrate missing columns for existing SQLite tables
+        existing_cols = [r[1] for r in cursor.execute("PRAGMA table_info(students)").fetchall()]
+        new_cols = {
+            "city": "TEXT DEFAULT ''",
+            "linkedin_url": "TEXT DEFAULT ''",
+            "website_url": "TEXT DEFAULT ''",
+            "twitter_url": "TEXT DEFAULT ''",
+            "experience_summary": "TEXT DEFAULT ''",
+            "parsed_skills": "TEXT DEFAULT ''",
+            "resume_text": "TEXT DEFAULT ''"
+        }
+        for col, col_type in new_cols.items():
+            if col not in existing_cols:
+                try:
+                    cursor.execute(f"ALTER TABLE students ADD COLUMN {col} {col_type}")
+                except Exception:
+                    pass
         
         # 5. Agent Activity Logs Table
         cursor.execute("""
@@ -497,25 +522,68 @@ def approve_retest(student_id: str) -> bool:
         conn.commit()
         return True
 
+def verify_student_login(login_id_or_email: str, dob_input: str) -> Optional[Dict[str, Any]]:
+    """Strict Student DOB Authentication. Accepts Student ID or Email and exact YYYY-MM-DD DOB."""
+    clean_id = str(login_id_or_email or "").strip()
+    clean_dob = str(dob_input or "").strip()
+    if not clean_id or not clean_dob:
+        return None
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM students 
+            WHERE (LOWER(student_id) = LOWER(?) OR LOWER(email) = LOWER(?)) AND dob = ?
+        """, (clean_id, clean_id, clean_dob))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
 def update_student_profile(
     student_id: str,
     full_name: str,
     email: str,
-    phone: str,
-    bio: str,
-    github_url: str,
-    skills_list: str,
-    target_role_preference: str,
-    past_companies_text: str,
-    work_experience_years: int
+    phone: str = "",
+    bio: str = "",
+    github_url: str = "",
+    skills_list: str = "",
+    target_role_preference: str = "",
+    past_companies_text: str = "",
+    work_experience_years: int = 0,
+    dob: str = "",
+    city: str = "",
+    linkedin_url: str = "",
+    website_url: str = "",
+    twitter_url: str = ""
 ) -> Dict[str, Any]:
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
+        query = """
             UPDATE students 
-            SET full_name = ?, email = ?, phone = ?, bio = ?, github_url = ?, skills_list = ?, target_role_preference = ?, past_companies_text = ?, work_experience_years = ?
-            WHERE student_id = ?
-        """, (full_name, email, phone, bio, github_url, skills_list, target_role_preference, past_companies_text, work_experience_years, student_id))
+            SET full_name = ?, email = ?, phone = ?, bio = ?, github_url = ?, skills_list = ?, 
+                target_role_preference = ?, past_companies_text = ?, work_experience_years = ?
+        """
+        params = [full_name, email, phone, bio, github_url, skills_list, target_role_preference, past_companies_text, work_experience_years]
+        
+        if dob:
+            query += ", dob = ?"
+            params.append(dob)
+        if city:
+            query += ", city = ?"
+            params.append(city)
+        if linkedin_url:
+            query += ", linkedin_url = ?"
+            params.append(linkedin_url)
+        if website_url:
+            query += ", website_url = ?"
+            params.append(website_url)
+        if twitter_url:
+            query += ", twitter_url = ?"
+            params.append(twitter_url)
+            
+        query += " WHERE student_id = ?"
+        params.append(student_id)
+        
+        cursor.execute(query, tuple(params))
         conn.commit()
     return get_student_by_id(student_id)
 

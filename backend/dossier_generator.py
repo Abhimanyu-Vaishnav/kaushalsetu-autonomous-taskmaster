@@ -3,10 +3,22 @@ import re
 import json
 import uuid
 import hashlib
-import datetime
+from datetime import datetime, date
 import requests
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
+
+def calculate_age(dob_str: Optional[str]) -> Optional[int]:
+    """Calculates candidate age dynamically relative to current date."""
+    if not dob_str:
+        return None
+    try:
+        dob_clean = str(dob_str).strip()
+        dob_obj = datetime.strptime(dob_clean, "%Y-%m-%d").date()
+        today = date.today()
+        return today.year - dob_obj.year - ((today.month, today.day) < (dob_obj.month, dob_obj.day))
+    except Exception:
+        return None
 
 def fetch_real_github_dossier(github_url: str) -> dict:
     """Bulletproof GitHub API crawler extracting real repositories and profile stats."""
@@ -94,6 +106,8 @@ def synthesize_dossier_with_gemini(student_dict: dict) -> dict:
         prompt = (
             f"You are an expert technical recruiter and AI curriculum evaluator. Synthesize an executive candidate portfolio dossier for:\n"
             f"- Full Name: {student_dict.get('full_name', 'Candidate')}\n"
+            f"- Date of Birth: {student_dict.get('dob', 'N/A')}\n"
+            f"- Location/City: {student_dict.get('city', 'N/A')}\n"
             f"- Vocational Track/Course: {student_dict.get('course_name', 'Vocational Specialty')}\n"
             f"- Branch/Center: {student_dict.get('branch_name', 'Main Center')}\n"
             f"- Target Role: {student_dict.get('target_role_preference', 'Technical Specialist')}\n"
@@ -126,7 +140,7 @@ def synthesize_dossier_with_gemini(student_dict: dict) -> dict:
 def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] = None) -> str:
     """
     Generates a world-class, dynamic, graphics-heavy, and Gemini 2.5-grounded Autonomous Candidate Portfolio Dossier.
-    Intelligently adapts layout omitting empty GitHub / Experience placeholders.
+    Intelligently adapts layout omitting empty GitHub / Experience placeholders and displaying dynamic Age & Social Badges.
     """
     resolved_base = (base_url or os.environ.get("APP_BASE_URL") or "http://localhost:8000").rstrip("/")
     student_id = student_dict.get("student_id") or "STU-1001"
@@ -135,11 +149,20 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
     branch_name = student_dict.get("branch_name") or "Main Center Node"
     email = student_dict.get("email") or f"{student_id.lower()}@kaushalsetu.internal"
     phone = student_dict.get("phone") or "+91 9876543210"
+    city = student_dict.get("city") or branch_name
     bio = student_dict.get("bio") or f"Certified specialist in {course_name}, verified by KaushalSetu Taskmaster Engine."
     target_role = student_dict.get("target_role_preference") or "Specialist Technical Engineer"
     past_companies = str(student_dict.get("past_companies_text") or "").strip()
     exp_years = int(student_dict.get("work_experience_years", 0))
     github_url = str(student_dict.get("github_url") or "").strip()
+    linkedin_url = str(student_dict.get("linkedin_url") or "").strip()
+    website_url = str(student_dict.get("website_url") or "").strip()
+    twitter_url = str(student_dict.get("twitter_url") or "").strip()
+    dob = student_dict.get("dob") or ""
+
+    # Dynamic Age Calculation
+    age = calculate_age(dob)
+    age_badge_text = f"Age: {age} Years | Verified Record" if age is not None else "Verified Academic Record"
 
     # 1. Run Gemini 2.5 Flash reasoning synthesis hook
     gemini_data = synthesize_dossier_with_gemini(student_dict)
@@ -156,6 +179,19 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
         username = gh_data.get("username", "")
         profile_url = gh_data.get("profile_url", github_url)
 
+    # Build Social Badges
+    social_badges = []
+    if linkedin_url:
+        social_badges.append(f'<a href="{linkedin_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-sky-400 px-3 py-1 rounded-lg border border-sky-500/30 transition"><i class="fa-brands fa-linkedin"></i> LinkedIn</a>')
+    if has_valid_github:
+        social_badges.append(f'<a href="{profile_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 px-3 py-1 rounded-lg border border-sky-500/30 transition"><i class="fa-brands fa-github"></i> GitHub (@{username if username else "Candidate"})</a>')
+    if website_url:
+        social_badges.append(f'<a href="{website_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-emerald-400 px-3 py-1 rounded-lg border border-emerald-500/30 transition"><i class="fa-solid fa-globe"></i> Portfolio</a>')
+    if twitter_url:
+        social_badges.append(f'<a href="{twitter_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-cyan-400 px-3 py-1 rounded-lg border border-cyan-500/30 transition"><i class="fa-brands fa-x-twitter"></i> X/Twitter</a>')
+
+    social_badges_html = "".join(social_badges)
+
     # 3. Parse skills for Chart.js radar graph
     skills_raw = student_dict.get("skills_list", "")
     if isinstance(skills_raw, str):
@@ -168,7 +204,6 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
     if not skills:
         skills = ["API Architecture", "Database Systems", "Multimodal AI", "System Testing", "DevOps & Docker"]
 
-    # Incorporate Gemini Competencies if available
     gemini_comps = gemini_data.get("competencies", [])
     if gemini_comps:
         radar_labels_list = [c.get("skill", "Engineering") for c in gemini_comps[:6]]
@@ -199,7 +234,6 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
     highlighted_projs = gemini_data.get("highlighted_projects", [])
     proj_cards_html = ""
 
-    # Add Gemini Capstone / Practical Projects
     if highlighted_projs:
         for hp in highlighted_projs:
             t_stack = "".join([f'<span class="text-[10px] bg-slate-900 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800">#{t}</span>' for t in hp.get("tech_stack", ["PracticalCap"])])
@@ -225,7 +259,6 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
             </div>
             """
 
-    # Add GitHub Projects ONLY if valid GitHub repos exist
     if has_valid_github and gh_projects:
         for p in gh_projects:
             topics_badges = "".join([f'<span class="text-[10px] bg-slate-900 text-slate-400 px-2 py-0.5 rounded border border-slate-800">#{t}</span>' for t in p.get("topics", [])])
@@ -254,7 +287,6 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
             </div>
             """
 
-    # If NO projects at all, construct an academic milestone project card
     if not proj_cards_html:
         proj_cards_html = f"""
         <div class="col-span-2 bg-slate-900/80 border border-slate-800 p-6 rounded-2xl space-y-3">
@@ -274,7 +306,6 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
         </div>
         """
 
-    # 7. Work Experience Block (Omitted cleanly if not present)
     if has_work_exp:
         work_exp_html = f"""
         <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800">
@@ -288,15 +319,6 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
             <div class="text-xs text-slate-400 font-semibold uppercase mb-1">Institutional Qualification & Track</div>
             <div class="text-slate-200 text-sm font-medium">Certified through KaushalSetu institutional vocational curriculum ({branch_name}).</div>
         </div>
-        """
-
-    # 8. GitHub Badge (Rendered ONLY if github_url is present)
-    github_profile_badge = ""
-    if has_valid_github:
-        github_profile_badge = f"""
-        <a href="{profile_url}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-sky-300 px-3 py-1 rounded-lg border border-sky-500/30 transition">
-            <i class="fa-brands fa-github"></i> View GitHub Profile (@{username if username else 'Candidate'})
-        </a>
         """
 
     prof_summary = gemini_data.get("professional_summary") or bio
@@ -355,13 +377,13 @@ def generate_candidate_dossier_html(student_dict: dict, base_url: Optional[str] 
                     <h1 class="text-3xl md:text-4xl font-extrabold text-white font-heading tracking-tight flex flex-wrap items-center justify-center md:justify-start gap-3">
                         {candidate_name}
                     </h1>
-                    <p class="text-slate-300 text-sm font-semibold mt-1">{target_role}</p>
+                    <p class="text-slate-300 text-sm font-semibold mt-1">{target_role} • <span class="text-sky-300 font-mono">{age_badge_text}</span></p>
                     <p class="text-slate-400 text-xs font-mono mt-1">
-                        ID: <code class="text-sky-300 font-bold">{student_id}</code> | Email: <a href="mailto:{email}" class="text-slate-300 hover:text-white underline">{email}</a>
+                        ID: <code class="text-sky-300 font-bold">{student_id}</code> | Email: <a href="mailto:{email}" class="text-slate-300 hover:text-white underline">{email}</a> | City: <span class="text-slate-200">{city}</span>
                     </p>
                     <div class="mt-3 flex flex-wrap items-center justify-center md:justify-start gap-2">
                         <span class="text-xs font-semibold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-lg border border-emerald-800">{exp_badge}</span>
-                        {github_profile_badge}
+                        {social_badges_html}
                         <a href="/api/students/{student_id}/resume" target="_blank" download class="inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 rounded-lg px-3 py-1 transition shadow-sm">
                             <i class="fa-solid fa-file-pdf"></i> 📄 Download Official Resume (PDF)
                         </a>
