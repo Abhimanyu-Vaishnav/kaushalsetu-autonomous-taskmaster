@@ -243,6 +243,8 @@ def init_db():
         # Run column migration helper
         ensure_db_schema()
 
+init_complete_db = init_db
+
 def ensure_db_schema():
     """Dynamically migrates missing columns & tables in SQLite database without crashing."""
     try:

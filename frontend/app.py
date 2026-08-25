@@ -50,12 +50,23 @@ for d in [BACKEND_DIR, ROOT_DIR]:
         sys.path.insert(0, d)
 
 # Import backend engines directly (Zero HTTP required!)
-from backend.main import (
-    direct_reset_database,
-    direct_student_login,
-    get_db,
-    DB_PATH
-)
+try:
+    from backend.database import DB_PATH, get_db, init_complete_db
+except ImportError:
+    from database import DB_PATH, get_db, init_complete_db
+
+try:
+    from backend.main import (
+        direct_reset_database,
+        direct_student_login,
+        normalize_dob
+    )
+except ImportError:
+    from main import (
+        direct_reset_database,
+        direct_student_login,
+        normalize_dob
+    )
 
 def perform_student_login(s_id: str, dob_val: str):
     """Direct in-memory student authentication helper."""

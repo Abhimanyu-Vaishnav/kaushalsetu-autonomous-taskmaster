@@ -24,6 +24,9 @@ from datetime import datetime, date
 
 try:
     from database import (
+        DB_PATH,
+        get_db,
+        init_complete_db,
         get_db_connection,
         get_all_institutes,
         get_institute_by_id,
@@ -43,6 +46,9 @@ try:
     )
 except ImportError:
     from backend.database import (
+        DB_PATH,
+        get_db,
+        init_complete_db,
         get_db_connection,
         get_all_institutes,
         get_institute_by_id,
