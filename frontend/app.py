@@ -41,30 +41,12 @@ def parse_list_or_json(val):
         return [s.strip(" '\"[]") for s in items if s.strip(" '\"[]")]
     return []
 
-# 1. Internal API Communication (Streamlit -> FastAPI inside container)
-BACKEND_API_BASE = os.environ.get("BACKEND_INTERNAL_URL", "http://127.0.0.1:8000").rstrip("/")
-BACKEND_URL = BACKEND_API_BASE
-
-# 2. Public Shareable / Display Links (User-Facing Portfolio Dossier Links & Recruiter Email URLs)
-def get_public_base_url():
-    """Resolves public shareable base URL for external viewing links (dossiers, marksheets, recruiter emails)."""
-    env_pub = os.environ.get("APP_BASE_URL", "").strip().rstrip("/")
-    if env_pub:
-        return env_pub
-    try:
-        if hasattr(st, "context") and hasattr(st.context, "headers"):
-            headers = st.context.headers
-            host = headers.get("x-forwarded-host") or headers.get("host")
-            proto = headers.get("x-forwarded-proto") or ("https" if "https" in str(host) else "http")
-            if host:
-                return f"{proto}://{host}".rstrip("/")
-    except Exception:
-        pass
-    return "https://kaushalsetu-taskmaster-879567142511.us-central1.run.app"
-
-PUBLIC_BASE_URL = get_public_base_url()
+# 1. Global backend loopback inside the Cloud Run container
+INTERNAL_BACKEND_URL = os.environ.get("INTERNAL_BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
+BACKEND_URL = INTERNAL_BACKEND_URL
+PUBLIC_BASE_URL = os.environ.get("APP_BASE_URL", "https://kaushalsetu-taskmaster-879567142511.us-central1.run.app").rstrip("/")
 APP_HOST = PUBLIC_BASE_URL
-FRONTEND_URL = PUBLIC_BASE_URL if PUBLIC_BASE_URL not in [BACKEND_API_BASE, "http://localhost:8000"] else "http://localhost:8501"
+FRONTEND_URL = PUBLIC_BASE_URL
 
 def build_portfolio_dossier_url(student_id: str, existing_url: str = "") -> str:
     """Constructs user-facing absolute portfolio dossier URL relative to active deployment domain."""
@@ -349,20 +331,17 @@ def main_app_layout():
         if st.button("📘 Open Platform Guide & Agent Hub", use_container_width=True):
             modal_feature_guide()
 
-        if st.button("🧹 Purge All Data & Reset DB", type="primary", use_container_width=True):
-            with st.spinner("Wiping database and resetting seed data..."):
-                try:
-                    res = requests.post(f"{BACKEND_URL}/api/admin/reset-database", timeout=10)
-                    if res.status_code == 200:
-                        st.session_state.clear()
-                        st.query_params.clear()
-                        st.toast("Database wiped & reinitialized with clean slate!", icon="🧹")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error(f"Reset failed: {res.text}")
-                except Exception as ex:
-                    st.error(f"Error resetting database: {ex}")
+        if st.sidebar.button("🧹 Purge All Data & Reset DB", key="purge_all_db_btn", use_container_width=True):
+            try:
+                res = requests.post(f"{INTERNAL_BACKEND_URL}/api/admin/reset-database", timeout=15)
+                if res.status_code == 200:
+                    st.session_state.clear()
+                    st.toast("Database purged and freshly initialized on Cloud!", icon="✅")
+                    st.rerun()
+                else:
+                    st.sidebar.error(f"Failed to reset: {res.text}")
+            except Exception as err:
+                st.sidebar.error(f"Error resetting database: {err}")
         st.divider()
 
     # --- BIDIRECTIONAL STATE PERSISTENCE ENGINE ---
@@ -1246,23 +1225,16 @@ def main_app_layout():
         backend_connected = False
         institutes = []
         try:
-            ires = requests.get(f"{BACKEND_URL}/api/institutes", timeout=8)
+            ires = requests.get(f"{INTERNAL_BACKEND_URL}/api/institutes", timeout=8)
             if ires.status_code == 200:
                 backend_connected = True
                 institutes = ires.json().get("data", [])
         except Exception:
-            try:
-                ires = requests.get("http://127.0.0.1:8000/api/institutes", timeout=5)
-                if ires.status_code == 200:
-                    backend_connected = True
-                    institutes = ires.json().get("data", [])
-                    BACKEND_URL = "http://127.0.0.1:8000"
-            except Exception:
-                pass
+            pass
 
         if not backend_connected:
             st.error("🔴 Could not connect to backend server. Ensure run_app.py is active.")
-            st.caption(f"Connecting to internal endpoint: `{BACKEND_URL}`")
+            st.caption(f"Connecting to internal endpoint: `{INTERNAL_BACKEND_URL}`")
             st.stop()
 
         # Auto-initialize default foundation network if database is completely clean/empty

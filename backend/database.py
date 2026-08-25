@@ -40,6 +40,8 @@ def get_db_connection() -> sqlite3.Connection:
     conn.execute("PRAGMA busy_timeout=30000;")
     return conn
 
+get_db = get_db_connection
+
 def init_db():
     with get_db_connection() as conn:
         cursor = conn.cursor()

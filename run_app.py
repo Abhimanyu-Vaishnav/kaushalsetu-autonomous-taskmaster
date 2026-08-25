@@ -1,44 +1,56 @@
 import subprocess
-import sys
 import time
+import sys
 import os
+import requests
 import signal
 
 def run_app():
     print("=" * 60)
-    print("[KaushalSetu Taskmaster] Starting Engine & Dashboard")
+    print("🚀 [Startup] Launching FastAPI Backend...")
     print("=" * 60)
     
-    port = os.environ.get("PORT", "8080")
     root_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # 1. Start FastAPI backend server
-    print("1. Launching FastAPI Backend on http://localhost:8000 ...")
-    backend_process = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"],
-        cwd=os.path.join(root_dir, "backend")
+    backend_env = os.environ.copy()
+    backend_env["PYTHONUNBUFFERED"] = "1"
+
+    backend_proc = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8000"],
+        cwd=root_dir,
+        env=backend_env
     )
-    
-    # Wait for backend to boot up
-    time.sleep(3)
-    
-    # 2. Start Streamlit frontend server
-    print(f"2. Launching Streamlit Dashboard on http://0.0.0.0:{port} ...")
-    frontend_process = subprocess.Popen(
-        [
-            sys.executable, "-m", "streamlit", "run", "frontend/app.py",
-            f"--server.port={port}",
-            "--server.address=0.0.0.0",
-            "--server.enableCORS=false",
-            "--server.enableXsrfProtection=false"
-        ],
-        cwd=root_dir
-    )
-    
+
+    # Wait for backend readiness (up to 20 seconds)
+    backend_ready = False
+    for i in range(20):
+        try:
+            res = requests.get("http://127.0.0.1:8000/docs", timeout=1)
+            if res.status_code in (200, 404):
+                print(f"✅ Backend ready on attempt {i+1}")
+                backend_ready = True
+                break
+        except Exception:
+            time.sleep(1)
+
+    if not backend_ready:
+        print("⚠️ Warning: Backend health check timed out after 20s, proceeding to launch frontend...")
+
+    # Start Streamlit on Cloud Run ingress port
+    port = os.environ.get("PORT", "8080")
+    print(f"🌟 Launching Streamlit on port {port}...")
+    frontend_proc = subprocess.Popen([
+        sys.executable, "-m", "streamlit", "run", "frontend/app.py",
+        "--server.port", str(port),
+        "--server.address", "0.0.0.0",
+        "--server.headless", "true",
+        "--server.enableCORS", "false",
+        "--server.enableXsrfProtection", "false"
+    ], cwd=root_dir)
+
     def shutdown_handler(signum=None, frame=None):
         print("\nShutting down KaushalSetu processes...")
-        for p in [backend_process, frontend_process]:
-            if p.poll() is None:
+        for p in [backend_proc, frontend_proc]:
+            if p and p.poll() is None:
                 p.terminate()
         sys.exit(0)
 
@@ -47,18 +59,11 @@ def run_app():
         signal.signal(signal.SIGTERM, shutdown_handler)
     except (ValueError, AttributeError):
         pass
-    
+
     try:
-        while True:
-            b_poll = backend_process.poll()
-            f_poll = frontend_process.poll()
-            if b_poll is not None or f_poll is not None:
-                print(f"Process exited - Backend code: {b_poll}, Frontend code: {f_poll}")
-                shutdown_handler()
-            time.sleep(1)
+        frontend_proc.wait()
     except KeyboardInterrupt:
         shutdown_handler()
 
 if __name__ == "__main__":
     run_app()
-
