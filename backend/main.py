@@ -54,6 +54,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "service": "kaushalsetu-backend", "time": datetime.now().isoformat()}
+
 PORTFOLIO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "portfolios")
 os.makedirs(PORTFOLIO_DIR, exist_ok=True)
 

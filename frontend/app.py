@@ -48,6 +48,24 @@ PUBLIC_BASE_URL = os.environ.get("APP_BASE_URL", "https://kaushalsetu-taskmaster
 APP_HOST = PUBLIC_BASE_URL
 FRONTEND_URL = PUBLIC_BASE_URL
 
+def safe_api_call(method: str, endpoint: str, payload: dict = None, timeout: int = 12):
+    """Executes resilient internal API call with up to 3 automatic retries."""
+    url = f"{INTERNAL_BACKEND_URL}{endpoint}"
+    for attempt in range(3):
+        try:
+            m = method.upper()
+            if m == "POST":
+                return requests.post(url, json=payload, timeout=timeout)
+            elif m == "DELETE":
+                return requests.delete(url, timeout=timeout)
+            elif m == "PUT":
+                return requests.put(url, json=payload, timeout=timeout)
+            else:
+                return requests.get(url, timeout=timeout)
+        except Exception:
+            time.sleep(1)
+    return None
+
 def build_portfolio_dossier_url(student_id: str, existing_url: str = "") -> str:
     """Constructs user-facing absolute portfolio dossier URL relative to active deployment domain."""
     if existing_url and "?view=portfolio" in existing_url:
@@ -1224,13 +1242,10 @@ def main_app_layout():
         # Fetch Institutes with resilient backend health check & auto-initialization
         backend_connected = False
         institutes = []
-        try:
-            ires = requests.get(f"{INTERNAL_BACKEND_URL}/api/institutes", timeout=8)
-            if ires.status_code == 200:
-                backend_connected = True
-                institutes = ires.json().get("data", [])
-        except Exception:
-            pass
+        ires = safe_api_call("GET", "/api/institutes", timeout=8)
+        if ires and ires.status_code == 200:
+            backend_connected = True
+            institutes = ires.json().get("data", [])
 
         if not backend_connected:
             st.error("🔴 Could not connect to backend server. Ensure run_app.py is active.")
@@ -1239,20 +1254,17 @@ def main_app_layout():
 
         # Auto-initialize default foundation network if database is completely clean/empty
         if backend_connected and not institutes:
-            try:
-                r_auto = requests.post(f"{BACKEND_URL}/api/institutes/create", json={
-                    "name": "KaushalSetu Vocational Foundation",
-                    "code": "KAUSHALSETU-HQ",
-                    "initial_branch_name": "Nangloi Center Node",
-                    "initial_city": "New Delhi",
-                    "placement_threshold": 70
-                }, timeout=5)
-                if r_auto.status_code in [200, 201]:
-                    ires = requests.get(f"{BACKEND_URL}/api/institutes", timeout=5)
-                    if ires.status_code == 200:
-                        institutes = ires.json().get("data", [])
-            except Exception:
-                pass
+            r_auto = safe_api_call("POST", "/api/institutes/create", payload={
+                "name": "KaushalSetu Vocational Foundation",
+                "code": "KAUSHALSETU-HQ",
+                "initial_branch_name": "Nangloi Center Node",
+                "initial_city": "New Delhi",
+                "placement_threshold": 70
+            }, timeout=5)
+            if r_auto and r_auto.status_code in [200, 201]:
+                ires2 = safe_api_call("GET", "/api/institutes", timeout=5)
+                if ires2 and ires2.status_code == 200:
+                    institutes = ires2.json().get("data", [])
 
         # --- MODAL DIALOGS FOR GOVERNANCE ---
         @st.dialog("🏢 Create New Institute & Initial Branch Node")
