@@ -1682,13 +1682,18 @@ def direct_evaluate_and_dispatch_exam(payload: dict):
         """, (plc_id, student_id, stu_name, stu_track, stu_branch, company, role, int(aggregate_score), status_seal))
 
         # 7. Add to Real-Time Agent Logs
-        c.execute("""
-            INSERT INTO agent_activity_logs (action, entity_type, entity_id, details)
-            VALUES ('EXAM_EVALUATED', 'student', ?, ?)
-        """, (student_id, f"Candidate {stu_name} scored {aggregate_score}% | Sealed with {status_seal} | Dispatched to {company}"))
-
         conn.commit()
         conn.close()
+
+        try:
+            log_agent_activity(
+                action="EXAM_EVALUATED",
+                entity_type="student",
+                entity_id=student_id,
+                details=f"Candidate {stu_name} scored {aggregate_score}% | Sealed: {status_seal} | Dispatched: {company}"
+            )
+        except Exception:
+            pass
 
         try:
             export_database_snapshot()
@@ -1829,23 +1834,37 @@ def direct_update_student(student_id: str, payload: dict):
 
 def log_agent_activity(action: str, entity_type: str, entity_id: str, details: str):
     try:
+        act_val = str(action or "GENERAL_ACTIVITY").strip()
+        e_type = str(entity_type or "").strip()
+        e_id = str(entity_id or "").strip()
+        det_val = str(details or "").strip()
+
         conn = get_db()
         c = conn.cursor()
         c.execute("PRAGMA table_info(agent_activity_logs)")
         cols = {r[1] for r in c.fetchall()}
 
+        insert_fields = {
+            "entity_type": e_type,
+            "entity_id": e_id,
+            "details": det_val
+        }
+
+        # Populate both column variations if present in DB
         if "action" in cols:
-            c.execute("""
-                INSERT INTO agent_activity_logs (action, entity_type, entity_id, details)
-                VALUES (?, ?, ?, ?)
-            """, (action, entity_type, entity_id, details))
-        else:
-            c.execute("INSERT INTO agent_activity_logs (details) VALUES (?)", (f"[{action}] {details}",))
-            
+            insert_fields["action"] = act_val
+        if "action_type" in cols:
+            insert_fields["action_type"] = act_val
+
+        col_str = ", ".join(insert_fields.keys())
+        placeholders = ", ".join(["?"] * len(insert_fields))
+        values = list(insert_fields.values())
+
+        c.execute(f"INSERT INTO agent_activity_logs ({col_str}) VALUES ({placeholders})", values)
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Log insert warning: {e}")
+        print(f"Logging notice: {e}")
 
 def direct_student_login(student_id: str, dob_input: str):
     try:

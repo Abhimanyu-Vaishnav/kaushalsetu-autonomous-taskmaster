@@ -265,7 +265,7 @@ def init_complete_db():
         CREATE TABLE IF NOT EXISTS agent_activity_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             action TEXT DEFAULT 'GENERAL_ACTIVITY',
-            action_type TEXT DEFAULT 'ACTION',
+            action_type TEXT DEFAULT 'GENERAL_ACTIVITY',
             entity_type TEXT DEFAULT '',
             entity_id TEXT DEFAULT '',
             student_id TEXT DEFAULT '',
@@ -283,7 +283,7 @@ def init_complete_db():
 
     log_required = {
         "action": "TEXT DEFAULT 'GENERAL_ACTIVITY'",
-        "action_type": "TEXT DEFAULT 'ACTION'",
+        "action_type": "TEXT DEFAULT 'GENERAL_ACTIVITY'",
         "entity_type": "TEXT DEFAULT ''",
         "entity_id": "TEXT DEFAULT ''",
         "details": "TEXT DEFAULT ''",
