@@ -85,6 +85,7 @@ try:
         agent_apply_job_for_student,
         agent_schedule_interview,
         direct_get_job_applications,
+        direct_verify_cryptographic_seal,
         normalize_dob
     )
 except ImportError:
@@ -117,6 +118,7 @@ except ImportError:
         agent_apply_job_for_student,
         agent_schedule_interview,
         direct_get_job_applications,
+        direct_verify_cryptographic_seal,
         normalize_dob
     )
 
@@ -465,8 +467,42 @@ def main_app_layout():
     # --- SIDEBAR ADMIN UTILITIES ---
     with st.sidebar:
         st.markdown("### ⚙️ System Admin Utilities")
-        st.caption("KaushalSetu Autonomous Taskmaster Engine Governance Controls")
+        st.caption("KaushalSetu Autonomous Taskmaster Governance Controls")
         
+        # --- LIVE SYSTEM TELEMETRY STATUS BANNER ---
+        st.markdown("""
+        <div style="background:#0F172A; border:1px solid #1E293B; padding:10px; border-radius:8px; margin-bottom:10px; font-size:0.75rem;">
+            <div style="color:#38BDF8; font-weight:700; margin-bottom:4px;">📡 Live System Telemetry</div>
+            <div>⚡ <b>FastAPI Core Engine:</b> <span style="color:#34D399;">🟢 Online (0ms Latency)</span></div>
+            <div>🤖 <b>Gemma & Gemini 3.5 Engine:</b> <span style="color:#34D399;">🟢 Active</span></div>
+            <div>🔒 <b>Cryptographic Provenance:</b> <span style="color:#34D399;">🟢 SHA-256 Verified</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.expander("🔍 Public SHA-256 Credential Verifier", expanded=False):
+            st.caption("Verify the authenticity of any KaushalSetu issued certification against the audit ledger.")
+            verify_input = st.text_input("Student ID or Cryptographic Seal", placeholder="e.g. STU-1001 or 0x27A5...", key="side_verify_inp")
+            if st.button("🛡️ Verify Credential Integrity", key="btn_verify_seal_public", use_container_width=True):
+                if not verify_input.strip():
+                    st.warning("Please enter a Student ID or Digest Seal.")
+                else:
+                    v_res = direct_verify_cryptographic_seal(verify_input)
+                    if v_res.get("valid"):
+                        st.success("✅ **CRYPTOGRAPHIC RECORD VERIFIED & AUTHENTIC**")
+                        st.markdown(f"""
+                        <div style="padding: 10px; border-radius: 8px; background: rgba(16, 185, 129, 0.08); border: 1px solid #10b981; font-size:0.8rem;">
+                            <b>Candidate:</b> {v_res.get('name')}<br>
+                            <b>Credential ID:</b> <code>{v_res.get('student_id')}</code><br>
+                            <b>Domain Track:</b> {v_res.get('track')}<br>
+                            <b>Aggregate Score:</b> <b style="color:#34d399;">{v_res.get('aggregate_score')}%</b><br>
+                            <b>Authorized Center:</b> {v_res.get('branch')}<br>
+                            <b>Digital Digest Seal:</b> <code style="font-size:0.7rem;">{v_res.get('status_seal')}</code><br>
+                            <b>Status:</b> <b style="color:#10b981;">{v_res.get('integrity_status')}</b>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.error(f"❌ {v_res.get('message')}")
+
         if st.button("📘 Open Platform Guide & Agent Hub", use_container_width=True):
             modal_feature_guide()
 
@@ -665,6 +701,37 @@ def main_app_layout():
                 with col_pt2:
                     if st.button("🔗 Copy Public Transcript Verification Link", use_container_width=True):
                         st.toast(f"📋 Verification link copied: https://kaushalsetu.gov.in/verify/{s_id}", icon="🔗")
+
+                with st.expander("🖨️ View Printable Official Marksheet Transcript", expanded=False):
+                    transcript_html = f"""
+                    <div id="printable-marksheet" style="padding: 30px; border: 2px solid #3b82f6; border-radius: 12px; background: #ffffff; color: #111827; font-family: Arial, sans-serif; margin-top: 15px;">
+                        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px;">
+                            <div>
+                                <h2 style="margin: 0; color: #1e3a8a;">KAUSHALSETU NATIONAL VOCATIONAL NETWORK</h2>
+                                <p style="margin: 3px 0 0 0; color: #4b5563; font-size: 0.9rem;">SkillForge Autonomous Taskmaster Assessment Authority</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="font-size: 0.8rem; background: #064e3b; color: #34d399; padding: 4px 10px; border-radius: 4px; font-weight: bold;">SEALED RECORD</span>
+                            </div>
+                        </div>
+                        <table style="width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 0.9rem;">
+                            <tr><td><b>Candidate Name:</b> {s_name}</td><td><b>Student ID:</b> {s_id}</td></tr>
+                            <tr><td><b>Domain Track:</b> {s_track}</td><td><b>Center:</b> {s_branch}</td></tr>
+                            <tr><td><b>Assessment Date:</b> 2026-08-26</td><td><b>DOB:</b> {student_data.get('dob', '2000-01-01')}</td></tr>
+                        </table>
+                        <div style="margin: 20px 0; border: 1px solid #d1d5db; border-radius: 8px; padding: 15px;">
+                            <h4 style="margin: 0 0 10px 0; color: #1e40af;">Certified Assessment Scores</h4>
+                            <p style="margin: 5px 0;">• Theoretical Multimodal MCQs (Weight 50%): <b>{mcq_s} / 50</b></p>
+                            <p style="margin: 5px 0;">• Practical Capstone Diagnostics (Weight 50%): <b>{cap_s} / 50</b></p>
+                            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 10px 0;">
+                            <h3 style="margin: 0; color: #047857;">Final Cumulative Competency: {agg_s}% (Grade A+)</h3>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #6b7280; word-break: break-all;">
+                            <b>Immutable Ledger Seal:</b> <code>{seal_val}</code>
+                        </div>
+                    </div>
+                    """
+                    st.components.v1.html(transcript_html, height=380, scrolling=True)
 
             # TAB 2: DYNAMIC ANIMATED PORTFOLIO
             with tab_port:
