@@ -496,34 +496,11 @@ def direct_get_students(branch_id: str = None, institute_id: str = None):
         return []
 
 def direct_add_student(payload: dict):
+    if not isinstance(payload, dict):
+        return {"status": "error", "message": "Invalid payload format"}
     try:
         from database import add_student
-        name = str(payload.get("full_name") or payload.get("name") or "").strip()
-        if not name:
-            return {"status": "error", "message": "Full name is required"}
-        email = str(payload.get("email") or "").strip()
-        phone = str(payload.get("phone") or "").strip()
-        dob = str(payload.get("dob") or "2000-01-01").strip()
-        inst_id = str(payload.get("institute_id") or "INST-ROOT").strip()
-        branch_id = str(payload.get("branch_id") or "BR-MAIN").strip()
-        course_name = str(payload.get("course_name") or payload.get("track") or "Vocational Track").strip()
-        b_name = str(payload.get("branch_name") or payload.get("branch_center") or "Main Center").strip()
-
-        res = add_student(
-            institute_id=inst_id,
-            branch_id=branch_id,
-            name=name,
-            dob=dob,
-            email=email,
-            phone=phone,
-            branch_center=b_name,
-            track=course_name
-        )
-        try:
-            export_database_snapshot()
-        except Exception:
-            pass
-        return {"status": "success", "success": True, "message": "Student added successfully", "data": res, "student_id": res.get("student_id") if isinstance(res, dict) else ""}
+        return add_student(**payload)
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -583,41 +560,13 @@ def direct_get_agent_logs(page: int = 1, page_size: int = 15, branch_id: str = N
         return {"status": "error", "message": str(e), "logs": [], "data": [], "total_count": 0, "total_pages": 1}
 
 def direct_create_student(payload: dict):
+    if not isinstance(payload, dict):
+        return {"status": "error", "message": "Invalid payload format"}
     try:
-        import uuid
-        s_id = str(payload.get("id") or payload.get("student_id") or f"STU-{uuid.uuid4().hex[:6].upper()}").strip()
-        name = str(payload.get("name") or payload.get("full_name") or "").strip()
-        if not name:
-            return {"status": "error", "message": "Full name is required"}
-        dob = str(payload.get("dob") or "2000-01-01").strip()
-        email = str(payload.get("email") or "").strip()
-        phone = str(payload.get("phone") or "").strip()
-        track = str(payload.get("track") or payload.get("course_name") or "General Track").strip()
-        branch = str(payload.get("branch_center") or payload.get("branch_name") or "Delhi Nangloi").strip()
-        inst_id = str(payload.get("institute_id") or "INST-ROOT").strip()
-        branch_id = str(payload.get("branch_id") or "BR-MAIN").strip()
-
-        conn = get_db()
-        c = conn.cursor()
-        c.execute("""
-            INSERT OR REPLACE INTO students (id, name, dob, email, phone, track, branch_center, institute_id, branch_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (s_id, name, dob, email, phone, track, branch, inst_id, branch_id))
-        
-        c.execute("""
-            INSERT INTO agent_activity_logs (id, action_type, description, student_id, branch_id, institute_id)
-            VALUES (?, 'ENROLL_STUDENT', ?, ?, ?, ?)
-        """, (f"LOG-{uuid.uuid4().hex[:8].upper()}", f"Enrolled candidate {name} ({s_id}) in {track}", s_id, branch_id, inst_id))
-
-        conn.commit()
-        conn.close()
-        try:
-            export_database_snapshot()
-        except Exception:
-            pass
-        return {"status": "success", "success": True, "message": "Student enrolled successfully!", "id": s_id, "student_id": s_id}
+        from database import add_student
+        return add_student(**payload)
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"Student creation failed: {str(e)}"}
 
 def direct_delete_student(student_id: str):
     try:

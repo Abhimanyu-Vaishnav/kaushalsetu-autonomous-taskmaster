@@ -1479,22 +1479,24 @@ def main_app_layout():
                             "branch_id": target_branch_id,
                             "course_id": c_id,
                             "branch_name": target_branch_name,
+                            "branch_center": target_branch_name,
                             "course_name": ms_cname,
+                            "track": ms_cname,
+                            "name": ms_name.strip(),
                             "full_name": ms_name.strip(),
                             "dob": str(ms_dob),
                             "email": ms_email.strip(),
                             "phone": ms_phone.strip(),
                             "bio": ms_bio.strip(),
-                            "target_role_preference": ms_role.strip(),
-                            "skills_list": ms_skills.strip(),
                             "fees_status": "PAID",
                             "consent": 1
                         }
                         try:
                             with st.spinner("Enrolling candidate & synthesizing base profile..."):
-                                resp = direct_add_student(payload)
+                                resp = direct_create_student(payload)
                             if resp.get("status") == "success" or resp.get("success"):
-                                st.toast(f"✅ Candidate {ms_name} Enrolled Successfully!", icon="🎉")
+                                c_id_disp = resp.get("id") or resp.get("student_id") or ""
+                                st.toast(f"✅ Candidate {ms_name.strip()} ({c_id_disp}) Enrolled Successfully!", icon="🎉")
                                 st.session_state["roster_refresh_key"] = time.time()
                                 st.rerun()
                             else:

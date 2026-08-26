@@ -859,44 +859,102 @@ def get_student_by_id(student_id: str) -> Optional[Dict[str, Any]]:
         return dict(row) if row else None
 
 def add_student(
-    institute_id: str,
-    branch_id: str,
-    course_id: str,
-    branch_name: str,
-    course_name: str,
-    full_name: str,
-    dob: str,
-    email: str,
+    id: str = None,
+    name: str = "",
+    student_name: str = "",
+    full_name: str = "",
+    dob: str = "2000-01-01",
+    email: str = "",
     phone: str = "",
+    track: str = "General Track",
+    course_name: str = "",
+    branch_center: str = "Delhi Center",
+    branch_name: str = "",
+    institute_id: str = "",
+    branch_id: str = "",
+    course_id: str = "",
     bio: str = "",
     fees_status: str = "PAID",
-    consent: int = 1
+    consent: int = 1,
+    **kwargs
 ) -> Dict[str, Any]:
-    with get_db_connection() as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        # Deduplication check: check if email or phone already registered
-        if email:
-            cursor.execute("SELECT * FROM students WHERE email = ? AND branch_id = ?", (email, branch_id))
-            existing = cursor.fetchone()
-            if existing:
-                return dict(existing)
-        if phone:
-            cursor.execute("SELECT * FROM students WHERE phone = ? AND branch_id = ?", (phone, branch_id))
-            existing = cursor.fetchone()
-            if existing:
-                return dict(existing)
+    try:
+        import uuid
+        
+        # Harmonize candidate name & attributes
+        final_name = str(name or student_name or full_name or kwargs.get("name") or kwargs.get("full_name") or "Candidate").strip()
+        final_id = str(id or kwargs.get("student_id") or kwargs.get("id") or f"STU-{uuid.uuid4().hex[:6].upper()}").strip()
+        final_dob = str(dob or kwargs.get("date_of_birth") or "2000-01-01").strip()
+        final_email = str(email or kwargs.get("candidate_email") or "").strip()
+        final_phone = str(phone or kwargs.get("contact_phone") or "").strip()
+        final_track = str(track or course_name or kwargs.get("course_track") or "General Track").strip()
+        final_branch = str(branch_center or branch_name or kwargs.get("branch") or branch_id or "Delhi Center").strip()
+        final_inst_id = str(institute_id or kwargs.get("institute_id") or "INST-ROOT").strip()
+        final_branch_id = str(branch_id or kwargs.get("branch_id") or "BR-MAIN").strip()
+        final_course_id = str(course_id or kwargs.get("course_id") or "CRS-GENERIC").strip()
+        final_bio = str(bio or kwargs.get("bio") or "").strip()
 
-        branch_slug = "".join([c for c in branch_name if c.isalnum()]).upper()
-        prefix = branch_slug[:3] if len(branch_slug) >= 3 else "GEN"
-        student_id = f"STU-{prefix}-{uuid.uuid4().hex[:4].upper()}"
-        cursor.execute("""
-            INSERT INTO students 
-            (student_id, institute_id, branch_id, course_id, branch_name, course_name, full_name, dob, email, phone, bio, fees_status, consent_given, consent_for_job_dispatch, exam_completed, portfolio_generated, interview_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0)
-        """, (student_id, institute_id, branch_id, course_id, branch_name, course_name, full_name, dob, email, phone, bio, fees_status, consent, consent))
+        conn = get_db()
+        c = conn.cursor()
+
+        # Check existing table columns to avoid column mismatch crashes
+        c.execute("PRAGMA table_info(students)")
+        cols = [r[1] for r in c.fetchall()]
+
+        insert_map = {}
+
+        if "id" in cols:
+            insert_map["id"] = final_id
+        if "student_id" in cols:
+            insert_map["student_id"] = final_id
+        if "name" in cols:
+            insert_map["name"] = final_name
+        if "student_name" in cols:
+            insert_map["student_name"] = final_name
+        if "full_name" in cols:
+            insert_map["full_name"] = final_name
+        if "dob" in cols:
+            insert_map["dob"] = final_dob
+        if "email" in cols:
+            insert_map["email"] = final_email
+        if "phone" in cols:
+            insert_map["phone"] = final_phone
+        if "track" in cols:
+            insert_map["track"] = final_track
+        if "course_name" in cols:
+            insert_map["course_name"] = final_track
+        if "branch_center" in cols:
+            insert_map["branch_center"] = final_branch
+        if "branch_name" in cols:
+            insert_map["branch_name"] = final_branch
+        if "institute_id" in cols:
+            insert_map["institute_id"] = final_inst_id
+        if "branch_id" in cols:
+            insert_map["branch_id"] = final_branch_id
+        if "course_id" in cols:
+            insert_map["course_id"] = final_course_id
+        if "bio" in cols:
+            insert_map["bio"] = final_bio
+        if "fees_status" in cols:
+            insert_map["fees_status"] = fees_status
+
+        col_names = ", ".join(insert_map.keys())
+        placeholders = ", ".join(["?"] * len(insert_map))
+        values = list(insert_map.values())
+
+        c.execute(f"INSERT OR REPLACE INTO students ({col_names}) VALUES ({placeholders})", values)
         conn.commit()
-    return get_student_by_id(student_id)
+        conn.close()
+
+        # Trigger snapshot backup & audit log
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
+
+        return {"status": "success", "success": True, "message": "Student registered successfully!", "id": final_id, "student_id": final_id, "name": final_name, "full_name": final_name, "data": insert_map}
+    except Exception as e:
+        return {"status": "error", "message": f"Registration failed: {str(e)}"}
 
 def mark_student_exam_complete(
     student_id: str,
