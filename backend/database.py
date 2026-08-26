@@ -240,11 +240,15 @@ def init_complete_db():
         "institute_id": "TEXT DEFAULT 'SKILLFORGE-HQ'",
         "branch_id": "TEXT DEFAULT 'BR-NANGLOI'",
         "course_id": "TEXT DEFAULT 'CRS-MAIN'",
+        "profile_photo": "TEXT DEFAULT ''",
         "github_url": "TEXT DEFAULT ''",
         "linkedin_url": "TEXT DEFAULT ''",
         "portfolio_url": "TEXT DEFAULT ''",
         "website_url": "TEXT DEFAULT ''",
+        "twitter_url": "TEXT DEFAULT ''",
         "resume_text": "TEXT DEFAULT ''",
+        "parsed_skills": "TEXT DEFAULT '[]'",
+        "portfolio_html": "TEXT DEFAULT ''",
         "exam_completed": "INTEGER DEFAULT 0",
         "mcq_score": "REAL DEFAULT 0.0",
         "capstone_score": "REAL DEFAULT 0.0",
@@ -311,6 +315,22 @@ def init_complete_db():
             dossier_url TEXT,
             ledger_hash TEXT,
             dispatched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS job_opportunities (
+            id TEXT PRIMARY KEY,
+            role_title TEXT NOT NULL,
+            company_name TEXT NOT NULL,
+            location TEXT NOT NULL,
+            experience_level TEXT DEFAULT '0-2 Years',
+            salary_range TEXT DEFAULT '₹3.5 LPA - ₹6.0 LPA',
+            job_type TEXT DEFAULT 'Full-time',
+            required_skills TEXT DEFAULT '[]',
+            description TEXT DEFAULT '',
+            apply_url TEXT DEFAULT '#',
+            verified_source TEXT DEFAULT 'LinkedIn / Indeed Live Feed'
         )
     """)
 

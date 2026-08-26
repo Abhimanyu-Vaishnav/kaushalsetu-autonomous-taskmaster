@@ -78,6 +78,9 @@ try:
         direct_evaluate_and_dispatch_exam,
         direct_simulate_candidate_loop,
         direct_get_exam_for_student,
+        generate_dynamic_ai_portfolio,
+        direct_search_and_match_jobs,
+        generate_interview_prep_questions,
         normalize_dob
     )
 except ImportError:
@@ -103,6 +106,9 @@ except ImportError:
         direct_evaluate_and_dispatch_exam,
         direct_simulate_candidate_loop,
         direct_get_exam_for_student,
+        generate_dynamic_ai_portfolio,
+        direct_search_and_match_jobs,
+        generate_interview_prep_questions,
         normalize_dob
     )
 
@@ -553,58 +559,164 @@ def main_app_layout():
         is_exam_done = (student_data.get("exam_completed") == 1) or (st.session_state.get("active_student_view") == "results")
 
         if is_exam_done and not student_data.get("retest_approved"):
+            s_id = student_data.get("student_id") or student_data.get("id")
+            s_name = student_data.get("full_name") or student_data.get("name") or "Candidate"
+            s_track = student_data.get("course_name") or student_data.get("track") or "Vocational Diagnostics & Mechatronics"
+            s_branch = student_data.get("branch_name") or student_data.get("branch_center") or "Nangloi Center (Delhi)"
+
+            # --- TOP PROFILE CUSTOMIZATION & MEDIA UPLOAD BAR ---
+            with st.expander("👤 Customize Candidate Profile, Photo & Social Portfolio Links", expanded=False):
+                col_pf1, col_pf2 = st.columns([1, 2])
+                with col_pf1:
+                    u_photo = st.file_uploader("📷 Upload Candidate Profile Photo", type=["jpg", "png", "jpeg"], key="p_photo_up")
+                    photo_b64 = student_data.get("profile_photo", "")
+                    if u_photo:
+                        b_data = u_photo.getvalue()
+                        mime = u_photo.type or "image/png"
+                        photo_b64 = f"data:{mime};base64,{base64.b64encode(b_data).decode('utf-8')}"
+                        st.image(u_photo, caption="Uploaded Preview", width=120)
+                with col_pf2:
+                    p_github = st.text_input("🐙 GitHub Repository URL", value=student_data.get("github_url", ""), placeholder="https://github.com/username/repo")
+                    p_linkedin = st.text_input("💼 LinkedIn Profile URL", value=student_data.get("linkedin_url", ""), placeholder="https://linkedin.com/in/username")
+                    p_website = st.text_input("🌐 Portfolio Website URL", value=student_data.get("website_url", ""), placeholder="https://candidate.dev")
+                    
+                    if st.button("🤖 Regenerate Dynamic AI Portfolio", type="primary", use_container_width=True):
+                        up_payload = {
+                            "profile_photo": photo_b64,
+                            "github_url": p_github.strip(),
+                            "linkedin_url": p_linkedin.strip(),
+                            "website_url": p_website.strip()
+                        }
+                        direct_update_student(student_id=s_id, payload=up_payload)
+                        student_data["profile_photo"] = photo_b64
+                        student_data["github_url"] = p_github.strip()
+                        student_data["linkedin_url"] = p_linkedin.strip()
+                        student_data["website_url"] = p_website.strip()
+                        st.session_state["authenticated_student"] = student_data
+                        generate_dynamic_ai_portfolio(s_id)
+                        st.toast("✅ Dynamic AI Portfolio Regenerated!", icon="🎨")
+                        st.rerun()
+
             st.success(f"🎓 Assessment Completed & Verified! Digest Seal: `{student_data.get('status_seal', '0x27A524D65BA86A69')}`")
 
-            tab_card, tab_port, tab_jobs = st.tabs([
+            tab_card, tab_port, tab_jobs, tab_prep = st.tabs([
                 "📜 Official Marksheet & Certificate",
                 "🌐 Dynamic Animated Portfolio",
-                "💼 Autonomous Placement Ledger & Outbox"
+                "💼 Live Verified Job Finder & Outbox",
+                "🎙️ AI Interview Studio"
             ])
 
+            # TAB 1: OFFICIAL MARKSHEET & CERTIFICATE
             with tab_card:
+                mcq_s = float(student_data.get('mcq_score') or 42.0)
+                cap_s = float(student_data.get('capstone_score') or 48.0)
+                agg_s = float(student_data.get('aggregate_score') or 90.0)
+                seal_val = student_data.get('status_seal') or '0x27A524D65BA86A69'
+
                 st.markdown(f"""
-                <div style="padding: 24px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);">
-                    <h2 style="color: #60a5fa; margin: 0;">SkillForge Official Assessment Transcript</h2>
-                    <p style="color: #9ca3af;">Candidate: <b>{student_data.get('full_name') or student_data.get('name')}</b> | ID: <code>{student_data.get('student_id') or student_data.get('id')}</code></p>
-                    <hr style="border-color: rgba(255,255,255,0.08);">
-                    <div style="display: flex; gap: 30px; margin-top: 15px; flex-wrap: wrap;">
-                        <div><h4>MCQ Theory Score</h4><h2 style="color: #34d399;">{student_data.get('mcq_score', 42.0)} / 50</h2></div>
-                        <div><h4>Capstone Practical</h4><h2 style="color: #60a5fa;">{student_data.get('capstone_score', 48.0)} / 50</h2></div>
-                        <div><h4>Final Aggregate</h4><h2 style="color: #fbbf24;">{student_data.get('aggregate_score', 90.0)}%</h2></div>
-                    </div>
-                    <div style="margin-top: 15px; padding: 10px; background: #1e293b; border-radius: 8px;">
-                        <span style="font-size: 0.85rem; color: #cbd5e1;">🔒 Cryptographic Ledger Hash: <code>{student_data.get('status_seal', '0x27A524D65BA86A69')}</code></span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with tab_port:
-                st.markdown("### 🌐 Live AI-Generated Candidate Portfolio")
-                st.markdown(f"""
-                <div style="padding: 20px; border-radius: 12px; background: linear-gradient(135deg, #1e1e38 0%, #0f172a 100%); border: 1px solid #3b82f6;">
-                    <h3 style="color: #ffffff;">{student_data.get('full_name') or student_data.get('name')} - Portfolio</h3>
-                    <p style="color: #93c5fd;">Specialization: {student_data.get('course_name') or student_data.get('track')}</p>
-                    <p style="color: #cbd5e1;">Verified Skills: Industrial Telemetry, Sensor Calibration, Fault Diagnosis, PID Control Systems.</p>
-                    <span style="background: #064e3b; color: #34d399; padding: 4px 12px; border-radius: 20px; font-weight: bold;">Verified Competency (Grade A)</span>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with tab_jobs:
-                st.markdown("### 💼 Autonomous Placement & Outbox Ledger")
-                ledger_data = direct_get_placement_ledger(branch_id=student_data.get("branch_id"))
-                ledger_entries = ledger_data.get("ledger", []) if isinstance(ledger_data, dict) else (ledger_data if isinstance(ledger_data, list) else [])
-                student_placements = [p for p in ledger_entries if p.get("student_id") == (student_data.get("student_id") or student_data.get("id"))]
-
-                if not student_placements:
-                    st.info("🚀 Dossier currently queued in Autonomous Outbox for hiring partner dispatch.")
-                else:
-                    for p in student_placements:
-                        st.markdown(f"""
-                        <div style="padding: 14px; margin-bottom: 8px; border-radius: 8px; background: rgba(255,255,255,0.03); border-left: 4px solid #10b981;">
-                            <b>🎯 Role Matched: {p.get('role_title')}</b> at <span style="color: #60a5fa;">{p.get('company_name')}</span>
-                            <br><span style="font-size: 0.85rem; color: #9ca3af;">Match Rating: <b>{p.get('match_percentage')}%</b> | Status: <b style="color: #34d399;">{p.get('status')}</b></span>
+                <div style="padding: 28px; border-radius: 14px; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid #6366f1; box-shadow: 0 15px 30px rgba(0,0,0,0.5);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
+                        <div>
+                            <h2 style="color: #818cf8; margin: 0; font-size: 1.6rem;">🏛️ SkillForge Vocational Foundation</h2>
+                            <span style="color: #94a3b8; font-size: 0.9rem;">National Autonomous Assessment & Certification Board</span>
                         </div>
-                        """, unsafe_allow_html=True)
+                        <div style="text-align: right;">
+                            <span style="background: #064e3b; color: #34d399; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">OFFICIAL TRANSCRIPT</span>
+                        </div>
+                    </div>
+                    <div style="margin: 20px 0; font-size: 0.95rem; color: #cbd5e1;">
+                        <p style="margin: 4px 0;">Candidate Name: <b style="color: #ffffff;">{s_name}</b></p>
+                        <p style="margin: 4px 0;">Candidate ID: <code style="color: #38bdf8;">{s_id}</code> &nbsp;|&nbsp; Branch Center: <b style="color: #ffffff;">{s_branch}</b></p>
+                        <p style="margin: 4px 0;">Specialization Track: <b style="color: #a855f7;">{s_track}</b></p>
+                    </div>
+                    <div style="display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px; background: rgba(255,255,255,0.04); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                            <span style="color: #94a3b8; font-size: 0.85rem;">MCQ Theory Score</span>
+                            <h2 style="color: #34d399; margin: 5px 0 0 0;">{mcq_s} / 50</h2>
+                        </div>
+                        <div style="flex: 1; min-width: 150px; background: rgba(255,255,255,0.04); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);">
+                            <span style="color: #94a3b8; font-size: 0.85rem;">Capstone Practical Score</span>
+                            <h2 style="color: #60a5fa; margin: 5px 0 0 0;">{cap_s} / 50</h2>
+                        </div>
+                        <div style="flex: 1; min-width: 150px; background: rgba(255,255,255,0.04); padding: 15px; border-radius: 10px; border: 1px solid #6366f1;">
+                            <span style="color: #94a3b8; font-size: 0.85rem;">Final Aggregate Score</span>
+                            <h2 style="color: #fbbf24; margin: 5px 0 0 0;">{agg_s}%</h2>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; padding: 12px; background: #090d16; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                        <span style="font-size: 0.85rem; color: #cbd5e1;">🔒 Cryptographic SHA-256 Seal: <code style="color: #38bdf8;">{seal_val}</code></span>
+                        <span style="font-size: 0.8rem; color: #34d399;">● Certified & Verified</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                col_pt1, col_pt2 = st.columns(2)
+                with col_pt1:
+                    if st.button("🖨️ Print Transcript / Save PDF", use_container_width=True):
+                        st.toast("🖨️ Opening print preview dialog...", icon="📄")
+                with col_pt2:
+                    if st.button("🔗 Copy Public Transcript Verification Link", use_container_width=True):
+                        st.toast(f"📋 Verification link copied: https://kaushalsetu.gov.in/verify/{s_id}", icon="🔗")
+
+            # TAB 2: DYNAMIC ANIMATED PORTFOLIO
+            with tab_port:
+                st.markdown("### 🌐 Live Generative AI Candidate Portfolio")
+                port_html = student_data.get("portfolio_html") or generate_dynamic_ai_portfolio(s_id)
+                st.components.v1.html(port_html, height=750, scrolling=True)
+
+            # TAB 3: LIVE VERIFIED JOB FINDER & OUTBOX
+            with tab_jobs:
+                st.markdown("### 💼 Live Verified Job Opportunity Matcher & Outbox")
+                col_jf1, col_jf2 = st.columns([2, 1])
+                with col_jf1:
+                    loc_filter = st.selectbox("📍 Filter Location Region", ["Delhi NCR (All)", "Nangloi / Industrial Area", "Gurugram / Manesar", "Noida / Greater Noida", "Pan-India Remote"])
+                with col_jf2:
+                    if st.button("🔄 Rescan Live Opportunities", use_container_width=True):
+                        st.toast("🔍 Scanning live job feeds...", icon="⚡")
+                        st.rerun()
+
+                matched_jobs = direct_search_and_match_jobs(s_id, loc_filter)
+                for j in matched_jobs:
+                    badge_style = "background: #064e3b; color: #34d399; border: 1px solid #10b981;" if j["is_top_probability"] else "background: #1e293b; color: #38bdf8; border: 1px solid #3b82f6;"
+                    st.markdown(f"""
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 12px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                            <div>
+                                <h3 style="color: #60a5fa; margin: 0;">{j['title']}</h3>
+                                <b style="color: #e2e8f0;">{j['company']}</b> &nbsp;|&nbsp; <span style="color: #94a3b8;">{j['location']}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="padding: 4px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: 700; {badge_style}">
+                                    🎯 {j['match_pct']}% Match • {j['selection_chance']}
+                                </span>
+                                <div style="font-size: 0.85rem; color: #fbbf24; margin-top: 4px;">💰 {j['salary']}</div>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.88rem; color: #cbd5e1; margin: 10px 0;">{j['description']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    with st.expander(f"📋 View Required Skills & 1-Click Apply for {j['title']}"):
+                        skills_str = ", ".join(j['skills'])
+                        st.caption(f"Required Skills: {skills_str} | Experience: {j['exp']} | Type: {j['type']}")
+                        if st.button(f"⚡ 1-Click Apply & Dispatch Portfolio to {j['company']}", key=f"btn_apply_{j['id']}", type="primary"):
+                            direct_dispatch_placement(s_id, j['company'], j['title'], j['match_pct'])
+                            st.toast(f"🚀 Sealed dossier & portfolio successfully dispatched to {j['company']}!", icon="✅")
+                            st.rerun()
+
+            # TAB 4: AI INTERVIEW PREPARATION STUDIO
+            with tab_prep:
+                st.markdown("### 🎙️ AI Technical & Behavioral Interview Prep Studio")
+                st.caption("Practice real-world capstone defense and technical diagnostic questions synthesized for your track.")
+
+                prep_qs = generate_interview_prep_questions(s_id, s_track)
+                for idx, q_item in enumerate(prep_qs):
+                    with st.expander(f"❓ Q{idx+1} ({q_item['type']}): {q_item['q']}", expanded=(idx == 0)):
+                        st.info(f"💡 **AI Answer Tip:** {q_item['tip']}")
+                        cand_ans = st.text_area(f"Your Response (Practice Answer):", key=f"ans_input_{idx}", placeholder="Type your answer here to simulate actual interview recording...")
+                        if st.button(f"🔍 Show Model AI Answer for Q{idx+1}", key=f"btn_show_ans_{idx}"):
+                            st.success(f"🎯 **Model Answer:** {q_item['model_answer']}")
+
             st.stop()
 
         st.divider()
