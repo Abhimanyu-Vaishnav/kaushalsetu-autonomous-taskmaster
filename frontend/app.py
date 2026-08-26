@@ -1826,20 +1826,33 @@ def main_app_layout():
                         except Exception as err:
                             st.error(f"❌ Enrollment Error: {str(err)}")
 
-        @st.dialog("✏️ Edit Student Candidate Record", width="large")
+        @st.dialog("✏️ Edit Student Candidate Record (Institute Authority)", width="large")
         def modal_edit_student_record(student_data):
             st.markdown(f"Updating Institutional Candidate Record: **{student_data['full_name']}** (`ID: {student_data['student_id']}`)")
-            st.caption("🔒 Security Governance: Full Name, DOB, Student ID, and Branch Node are locked immutable academic records.")
+            st.caption("🏛️ Institute Authority Mode: You have full administrative permission to modify candidate identity, academic track, and professional links.")
             
             with st.form(f"modal_edit_student_record_form_{student_data['student_id']}"):
                 col_m1, col_m2 = st.columns(2)
                 with col_m1:
-                    st.markdown("##### 👤 Protected Identity & Contact")
-                    st.text_input("Full Name (Locked)", value=student_data.get('full_name', ''), disabled=True)
-                    st.text_input("Date of Birth (Locked)", value=student_data.get('dob', '2000-01-01'), disabled=True)
-                    st.text_input("Branch Center (Locked)", value=student_data.get('branch_name') or student_data.get('branch_center', 'Delhi'), disabled=True)
+                    st.markdown("##### 👤 Personal & Academic Identity")
+                    m_name = st.text_input("Full Name", value=student_data.get('full_name') or student_data.get('name', ''))
                     
+                    raw_stored_dob = student_data.get("dob") or "2000-01-01"
+                    try:
+                        parsed_stored_date = datetime.datetime.strptime(normalize_dob(raw_stored_dob), "%Y-%m-%d").date()
+                    except Exception:
+                        parsed_stored_date = datetime.date(2000, 1, 1)
+
+                    m_dob = st.date_input(
+                        "Date of Birth",
+                        value=parsed_stored_date,
+                        min_value=datetime.date(1970, 1, 1),
+                        max_value=datetime.date(2015, 12, 31),
+                        key=f"edit_dob_input_{student_data.get('student_id') or student_data.get('id')}"
+                    )
                     m_gender = st.selectbox("Gender Identity", ["Male", "Female", "Other"], index=0 if student_data.get('gender') != "Female" else 1)
+                    m_track = st.text_input("Assigned Course Track", value=student_data.get('course_name') or student_data.get('track', ''))
+                    m_branch = st.text_input("Assigned Branch Center", value=student_data.get('branch_name') or student_data.get('branch_center', ''))
                     m_email = st.text_input("Email Address", value=student_data.get('email', ''))
                     m_phone = st.text_input("Phone Number", value=student_data.get('phone', ''))
                 with col_m2:
@@ -1854,15 +1867,24 @@ def main_app_layout():
                 
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
-                    sub_save = st.form_submit_button("💾 Save Candidate Record", type="primary", use_container_width=True)
+                    sub_save = st.form_submit_button("💾 Save Institutional Record", type="primary", use_container_width=True)
                 with col_s2:
                     sub_cancel = st.form_submit_button("❌ Cancel", use_container_width=True)
 
                 if sub_save:
                     with st.spinner("Saving changes & updating candidate record..."):
                         try:
+                            saved_iso_dob = m_dob.strftime("%Y-%m-%d") if hasattr(m_dob, "strftime") else normalize_dob(m_dob)
                             up_payload = {
+                                "name": m_name.strip(),
+                                "student_name": m_name.strip(),
+                                "full_name": m_name.strip(),
+                                "dob": saved_iso_dob,
                                 "gender": m_gender,
+                                "track": m_track.strip(),
+                                "course_name": m_track.strip(),
+                                "branch_center": m_branch.strip(),
+                                "branch_name": m_branch.strip(),
                                 "email": m_email.strip(),
                                 "phone": m_phone.strip(),
                                 "github_url": m_github.strip(),
@@ -1874,7 +1896,7 @@ def main_app_layout():
                             }
                             up_res = direct_update_student(student_id=student_data.get('student_id') or student_data.get('id'), payload=up_payload)
                             if up_res.get("status") == "success" or up_res.get("success"):
-                                st.toast(f"✅ Candidate profile updated successfully!", icon="🎉")
+                                st.toast(f"✅ Candidate {m_name.strip()} record updated successfully!", icon="🎉")
                                 st.rerun()
                             else:
                                 st.error(f"❌ Update Failed: {up_res.get('message')}")
