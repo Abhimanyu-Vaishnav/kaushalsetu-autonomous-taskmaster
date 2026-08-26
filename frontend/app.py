@@ -294,14 +294,29 @@ st.markdown("""
         border: 1px solid #4F46E5;
     }
 
-    /* Layout Padding & Container Reset */
+    /* Layout Padding & Container Reset (Prevents Top Header Clipping) */
+    header[data-testid="stHeader"] {
+        display: none !important;
+        height: 0px !important;
+        visibility: hidden !important;
+    }
+    div[data-testid="stHeader"] {
+        display: none !important;
+        height: 0px !important;
+    }
     .block-container {
-        padding: 1rem 1rem 3rem 1rem !important;
+        padding-top: 3.5rem !important;
+        padding-bottom: 3rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
         max-width: 98% !important;
     }
     
     /* Responsive Viewport & Mobile Optimization */
     @media (max-width: 768px) {
+        .block-container {
+            padding-top: 2rem !important;
+        }
         .stColumns > div {
             min-width: 100% !important;
             margin-bottom: 0.75rem !important;
@@ -334,8 +349,8 @@ st.markdown("""
     }
 
     /* Hide Streamlit branding clutter */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    #MainMenu { visibility: hidden; display: none !important; }
+    footer { visibility: hidden; display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
