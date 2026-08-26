@@ -1539,31 +1539,29 @@ def main_app_layout():
                 if sub_save:
                     with st.spinner("Saving changes & updating candidate record..."):
                         try:
-                            up_res = requests.put(f"{BACKEND_URL}/api/students/{student_data['student_id']}", json={
-                                "student_id": student_data['student_id'],
-                                "full_name": m_name.strip(),
+                            norm_dob_val = normalize_dob(m_dob)
+                            up_payload = {
                                 "name": m_name.strip(),
-                                "dob": m_dob.strip(),
+                                "student_name": m_name.strip(),
+                                "full_name": m_name.strip(),
+                                "dob": norm_dob_val,
                                 "email": m_email.strip(),
                                 "phone": m_phone.strip(),
-                                "course_name": m_track.strip(),
                                 "track": m_track.strip(),
-                                "city": m_city.strip(),
+                                "course_name": m_track.strip(),
                                 "branch_center": m_city.strip(),
+                                "branch_name": m_city.strip(),
                                 "github_url": m_github.strip(),
                                 "linkedin_url": m_linkedin.strip(),
-                                "website_url": m_website.strip(),
-                                "twitter_url": m_twitter.strip(),
-                                "target_role_preference": m_role.strip(),
-                                "work_experience_years": m_exp_years,
-                                "bio": m_bio.strip(),
-                                "experience_summary": m_bio.strip()
-                            }, timeout=10)
-                            if up_res.status_code == 200:
-                                st.toast("✅ Candidate profile updated successfully!", icon="🎉")
+                                "portfolio_url": m_website.strip(),
+                                "resume_text": m_bio.strip()
+                            }
+                            up_res = direct_update_student(student_id=student_data.get('student_id') or student_data.get('id'), payload=up_payload)
+                            if up_res.get("status") == "success" or up_res.get("success"):
+                                st.toast(f"✅ Candidate {m_name.strip()} profile updated successfully!", icon="🎉")
                                 st.rerun()
                             else:
-                                st.error(f"Error updating candidate record: {up_res.text}")
+                                st.error(f"❌ Update Failed: {up_res.get('message')}")
                         except Exception as ex:
                             st.error(f"Failed to update candidate record: {ex}")
 

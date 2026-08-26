@@ -1706,3 +1706,136 @@ def direct_evaluate_and_dispatch_exam(payload: dict):
         }
     except Exception as e:
         return {"status": "error", "message": f"Evaluation error: {str(e)}"}
+
+import re
+from datetime import datetime
+
+def normalize_dob(dob_str: str) -> str:
+    """Normalizes any date string (YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, etc.) to standard YYYY-MM-DD."""
+    if not dob_str:
+        return "2000-01-01"
+    dob_str = str(dob_str).strip()
+    
+    # Remove timestamp if present
+    dob_str = dob_str.split("T")[0].split(" ")[0]
+
+    # Check standard YYYY-MM-DD
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", dob_str):
+        return dob_str
+
+    # Common format handlers
+    formats = ["%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%d.%m.%Y", "%m/%d/%Y", "%Y-%m-%d"]
+    for fmt in formats:
+        try:
+            return datetime.strptime(dob_str, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    
+    # Extract digits only fallback (e.g., 15082000 -> 2000-08-15)
+    digits = re.sub(r"\D", "", dob_str)
+    if len(digits) == 8:
+        if int(digits[:4]) > 1900:  # YYYYMMDD
+            return f"{digits[:4]}-{digits[4:6]}-{digits[6:]}"
+        else:  # DDMMYYYY
+            return f"{digits[4:]}-{digits[2:4]}-{digits[:2]}"
+
+    return dob_str
+
+def direct_update_student(student_id: str, payload: dict):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+
+        name = payload.get("name") or payload.get("student_name") or payload.get("full_name")
+        raw_dob = payload.get("dob")
+        norm_dob = normalize_dob(raw_dob) if raw_dob else None
+        email = payload.get("email")
+        phone = payload.get("phone")
+        track = payload.get("track") or payload.get("course_name")
+        branch = payload.get("branch_center") or payload.get("branch_name")
+        github = payload.get("github_url")
+        linkedin = payload.get("linkedin_url")
+        portfolio = payload.get("portfolio_url")
+        resume = payload.get("resume_text")
+
+        update_fields = []
+        values = []
+
+        if name is not None:
+            update_fields.extend(["name = ?", "student_name = ?", "full_name = ?"])
+            values.extend([name.strip(), name.strip(), name.strip()])
+        if norm_dob is not None:
+            update_fields.append("dob = ?")
+            values.append(norm_dob)
+        if email is not None:
+            update_fields.append("email = ?")
+            values.append(email.strip())
+        if phone is not None:
+            update_fields.append("phone = ?")
+            values.append(phone.strip())
+        if track is not None:
+            update_fields.extend(["track = ?", "course_name = ?"])
+            values.extend([track.strip(), track.strip()])
+        if branch is not None:
+            update_fields.extend(["branch_center = ?", "branch_name = ?"])
+            values.extend([branch.strip(), branch.strip()])
+        if github is not None:
+            update_fields.append("github_url = ?")
+            values.append(github.strip())
+        if linkedin is not None:
+            update_fields.append("linkedin_url = ?")
+            values.append(linkedin.strip())
+        if portfolio is not None:
+            update_fields.append("portfolio_url = ?")
+            values.append(portfolio.strip())
+        if resume is not None:
+            update_fields.append("resume_text = ?")
+            values.append(resume.strip())
+
+        if not update_fields:
+            conn.close()
+            return {"status": "success", "success": True, "message": "No changes provided."}
+
+        sid = str(student_id).strip()
+        values.extend([sid, sid])
+        query = f"UPDATE students SET {', '.join(update_fields)} WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)"
+        c.execute(query, values)
+        conn.commit()
+        conn.close()
+
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
+
+        return {"status": "success", "success": True, "message": "Candidate record updated successfully."}
+    except Exception as e:
+        return {"status": "error", "message": f"Update failed: {str(e)}"}
+
+def direct_student_login(student_id: str, dob_input: str):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        sid = str(student_id or "").strip()
+        c.execute("SELECT * FROM students WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (sid, sid))
+        row = c.fetchone()
+        conn.close()
+
+        if not row:
+            return {"authenticated": False, "status": "error", "message": f"Candidate ID '{sid}' not found."}
+
+        s = dict(row)
+        stored_dob = s.get("dob")
+
+        if not stored_dob:
+            return {"authenticated": True, "status": "success", "student": s, "data": s}
+
+        norm_input = normalize_dob(dob_input)
+        norm_stored = normalize_dob(stored_dob)
+
+        if norm_input == norm_stored:
+            return {"authenticated": True, "status": "success", "student": s, "data": s}
+        else:
+            return {"authenticated": False, "status": "error", "message": f"DOB mismatch. Entered: {norm_input} vs Expected: {norm_stored}"}
+    except Exception as e:
+        return {"authenticated": False, "status": "error", "message": str(e)}
