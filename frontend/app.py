@@ -2014,7 +2014,8 @@ def main_app_layout():
         tabs = st.tabs([
             "📚 Course & Curriculum Management",
             "👥 Student Roster & Assessment Hub",
-            "🤖 Autonomous Placement & Agent Action Ledger",
+            "💼 Candidate Placement & Application Ledger",
+            "🤖 Autonomous Placement & Signed Dossier Ledger",
             "📜 Real-Time Agent Operational Audit Log"
         ])
 
