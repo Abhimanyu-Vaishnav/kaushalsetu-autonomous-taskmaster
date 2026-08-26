@@ -1844,6 +1844,8 @@ def main_app_layout():
             st.divider()
 
             students = direct_get_students(branch_center=sel_branch.get('branch_name'), branch_id=sel_branch.get('id'), institute_id=sel_inst.get('id'))
+            if not students:
+                students = direct_get_students()
 
             if not students:
                 st.info(f"No candidates enrolled under {sel_branch['branch_name']} yet. Use **👤 Add Single Student** to add one.")
