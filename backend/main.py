@@ -27,6 +27,7 @@ try:
         DB_PATH,
         get_db,
         init_complete_db,
+        export_database_snapshot,
         get_db_connection,
         get_all_institutes,
         get_institute_by_id,
@@ -49,6 +50,7 @@ except ImportError:
         DB_PATH,
         get_db,
         init_complete_db,
+        export_database_snapshot,
         get_db_connection,
         get_all_institutes,
         get_institute_by_id,
@@ -192,6 +194,10 @@ def direct_create_institute(payload: dict):
         
         conn.commit()
         conn.close()
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
         return {"status": "success", "success": True, "message": "Institute created successfully", "id": inst_id, "data": {"id": inst_id, "name": name, "code": code}}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -215,6 +221,10 @@ def direct_create_branch(payload: dict):
         """, (branch_id, inst_id, name, name, city, city, contact_person, phone))
         conn.commit()
         conn.close()
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
         return {"status": "success", "success": True, "message": "Branch created successfully", "id": branch_id, "data": {"id": branch_id, "name": name, "city": city}}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -302,6 +312,10 @@ def direct_dispatch_placement(payload: dict):
 
         conn.commit()
         conn.close()
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
         return {"status": "success", "success": True, "ledger_id": entry_id, "ledger_hash": ledger_hash}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -380,6 +394,11 @@ def direct_create_course(payload: dict):
         except Exception:
             pass
 
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
+
         return {"status": "success", "success": True, "message": "Course created successfully!", "course_id": course_id, "title": c_title, "id": course_id, "data": {"id": course_id, "title": c_title, "course_name": c_title}}
     except Exception as e:
         return {"status": "error", "message": f"Course creation failed: {str(e)}"}
@@ -429,6 +448,10 @@ def direct_update_course(course_id: str, payload: dict):
         """, (title, topic, modules_json, mcqs_json, capstone, desc, desc, modules_json, skills_json, str(course_id)))
         conn.commit()
         conn.close()
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
         return {"status": "success", "success": True, "message": "Course updated successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -440,6 +463,10 @@ def direct_delete_course(course_id: str):
         c.execute("DELETE FROM courses WHERE id = ?", (str(course_id),))
         conn.commit()
         conn.close()
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
         return {"status": "success", "success": True, "message": "Course deleted successfully."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -492,6 +519,10 @@ def direct_add_student(payload: dict):
             branch_center=b_name,
             track=course_name
         )
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
         return {"status": "success", "success": True, "message": "Student added successfully", "data": res, "student_id": res.get("student_id") if isinstance(res, dict) else ""}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -580,6 +611,10 @@ def direct_create_student(payload: dict):
 
         conn.commit()
         conn.close()
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
         return {"status": "success", "success": True, "message": "Student enrolled successfully!", "id": s_id, "student_id": s_id}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -593,6 +628,10 @@ def direct_delete_student(student_id: str):
         c.execute("DELETE FROM evaluations WHERE UPPER(student_id) = UPPER(?)", (sid,))
         conn.commit()
         conn.close()
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
         return {"status": "success", "success": True, "message": "Student record deleted."}
     except Exception as e:
         return {"status": "error", "message": str(e)}

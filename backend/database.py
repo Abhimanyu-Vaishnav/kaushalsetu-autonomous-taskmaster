@@ -7,11 +7,16 @@ from datetime import datetime, date
 from typing import List, Dict, Any, Optional, Union
 import shutil
 
-# /tmp is guaranteed writable in all Google Cloud Run container instances
-DB_PATH = os.environ.get(
-    "SQLITE_DB_PATH", 
-    os.environ.get("DATA_DIR", "/tmp/kaushalsetu_prod.db" if os.name != "nt" else os.path.join(os.path.dirname(os.path.abspath(__file__)), "kaushalsetu_prod.db"))
-)
+DATA_DIR = os.environ.get("DATA_DIR", "/app/data")
+try:
+    os.makedirs(DATA_DIR, exist_ok=True)
+except Exception:
+    DATA_DIR = "/tmp"
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+DB_PATH = os.environ.get("SQLITE_DB_PATH", os.path.join(DATA_DIR, "kaushalsetu_prod.db"))
+SNAPSHOT_FILE = os.path.join(DATA_DIR, "state_snapshot.json")
+ROOT_SNAPSHOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "state_snapshot.json")
 
 # Ensure parent directory exists
 os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -41,6 +46,61 @@ def get_db_connection() -> sqlite3.Connection:
     return conn
 
 get_db = get_db_connection
+
+def export_database_snapshot():
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        snapshot = {}
+        tables = ["institutes", "branches", "courses", "students", "evaluations", "agent_activity_logs", "placement_ledger"]
+        for t in tables:
+            try:
+                c.execute(f"SELECT * FROM {t}")
+                rows = [dict(r) for r in c.fetchall()]
+                snapshot[t] = rows
+            except Exception:
+                snapshot[t] = []
+        conn.close()
+
+        with open(SNAPSHOT_FILE, "w", encoding="utf-8") as f:
+            json.dump(snapshot, f, indent=2, default=str)
+        if os.path.exists(os.path.dirname(ROOT_SNAPSHOT)):
+            try:
+                with open(ROOT_SNAPSHOT, "w", encoding="utf-8") as f:
+                    json.dump(snapshot, f, indent=2, default=str)
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"Snapshot export warning: {e}")
+
+def restore_database_from_snapshot():
+    source_file = SNAPSHOT_FILE if os.path.exists(SNAPSHOT_FILE) else (ROOT_SNAPSHOT if os.path.exists(ROOT_SNAPSHOT) else None)
+    if not source_file:
+        return
+
+    try:
+        with open(source_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        conn = get_db()
+        c = conn.cursor()
+
+        for table_name, rows in data.items():
+            if not rows:
+                continue
+            c.execute(f"SELECT COUNT(*) FROM {table_name}")
+            count = c.fetchone()[0]
+            if count == 0:
+                for row in rows:
+                    keys = list(row.keys())
+                    placeholders = ", ".join(["?"] * len(keys))
+                    cols = ", ".join(keys)
+                    c.execute(f"INSERT OR IGNORE INTO {table_name} ({cols}) VALUES ({placeholders})", list(row.values()))
+        conn.commit()
+        conn.close()
+        print("✅ [KaushalSetu Startup] Database state successfully restored from persistent snapshot!")
+    except Exception as e:
+        print(f"Snapshot restore warning: {e}")
 
 def init_complete_db():
     conn = get_db()
@@ -196,6 +256,8 @@ def init_complete_db():
 
     conn.commit()
     conn.close()
+
+    restore_database_from_snapshot()
 
 # Auto-run on import
 init_complete_db()
