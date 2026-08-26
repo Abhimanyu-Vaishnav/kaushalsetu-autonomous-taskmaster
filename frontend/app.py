@@ -1843,13 +1843,7 @@ def main_app_layout():
 
             st.divider()
 
-            students = []
-            try:
-                sres = requests.get(f"{BACKEND_URL}/api/students?institute_id={sel_inst['id']}&branch_id={sel_branch['id']}", timeout=2)
-                if sres.status_code == 200:
-                    students = sres.json()["data"]
-            except Exception:
-                pass
+            students = direct_get_students(branch_center=sel_branch.get('branch_name'), branch_id=sel_branch.get('id'), institute_id=sel_inst.get('id'))
 
             if not students:
                 st.info(f"No candidates enrolled under {sel_branch['branch_name']} yet. Use **👤 Add Single Student** to add one.")
