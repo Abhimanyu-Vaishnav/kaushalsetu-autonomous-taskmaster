@@ -231,15 +231,19 @@ st.markdown("""
     }
 
     .main-header {
-        font-size: 2.1rem;
+        font-size: 2.0rem;
         font-weight: 800;
         color: #F9FAFB;
         letter-spacing: -0.025em;
+        line-height: 1.35 !important;
+        padding-top: 8px !important;
         margin-bottom: 0.2rem;
+        overflow: visible !important;
     }
     .sub-header {
         color: #9CA3AF;
         font-size: 0.95rem;
+        line-height: 1.4 !important;
         margin-bottom: 1.2rem;
     }
 
@@ -1251,10 +1255,10 @@ def main_app_layout():
     else:
 
         # --- SLEEK MINIMALIST NAVIGATION & GOVERNANCE HEADER ---
-        col_title, col_actions = st.columns([6, 4], vertical_alignment="center")
+        col_title, col_actions = st.columns([7, 3], vertical_alignment="center")
         with col_title:
-            st.markdown('<div class="main-header" style="margin-bottom:0;">🌉 KaushalSetu: Autonomous Vocational Taskmaster</div>', unsafe_allow_html=True)
-            st.markdown('<div class="sub-header" style="margin-bottom:0;">Autonomous Dual-AI Institutional Taskmaster for Vocational Skilling, Multimodal Evaluation & Zero-HITL Job Dispatch</div>', unsafe_allow_html=True)
+            st.markdown('<div class="main-header" style="margin-bottom:0; line-height:1.35; padding-top:6px; overflow:visible;">🌉 KaushalSetu: Autonomous Vocational Taskmaster</div>', unsafe_allow_html=True)
+            st.markdown('<div class="sub-header" style="margin-bottom:0; margin-top:4px; line-height:1.4;">Autonomous Dual-AI Institutional Taskmaster for Vocational Skilling, Multimodal Evaluation & Zero-HITL Job Dispatch</div>', unsafe_allow_html=True)
         with col_actions:
             sub_c1, sub_c2, sub_c3 = st.columns([1.5, 1, 1.8], vertical_alignment="center")
             with sub_c1:
