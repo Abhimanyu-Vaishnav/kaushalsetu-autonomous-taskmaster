@@ -2,6 +2,9 @@ import os
 import sys
 import subprocess
 
+if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # Ensure root directory is on PYTHONPATH
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 if ROOT_DIR not in sys.path:
@@ -11,14 +14,14 @@ os.environ["PYTHONUNBUFFERED"] = "1"
 
 port = os.environ.get("PORT", "8080")
 print("=" * 60)
-print(f"🌟 Launching KaushalSetu Direct-Engine on 0.0.0.0:{port}...")
+print(f"Launching KaushalSetu Direct-Engine on 0.0.0.0:{port}...")
 print("=" * 60)
 
 # Ensure database tables exist before UI opens
 try:
     from backend.database import ensure_db_schema
     ensure_db_schema()
-    print("✅ Database schema initialized successfully.")
+    print("Database schema initialized successfully.")
 except Exception as ex:
     print(f"[STARTUP SCHEMA WARNING] {ex}")
 

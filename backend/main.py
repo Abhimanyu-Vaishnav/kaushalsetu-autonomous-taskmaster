@@ -2640,59 +2640,135 @@ def generate_interview_prep_questions(student_id: str, job_title: str):
         }
     ]
 
-# 1. Autonomous Course Curriculum Auto-Synthesizer & Spell Correction
+# 1. Autonomous Course Curriculum Auto-Synthesizer & Dynamic AI Topic Engine
 def agentic_synthesize_course(raw_input: str, branch_id: str = "BR-NANGLOI"):
     """
     Intelligent Agentic Handler: Takes raw or misspelled topic inputs
-    (e.g., 'elctric vehicl mechatrnics') and autonomously produces a complete,
-    standardized industry curriculum with modules, verified MCQs, and capstone prompt.
+    (e.g., 'excel', 'tally', 'elctric vehicl') and autonomously produces a complete,
+    standardized industry curriculum matching THAT EXACT TOPIC without hardcoded static suffixes.
     """
     clean_text = raw_input.strip() if raw_input else "Industrial Mechatronics & Automation"
+    lower_inp = clean_text.lower()
     
-    if re.search(r"electric|ev|vehic|battery", clean_text, re.IGNORECASE):
+    if re.search(r"\bexcel\b|spreadsheet|financial model", lower_inp):
+        standard_title = "Advanced Microsoft Excel & Financial Analytics"
+        topic = "Master XLOOKUP, PivotTables, Power Query, dynamic arrays, VBA macros, and financial dashboard modeling."
+        skills = ["Advanced Excel", "XLOOKUP & Formulas", "PivotTables", "Power Query", "Financial Modeling"]
+        capstone = "Build a dynamic multi-tab corporate financial model with automated KPI dashboards and scenario analysis."
+        m1, m2, m3, m4 = "Module 1: Excel Essentials & Logical Formulas", "Module 2: PivotTables, Power Query & Data Cleaning", "Module 3: Financial Modeling & Scenario Planning", "Module 4: VBA Automation & Executive Dashboard Capstone"
+        q1 = "Which Excel function dynamically retrieves matching values from vertical or horizontal lookup tables without structural limitation?"
+        q1_opts = ["A) VLOOKUP", "B) XLOOKUP", "C) HLOOKUP", "D) INDEX ONLY"]
+        q1_ans = "B) XLOOKUP"
+        q2 = "In Power Query, which feature allows combining data from multiple CSV files automatically?"
+        q2_opts = ["A) Data Validation", "B) Folder Data Connector & Append Queries", "C) Goal Seek", "D) Conditional Formatting"]
+        q2_ans = "B) Folder Data Connector & Append Queries"
+        q3 = "What is the primary benefit of using Excel Data Models over traditional PivotTables?"
+        q3_opts = ["A) Faster font formatting", "B) Creating relationships between multiple tables without VLOOKUP", "C) Hiding gridlines", "D) Auto-saving files"]
+        q3_ans = "B) Creating relationships between multiple tables without VLOOKUP"
+    elif re.search(r"\btally\b|gst|accounting|bookkeeping", lower_inp):
+        standard_title = "Tally Prime & Corporate GST Accounting"
+        topic = "Double-entry bookkeeping, GST return filing (GSTR-1/3B), e-way bills, inventory tracking, and payroll."
+        skills = ["Tally Prime", "GST Return Filing", "E-Way Bill Generation", "Inventory Management", "Financial Auditing"]
+        capstone = "Execute a full month of enterprise accounting transactions, reconcile bank ledgers, and export ready-to-file GSTR-3B."
+        m1, m2, m3, m4 = "Module 1: Fundamentals of Double-Entry Bookkeeping", "Module 2: Tally Prime Setup & Ledger Master Creation", "Module 3: GST Compliance, Tax Invoicing & E-Way Bills", "Module 4: Bank Reconciliation, Payroll & Audit Capstone"
+        q1 = "Under GST compliance in India, GSTR-3B primarily represents:"
+        q1_opts = ["A) Monthly self-declaration summary return", "B) Annual audit report", "C) E-way bill clearance receipt", "D) Employee PF return"]
+        q1_ans = "A) Monthly self-declaration summary return"
+        q2 = "In Tally Prime, which shortcut key opens the Voucher Creation screen?"
+        q2_opts = ["A) Alt + F1", "B) V", "C) Ctrl + P", "D) F12"]
+        q2_ans = "B) V"
+        q3 = "What type of account is Bank Account under golden rules of accounting?"
+        q3_opts = ["A) Nominal Account", "B) Personal Account", "C) Real Account", "D) Temporary Account"]
+        q3_ans = "B) Personal Account"
+    elif re.search(r"electric|ev|vehic|battery", lower_inp):
         standard_title = "Electric Vehicle Powertrain & Battery Diagnostics"
         topic = "High-voltage battery safety, BMS telemetry, regenerative braking controllers, and diagnostic fault-codes."
         skills = ["EV Diagnostics", "BMS Calibration", "High-Voltage Isolation", "CAN-Bus Telemetry"]
         capstone = "Design a fail-safe battery thermal runaway cutoff and diagnostic alert circuit using CAN telemetry."
-    elif re.search(r"solar|renew|green|energy", clean_text, re.IGNORECASE):
+        m1, m2, m3, m4 = "Module 1: High Voltage Safety & Isolation Protocols", "Module 2: Lithium Battery Chemistry & BMS Architecture", "Module 3: Motor Controllers & CAN-Bus Telemetry", "Module 4: Diagnostic Fault-Code Analysis & Capstone"
+        q1 = "What is the primary purpose of a Battery Management System (BMS) in an Electric Vehicle?"
+        q1_opts = ["A) Control cabin AC", "B) Cell balancing, thermal protection, and SoC calculation", "C) Regulate wiper speed", "D) Increase tire pressure"]
+        q1_ans = "B) Cell balancing, thermal protection, and SoC calculation"
+        q2 = "High-voltage isolation testing in EVs ensures:"
+        q2_opts = ["A) Radio signal strength", "B) Zero electrical leakage between high-voltage bus and chassis ground", "C) Faster charging speeds", "D) Low brake wear"]
+        q2_ans = "B) Zero electrical leakage between high-voltage bus and chassis ground"
+        q3 = "Which communication protocol is industry-standard for EV internal telemetry data exchange?"
+        q3_opts = ["A) HTTP/1.1", "B) CAN Bus (Controller Area Network)", "C) Bluetooth 4.0", "D) SPI"]
+        q3_ans = "B) CAN Bus (Controller Area Network)"
+    elif re.search(r"solar|renew|green|energy", lower_inp):
         standard_title = "Solar Photovoltaic Systems & Micro-Grid Automation"
         topic = "Inverter MPPT optimization, off-grid telemetry monitoring, and commercial rooftop grid-tie compliance."
         skills = ["Solar Inverter Setup", "MPPT Algorithms", "Micro-Grid Sync", "SCADA Telemetry"]
         capstone = "Architect an automated remote telemetry bridge syncing rooftop solar inverters with central utility SCADA."
-    elif re.search(r"python|web|full|stack|soft", clean_text, re.IGNORECASE):
+        m1, m2, m3, m4 = "Module 1: Solar PV Physics & Panel String Sizing", "Module 2: Inverters, MPPT Charge Controllers & Storage", "Module 3: Net-Metering & SCADA Telemetry Monitoring", "Module 4: Grid-Tie Commissioning & Remote Audit Capstone"
+        q1 = "MPPT technology in solar inverters maximizes energy yield by:"
+        q1_opts = ["A) Turning panels towards wind", "B) Dynamically adjusting electrical operating point along IV curve", "C) Cooling inverter coils", "D) Increasing battery voltage"]
+        q1_ans = "B) Dynamically adjusting electrical operating point along IV curve"
+        q2 = "Grid-tie solar inverters must automatically shut down during grid outages to prevent:"
+        q2_opts = ["A) Battery explosion", "B) Islanding (energizing dead lines and endangering utility workers)", "C) Overheating panels", "D) Meter damage"]
+        q2_ans = "B) Islanding (energizing dead lines and endangering utility workers)"
+        q3 = "What instrument measures solar irradiance levels on PV plant sites?"
+        q3_opts = ["A) Multimeter", "B) Pyranometer", "C) Oscilloscope", "D) Hydrometer"]
+        q3_ans = "B) Pyranometer"
+    elif re.search(r"python|web|full|stack|soft|dev", lower_inp):
         standard_title = "Full Stack Cloud Platform Engineering & APIs"
         topic = "High-throughput REST architectures, database clustering, asynchronous job queues, and cloud deployment."
         skills = ["React / Next.js", "Python / FastAPI", "SQL Optimization", "Docker / Cloud Run"]
         capstone = "Build and deploy an automated distributed task-dispatch system with SHA-256 audit trail validation."
+        m1, m2, m3, m4 = "Module 1: Modern JavaScript & Frontend Components", "Module 2: Python Backend Architecture & REST APIs", "Module 3: Relational SQL & Async Background Tasks", "Module 4: Cloud Container Deployment & Audit Capstone"
+        q1 = "In modern REST APIs, HTTP 201 Created status code indicates:"
+        q1_opts = ["A) Bad request payload", "B) Resource successfully created on server", "C) Internal server crash", "D) Unauthorized token"]
+        q1_ans = "B) Resource successfully created on server"
+        q2 = "Which database index structure optimizes range queries on numeric timestamp columns?"
+        q2_opts = ["A) B-Tree Index", "B) Full-Text Search Index", "C) Hash Index", "D) Foreign Key"]
+        q2_ans = "A) B-Tree Index"
+        q3 = "Docker containers differ from traditional virtual machines because:"
+        q3_opts = ["A) They require dedicated OS kernels", "B) They share the host OS kernel for lightweight isolation", "C) They cannot run Python", "D) They consume more RAM"]
+        q3_ans = "B) They share the host OS kernel for lightweight isolation"
+    elif re.search(r"digital|market|seo|social", lower_inp):
+        standard_title = "Digital Marketing & Performance Growth Strategy"
+        topic = "SEO strategy, Meta & Google Ads performance analytics, conversion funnels, and content automation."
+        skills = ["Google Ads", "SEO Optimization", "Meta Campaign Manager", "Google Analytics 4", "Copywriting"]
+        capstone = "Develop an end-to-end multi-channel acquisition campaign with target CAC and ROAS optimization."
+        m1, m2, m3, m4 = "Module 1: Search Engine Optimization & Keyword Research", "Module 2: Paid Search (Google Ads) & Bidding Strategies", "Module 3: Social Media Ads (Meta) & Audience Targeting", "Module 4: GA4 Funnel Analytics & Campaign ROAS Capstone"
+        q1 = "In digital advertising, ROAS stands for:"
+        q1_opts = ["A) Return on Ad Spend", "B) Rate of Automated Sales", "C) Regional Online Ad System", "D) Re-Order Annual Schedule"]
+        q1_ans = "A) Return on Ad Spend"
+        q2 = "Which metric measures the percentage of website visitors who leave after viewing only one page?"
+        q2_opts = ["A) Click-Through Rate", "B) Bounce Rate", "C) Conversion Rate", "D) Impressions"]
+        q2_ans = "B) Bounce Rate"
+        q3 = "Google Analytics 4 (GA4) uses which data model to track user interactions?"
+        q3_opts = ["A) Session-based model", "B) Event-based data model", "C) Pageview-only model", "D) Cookie-only model"]
+        q3_ans = "B) Event-based data model"
     else:
-        standard_title = f"{clean_text.title()} Engineering & Vocational Diagnostics"
-        topic = f"Comprehensive operational protocols, telemetry verification, and safety calibrations for {clean_text.title()}."
-        skills = ["Industrial Telemetry", "System Diagnostics", "Operational Safety", "Quality Assurance"]
-        capstone = f"Create an industrial deployment guide and failure recovery protocol for {clean_text.title()} assets."
+        title_words = [w.capitalize() for w in clean_text.split()]
+        formatted_name = " ".join(title_words)
+        standard_title = f"{formatted_name} Mastery & Certification"
+        topic = f"Comprehensive practical training, industry standards, and diagnostic execution for {formatted_name}."
+        skills = [f"{formatted_name} Operations", "System Diagnostics", "Quality Assurance", "Practical Execution"]
+        capstone = f"Execute a comprehensive real-world capstone project demonstrating practical mastery in {formatted_name}."
+        m1, m2, m3, m4 = f"Module 1: Fundamentals & Core Principles of {formatted_name}", f"Module 2: Applied Techniques & Industry Workflows", f"Module 3: Diagnostics, Troubleshooting & Quality Control", f"Module 4: Real-World Execution & Capstone Verification"
+        q1 = f"What is the foundational requirement when initiating a project in {formatted_name}?"
+        q1_opts = ["A) Adhering to safety and quality protocols", "B) Bypassing initial checks", "C) Working without guidelines", "D) Ignoring input data"]
+        q1_ans = "A) Adhering to safety and quality protocols"
+        q2 = f"How is quality assurance verified in modern {formatted_name} practices?"
+        q2_opts = ["A) By random guessing", "B) Through standardized measurement and benchmark verification", "C) Skipping inspections", "D) Using outdated manuals"]
+        q2_ans = "B) Through standardized measurement and benchmark verification"
+        q3 = f"When encountering an operational anomaly in {formatted_name}, what is the first step?"
+        q3_opts = ["A) Panic and abandon work", "B) Isolate the root cause and execute safe diagnostic recovery", "C) Force maximum power", "D) Delete all logs"]
+        q3_ans = "B) Isolate the root cause and execute safe diagnostic recovery"
 
     mcqs = [
-        {
-            "question": f"What is the most critical initial safety baseline when commissioning {standard_title} hardware?",
-            "options": ["A) High-frequency stress testing", "B) Ground loop & insulation isolation verification", "C) Bypassing circuit breakers", "D) Overclocking clock frequency"],
-            "correct_answer": "B) Ground loop & insulation isolation verification"
-        },
-        {
-            "question": "In real-time industrial telemetry networks, packet corruption is primarily mitigated using:",
-            "options": ["A) Unchecked UDP streams", "B) CRC-32 checksums & deterministic retransmissions", "C) Polling without timeouts", "D) Ignoring parity bits"],
-            "correct_answer": "B) CRC-32 checksums & deterministic retransmissions"
-        },
-        {
-            "question": "When diagnostic sensors report intermittent drift values, the automated recovery agent should:",
-            "options": ["A) Immediately shut down without warning", "B) Switch to fallback baseline and log calibration alert", "C) Delete sensor registry", "D) Force maximum voltage"],
-            "correct_answer": "B) Switch to fallback baseline and log calibration alert"
-        }
+        {"question": q1, "options": q1_opts, "correct_answer": q1_ans},
+        {"question": q2, "options": q2_opts, "correct_answer": q2_ans},
+        {"question": q3, "options": q3_opts, "correct_answer": q3_ans}
     ]
 
     modules = [
-        {"title": "Module 1: Domain Foundations & Regulatory Standards", "duration": "2 Weeks"},
-        {"title": "Module 2: Practical Telemetry, Hardware & Sensors", "duration": "3 Weeks"},
-        {"title": "Module 3: Troubleshooting Protocols & Real-Time Diagnostics", "duration": "3 Weeks"},
-        {"title": "Module 4: Capstone Execution & Ledger Seal Minting", "duration": "2 Weeks"}
+        {"title": m1, "duration": "2 Weeks"},
+        {"title": m2, "duration": "3 Weeks"},
+        {"title": m3, "duration": "3 Weeks"},
+        {"title": m4, "duration": "2 Weeks"}
     ]
 
     return {

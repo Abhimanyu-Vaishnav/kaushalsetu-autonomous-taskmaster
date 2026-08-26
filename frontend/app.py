@@ -2236,10 +2236,17 @@ def main_app_layout():
 
             st.divider()
 
-            # --- FRESH UN-CACHED DIRECT DB READ ---
+            # --- FRESH UN-CACHED DIRECT DB READ (FILTERED BY ACTIVE BRANCH) ---
             conn = get_db()
             c = conn.cursor()
-            c.execute("SELECT * FROM students ORDER BY rowid DESC")
+            active_b_id = str(sel_branch.get("id") or "").strip()
+            active_b_name = str(sel_branch.get("branch_name") or "").strip()
+            
+            c.execute("""
+                SELECT * FROM students 
+                WHERE UPPER(branch_id) = UPPER(?) OR UPPER(branch_name) = UPPER(?) OR branch_id IS NULL OR branch_id = ''
+                ORDER BY rowid DESC
+            """, (active_b_id, active_b_name))
             students_list = [dict(r) for r in c.fetchall()]
             conn.close()
 
@@ -2252,6 +2259,10 @@ def main_app_layout():
                     r["full_name"] = r.get("name") or "Candidate"
                 if not r.get("course_name"):
                     r["course_name"] = r.get("track") or "Vocational Track"
+                if not r.get("institute_id"):
+                    r["institute_id"] = sel_inst.get("id", "SKILLFORGE-HQ")
+                if not r.get("branch_name"):
+                    r["branch_name"] = active_b_name or "Nangloi Center"
 
             if not students_list:
                 st.warning("⚠️ No candidates enrolled in database yet. Click '➕ Add Single Student' above to register.")

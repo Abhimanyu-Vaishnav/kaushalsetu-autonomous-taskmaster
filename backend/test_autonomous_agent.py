@@ -5,12 +5,24 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from main import app
+from main import app, direct_create_student
 from recruiter_agent import AutonomousRecruiterAgent
 
 client = TestClient(app)
 
 def test_autonomous_background_agent():
+    # Ensure STU-1001 exists in database
+    direct_create_student({
+        "id": "STU-1001",
+        "student_id": "STU-1001",
+        "full_name": "Alex Mercer",
+        "name": "Alex Mercer",
+        "dob": "2001-05-15",
+        "email": "alex.m@skillforge-edu.org",
+        "course_name": "Vocational Diagnostics & Mechatronics",
+        "track": "Vocational Diagnostics & Mechatronics"
+    })
+
     # 1. Test Portfolio HTML Route
     res = client.get("/portfolio/STU-1001")
     # Will be 404 until generated or 200 if generated

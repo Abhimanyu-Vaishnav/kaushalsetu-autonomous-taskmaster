@@ -355,6 +355,21 @@ def init_complete_db():
         )
     """)
 
+    # Dynamic Column Migration for job_applications table
+    c.execute("PRAGMA table_info(job_applications)")
+    ja_cols = {r[1] for r in c.fetchall()}
+    for col_name, col_def in [
+        ("student_notified", "INTEGER DEFAULT 1"),
+        ("mentor_notified", "INTEGER DEFAULT 1"),
+        ("branch_notified", "INTEGER DEFAULT 1"),
+        ("metric_hash", "TEXT DEFAULT ''")
+    ]:
+        if col_name not in ja_cols:
+            try:
+                c.execute(f"ALTER TABLE job_applications ADD COLUMN {col_name} {col_def}")
+            except Exception:
+                pass
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS agent_notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
