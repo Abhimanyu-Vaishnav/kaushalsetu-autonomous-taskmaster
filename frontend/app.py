@@ -98,6 +98,11 @@ except ImportError:
         normalize_dob
     )
 
+try:
+    init_complete_db()
+except Exception:
+    pass
+
 def perform_student_login(s_id: str, dob_val: str):
     """Direct in-memory student authentication helper."""
     return direct_student_login(s_id, dob_val)
@@ -1886,7 +1891,7 @@ def main_app_layout():
             # --- FRESH UN-CACHED DIRECT DB READ ---
             conn = get_db()
             c = conn.cursor()
-            c.execute("SELECT id, student_id, name, full_name, dob, email, phone, track, course_name, branch_center, aggregate_score, status_seal, created_at, github_url, portfolio_url, exam_completed FROM students ORDER BY created_at DESC")
+            c.execute("SELECT * FROM students ORDER BY rowid DESC")
             students_list = [dict(r) for r in c.fetchall()]
             conn.close()
 

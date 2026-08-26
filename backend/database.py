@@ -221,6 +221,43 @@ def init_complete_db():
         )
     """)
 
+    # Dynamic dynamic migration check for missing columns in students
+    c.execute("PRAGMA table_info(students)")
+    existing_cols = {r[1] for r in c.fetchall()}
+
+    required_student_columns = {
+        "student_id": "TEXT DEFAULT ''",
+        "name": "TEXT DEFAULT ''",
+        "full_name": "TEXT DEFAULT ''",
+        "dob": "TEXT DEFAULT '2000-01-01'",
+        "email": "TEXT DEFAULT ''",
+        "phone": "TEXT DEFAULT ''",
+        "track": "TEXT DEFAULT 'General Track'",
+        "course_name": "TEXT DEFAULT 'General Track'",
+        "branch_center": "TEXT DEFAULT 'Delhi Nangloi'",
+        "branch_name": "TEXT DEFAULT 'Delhi Nangloi'",
+        "institute_id": "TEXT DEFAULT ''",
+        "branch_id": "TEXT DEFAULT ''",
+        "course_id": "TEXT DEFAULT ''",
+        "github_url": "TEXT DEFAULT ''",
+        "linkedin_url": "TEXT DEFAULT ''",
+        "portfolio_url": "TEXT DEFAULT ''",
+        "exam_completed": "INTEGER DEFAULT 0",
+        "mcq_score": "REAL DEFAULT 0.0",
+        "capstone_score": "REAL DEFAULT 0.0",
+        "aggregate_score": "REAL DEFAULT 0.0",
+        "status_seal": "TEXT DEFAULT 'PENDING'",
+        "created_at": "TIMESTAMP DEFAULT ''"
+    }
+
+    for col_name, col_def in required_student_columns.items():
+        if col_name not in existing_cols:
+            try:
+                c.execute(f"ALTER TABLE students ADD COLUMN {col_name} {col_def}")
+                print(f"[DB Migration] Added missing column '{col_name}' to students table.")
+            except Exception as e:
+                print(f"Migration notice ({col_name}): {e}")
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS agent_activity_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
