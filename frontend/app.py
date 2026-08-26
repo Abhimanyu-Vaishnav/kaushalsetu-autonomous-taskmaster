@@ -1932,12 +1932,12 @@ def main_app_layout():
                                 modal_edit_student_record(stu)
                         with col_st5:
                             if st.button("🗑️ Remove", key=f"btn_delete_student_{stu['student_id']}", type="secondary", use_container_width=True):
-                                del_s_res = safe_api_call("DELETE", f"/api/student/{stu['student_id']}")
-                                if del_s_res and del_s_res.status_code in [200, 204]:
+                                del_s_res = direct_delete_student(stu['student_id'])
+                                if del_s_res.get("status") == "success" or del_s_res.get("success"):
                                     st.toast(f"Candidate {stu['full_name']} removed from roster.", icon="🗑️")
                                     st.rerun()
                                 else:
-                                    st.error("Error removing candidate")
+                                    st.error(f"Error removing candidate: {del_s_res.get('message')}")
                         st.divider()
 
         # --- TAB 3: AUTONOMOUS PLACEMENT & LIVE LEDGER ---

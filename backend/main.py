@@ -475,28 +475,48 @@ def direct_get_students(branch_center: str = None, branch_id: str = None, instit
     try:
         conn = get_db()
         c = conn.cursor()
-        filter_val = branch_center or branch_id
-        if filter_val and str(filter_val).strip() and str(filter_val).strip() != "All Centers":
-            val = str(filter_val).strip()
-            c.execute("""
-                SELECT * FROM students 
-                WHERE branch_id = ? 
-                   OR branch_center = ? 
-                   OR branch_name = ? 
-                   OR branch_center LIKE ? 
-                   OR branch_name LIKE ? 
-                   OR branch_id = '' 
-                   OR branch_id IS NULL 
-                   OR branch_center = '' 
-                   OR branch_center IS NULL 
-                ORDER BY created_at DESC
-            """, (val, val, val, f"%{val}%", f"%{val}%"))
-        elif institute_id and str(institute_id).strip():
-            c.execute("SELECT * FROM students WHERE institute_id = ? OR institute_id = '' OR institute_id IS NULL ORDER BY created_at DESC", (str(institute_id).strip(),))
-        else:
+
+        filter_val = (branch_center or branch_id or "").strip()
+        if not filter_val or filter_val == "All Centers":
             c.execute("SELECT * FROM students ORDER BY created_at DESC")
+            rows = [dict(r) for r in c.fetchall()]
+            conn.close()
+            for r in rows:
+                if not r.get("id"):
+                    r["id"] = r.get("student_id") or "STU-1001"
+                if not r.get("student_id"):
+                    r["student_id"] = r.get("id") or "STU-1001"
+                if not r.get("name"):
+                    r["name"] = r.get("full_name") or r.get("student_name") or "Candidate"
+                if not r.get("full_name"):
+                    r["full_name"] = r.get("name") or "Candidate"
+                if not r.get("track"):
+                    r["track"] = r.get("course_name") or "Vocational Track"
+                if not r.get("course_name"):
+                    r["course_name"] = r.get("track") or "Vocational Track"
+            return rows
+
+        base_keyword = filter_val.split()[0].replace("(", "").replace(")", "").strip() if filter_val else ""
+
+        query = """
+            SELECT * FROM students 
+            WHERE branch_id = ? 
+               OR branch_center = ? 
+               OR branch_name = ? 
+               OR branch_center LIKE ? 
+               OR branch_name LIKE ? 
+               OR branch_center LIKE ? 
+               OR branch_name LIKE ? 
+               OR branch_id = '' 
+               OR branch_id IS NULL 
+               OR branch_center = '' 
+               OR branch_center IS NULL 
+            ORDER BY created_at DESC
+        """
+        c.execute(query, (filter_val, filter_val, filter_val, f"%{filter_val}%", f"%{filter_val}%", f"%{base_keyword}%", f"%{base_keyword}%"))
         rows = [dict(r) for r in c.fetchall()]
         conn.close()
+
         for r in rows:
             if not r.get("id"):
                 r["id"] = r.get("student_id") or "STU-1001"
