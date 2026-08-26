@@ -314,6 +314,14 @@ def init_complete_db():
         )
     """)
 
+    # Seed Default Institute & Branch if empty
+    c.execute("SELECT COUNT(*) FROM institutes")
+    if c.fetchone()[0] == 0:
+        c.execute("INSERT INTO institutes (id, name, code) VALUES ('SKILLFORGE-HQ', 'SkillForge Vocational Foundation', 'SKILLFORGE-HQ')")
+    c.execute("SELECT COUNT(*) FROM branches")
+    if c.fetchone()[0] == 0:
+        c.execute("INSERT INTO branches (id, institute_id, name, location) VALUES ('BR-NANGLOI', 'SKILLFORGE-HQ', 'Nangloi Center (Delhi)', 'Delhi NCR')")
+
     conn.commit()
     conn.close()
 
