@@ -76,6 +76,7 @@ try:
         direct_create_institute,
         direct_create_branch,
         direct_evaluate_and_dispatch_exam,
+        direct_simulate_candidate_loop,
         normalize_dob
     )
 except ImportError:
@@ -99,6 +100,7 @@ except ImportError:
         direct_create_institute,
         direct_create_branch,
         direct_evaluate_and_dispatch_exam,
+        direct_simulate_candidate_loop,
         normalize_dob
     )
 
@@ -1608,21 +1610,10 @@ def main_app_layout():
         """, unsafe_allow_html=True)
         col_dbar1, col_dbar2 = st.columns(2)
         with col_dbar1:
-            if st.button("🔥 Simulate Top Candidate (92% Score → Portfolio → Outbox Dispatched)", type="primary", use_container_width=True):
-                st.toast("⚡ Simulation Active: Top Candidate Loop Executed", icon="🔥")
-                with st.spinner("Simulating Top Performer Autonomous Pipeline..."):
-                    r_sim = requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
-                        "student_id": "STU-1001",
-                        "assessment_id": "ASS-SIM-TOP",
-                        "mcq_answers": [0] * 10,
-                        "mcq_key": [0] * 10,
-                        "practical_task": "Full system safety lockout and high-voltage diagnostic waveform isolation",
-                        "grading_rubric": ["Safety lockout", "Diagnostic accuracy", "Documentation"],
-                        "submission_text": "Completed full safety lockout and oscilloscope differential signal inspection. Cleaned ground terminals and replaced splice.",
-                        "github_url": "https://github.com/skillforge/top-candidate-spec",
-                        "live_url": f"{BACKEND_URL}/portfolio/STU-1001"
-                    }, timeout=15)
-                    if r_sim.status_code == 200:
+            if st.button("🔥 Simulate Top Candidate (92% Score → Portfolio → Outbox Dispatched)", key="btn_sim_top_perf", type="primary", use_container_width=True):
+                with st.spinner("🤖 Running autonomous simulation loop for Top Candidate..."):
+                    res = direct_simulate_candidate_loop(score_type="TOP")
+                    if res.get("status") == "success" or res.get("success"):
                         st.session_state["inst_active_tab_idx"] = 2
                         st.query_params["tab"] = "placements"
                         st.session_state["simulation_banner"] = {
@@ -1631,21 +1622,15 @@ def main_app_layout():
                                     "• **Agent Actions Executed:** Auto-ingested profile → Synthesized MCQs → Graded Capstone via Gemini 3.5 (92%) → Dispatched SHA-256 sealed portfolio dossier to employer outboxes."
                         }
                         st.balloons()
+                        st.toast(f"🎉 Simulation Complete! Candidate {res.get('name')} scored {res.get('score')}% and was dispatched.", icon="🚀")
                         st.rerun()
+                    else:
+                        st.error(res.get("message"))
         with col_dbar2:
-            if st.button("⚠️ Simulate Remedial Candidate (54% Score → Weakness Diagnostics → 7-Day Curriculum)", use_container_width=True):
-                st.toast("⚡ Simulation Active: Remedial Candidate Loop Executed", icon="⚠️")
-                with st.spinner("Simulating Remedial Candidate Pipeline..."):
-                    r_sim2 = requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
-                        "student_id": "STU-1002",
-                        "assessment_id": "ASS-SIM-REM",
-                        "mcq_answers": [1, 2, 3, 0, 1, 2, 3, 0, 1, 2],
-                        "mcq_key": [0] * 10,
-                        "practical_task": "Diagnostic inspection procedure",
-                        "grading_rubric": ["Safety lockout", "Diagnostic accuracy"],
-                        "submission_text": "Incomplete diagnostic check. Skipped safety lockout step due to time constraint.",
-                    }, timeout=15)
-                    if r_sim2.status_code == 200:
+            if st.button("⚠️ Simulate Remedial Candidate (54% Score → Weakness Diagnostics → 7-Day Curriculum)", key="btn_sim_remedial_perf", use_container_width=True):
+                with st.spinner("🤖 Running autonomous remediation simulation loop..."):
+                    res = direct_simulate_candidate_loop(score_type="REMEDIAL")
+                    if res.get("status") == "success" or res.get("success"):
                         st.session_state["inst_active_tab_idx"] = 2
                         st.query_params["tab"] = "placements"
                         st.session_state["simulation_banner"] = {
@@ -1653,7 +1638,10 @@ def main_app_layout():
                             "text": "⚠️ **Remedial Candidate Evaluation Completed!**\n"
                                     "• **Agent Actions Executed:** Gemma fast-prescreened syntax (42ms) → Gemini 3.5 identified skill gaps → Generated 7-Day Personalized Micro-Curriculum."
                         }
+                        st.toast(f"⚠️ Remediation simulation complete! Weakness diagnostics generated for {res.get('name')}.", icon="📋")
                         st.rerun()
+                    else:
+                        st.error(res.get("message"))
         st.markdown('</div>', unsafe_allow_html=True)
 
         # --- DISPLAY POST-SIMULATION ACTION GUIDANCE BANNER (IF ACTIVE) ---

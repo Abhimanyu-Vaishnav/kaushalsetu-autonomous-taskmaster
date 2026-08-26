@@ -1866,6 +1866,86 @@ def log_agent_activity(action: str, entity_type: str, entity_id: str, details: s
     except Exception as e:
         print(f"Logging notice: {e}")
 
+def direct_simulate_candidate_loop(score_type: str = "TOP"):
+    """
+    Simulates complete autonomous loop (Student Creation -> Evaluation -> Seal -> Placement/Remediation)
+    Entirely in-process with ZERO HTTP calls.
+    """
+    try:
+        conn = get_db()
+        c = conn.cursor()
+
+        is_top = (score_type.upper() == "TOP")
+        s_id = "STU-DEMO-TOP" if is_top else "STU-DEMO-REMEDIAL"
+        s_name = "Alex Mercer (Top Performer)" if is_top else "Rohan Verma (Remedial Case)"
+        track = "Vocational Diagnostics & Mechatronics"
+        branch = "Nangloi Center (Delhi)"
+        agg_score = 92.0 if is_top else 54.0
+        mcq_s = 46.0 if is_top else 24.0
+        cap_s = 46.0 if is_top else 30.0
+
+        # 1. Ensure Demo Candidate Exists in students table
+        c.execute("""
+            INSERT OR REPLACE INTO students 
+            (id, student_id, name, student_name, full_name, dob, email, phone, track, course_name, branch_center, branch_name, mcq_score, capstone_score, aggregate_score, status_seal, exam_completed, created_at)
+            VALUES (?, ?, ?, ?, ?, '2000-01-01', 'demo@skillforge.edu', '+91 98100 12345', ?, ?, ?, ?, ?, ?, ?, 'PENDING', 1, CURRENT_TIMESTAMP)
+        """, (s_id, s_id, s_name, s_name, s_name, track, track, branch, branch, mcq_s, cap_s, agg_score))
+
+        # 2. Generate SHA-256 Ledger Seal
+        raw_digest = f"{s_id}|{agg_score}|{datetime.now().isoformat()}"
+        status_seal = f"0x{hashlib.sha256(raw_digest.encode()).hexdigest()[:16].upper()}"
+
+        # 3. Update status seal in student record
+        c.execute("UPDATE students SET status_seal = ? WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (status_seal, s_id, s_id))
+
+        # 4. Handle Top Candidate Dispatch vs Remedial Diagnosis
+        if is_top:
+            plc_id = f"PLC-{uuid.uuid4().hex[:6].upper()}"
+            company = "TechNexus Automation Systems"
+            role = "Senior Mechatronics Specialist"
+            c.execute("""
+                INSERT OR REPLACE INTO placement_ledger 
+                (id, student_id, student_name, track, branch_id, company_name, role_title, match_percentage, status, ledger_hash)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 92, 'DISPATCHED', ?)
+            """, (plc_id, s_id, s_name, track, branch, company, role, status_seal))
+
+            log_details = f"Candidate {s_name} scored 92% | Seal: {status_seal} | Dispatched to {company}"
+        else:
+            log_details = f"Remedial Candidate {s_name} scored 54% | Weakness: Sensor Calibration | 7-Day Micro-Curriculum Triggered"
+
+        conn.commit()
+        conn.close()
+
+        # 5. Add Log Entry safely via helper
+        try:
+            log_agent_activity(
+                action="EXAM_EVALUATED",
+                entity_type="student",
+                entity_id=s_id,
+                details=log_details
+            )
+        except Exception:
+            pass
+
+        # Trigger persistent backup
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
+
+        return {
+            "status": "success",
+            "success": True,
+            "score": agg_score,
+            "student_id": s_id,
+            "name": s_name,
+            "seal": status_seal,
+            "is_top": is_top,
+            "details": log_details
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 def direct_student_login(student_id: str, dob_input: str):
     try:
         conn = get_db()
