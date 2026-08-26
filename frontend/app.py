@@ -1514,7 +1514,20 @@ def main_app_layout():
                 with col_m1:
                     st.markdown("##### 👤 Personal & Academic Identity")
                     m_name = st.text_input("Full Name", value=student_data.get('full_name', ''))
-                    m_dob = st.text_input("Date of Birth (YYYY-MM-DD)", value=student_data.get('dob', '2000-01-01'))
+                    
+                    raw_stored_dob = student_data.get("dob") or "2000-01-01"
+                    try:
+                        parsed_stored_date = datetime.datetime.strptime(normalize_dob(raw_stored_dob), "%Y-%m-%d").date()
+                    except Exception:
+                        parsed_stored_date = datetime.date(2000, 1, 1)
+
+                    m_dob = st.date_input(
+                        "Date of Birth",
+                        value=parsed_stored_date,
+                        min_value=datetime.date(1970, 1, 1),
+                        max_value=datetime.date(2015, 12, 31),
+                        key=f"edit_dob_input_{student_data.get('student_id') or student_data.get('id')}"
+                    )
                     m_email = st.text_input("Email Address", value=student_data.get('email', ''))
                     m_phone = st.text_input("Phone Number", value=student_data.get('phone', ''))
                     m_track = st.text_input("Vocational Track / Course", value=student_data.get('course_name', ''))
@@ -1539,12 +1552,12 @@ def main_app_layout():
                 if sub_save:
                     with st.spinner("Saving changes & updating candidate record..."):
                         try:
-                            norm_dob_val = normalize_dob(m_dob)
+                            saved_iso_dob = m_dob.strftime("%Y-%m-%d") if hasattr(m_dob, "strftime") else normalize_dob(m_dob)
                             up_payload = {
                                 "name": m_name.strip(),
                                 "student_name": m_name.strip(),
                                 "full_name": m_name.strip(),
-                                "dob": norm_dob_val,
+                                "dob": saved_iso_dob,
                                 "email": m_email.strip(),
                                 "phone": m_phone.strip(),
                                 "track": m_track.strip(),
@@ -1797,20 +1810,26 @@ def main_app_layout():
 
             # --- FULL INSTITUTIONAL REGISTRATION FORM ---
             if st.session_state.get("show_full_modal_reg", False):
-                with st.form("form_full_modal_candidate_registration", clear_on_submit=True):
+                with st.form("form_full_modal_candidate_registration", clear_on_submit=False):
                     st.markdown("#### 📝 Institutional Candidate Registration")
                     
                     c1, c2 = st.columns(2)
                     with c1:
-                        r_name = st.text_input("Candidate Full Name *", placeholder="e.g. Rahul Sharma")
-                        r_dob = st.date_input("Date of Birth")
-                        r_email = st.text_input("Email Address", placeholder="rahul@domain.com")
+                        r_name = st.text_input("Candidate Full Name *", placeholder="e.g. Rahul Sharma", key="reg_cand_name")
+                        r_dob = st.date_input(
+                            "Date of Birth *",
+                            value=datetime.date(2000, 1, 1),
+                            min_value=datetime.date(1970, 1, 1),
+                            max_value=datetime.date(2015, 12, 31),
+                            key="reg_cand_dob"
+                        )
+                        r_email = st.text_input("Email Address", placeholder="rahul@domain.com", key="reg_cand_email")
                     with c2:
-                        r_phone = st.text_input("Phone Number", placeholder="+91 9876543210")
+                        r_phone = st.text_input("Phone Number", placeholder="+91 9876543210", key="reg_cand_phone")
                         
                         courses_db = direct_get_courses()
                         course_names = [c.get("title") or c.get("course_name") or "Vocational Track" for c in courses_db] if courses_db else ["Full Stack Web Development", "Vocational Diagnostics & Mechatronics"]
-                        r_track = st.selectbox("Assigned Course Track *", options=course_names)
+                        r_track = st.selectbox("Assigned Course Track *", options=course_names, key="reg_cand_track")
                         
                         active_center_name = sel_branch.get("branch_name", "Main Center")
                         st.text_input("Assigned Center", value=active_center_name, disabled=True)
@@ -1823,12 +1842,13 @@ def main_app_layout():
                             else:
                                 import uuid
                                 new_stu_id = f"STU-{uuid.uuid4().hex[:6].upper()}"
+                                final_dob_iso = r_dob.strftime("%Y-%m-%d") if hasattr(r_dob, "strftime") else normalize_dob(r_dob)
                                 reg_res = direct_create_student({
                                     "id": new_stu_id,
                                     "name": r_name.strip(),
                                     "student_name": r_name.strip(),
                                     "full_name": r_name.strip(),
-                                    "dob": str(r_dob),
+                                    "dob": final_dob_iso,
                                     "email": r_email.strip(),
                                     "phone": r_phone.strip(),
                                     "track": r_track,

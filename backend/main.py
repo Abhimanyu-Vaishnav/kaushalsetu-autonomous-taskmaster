@@ -1708,38 +1708,33 @@ def direct_evaluate_and_dispatch_exam(payload: dict):
         return {"status": "error", "message": f"Evaluation error: {str(e)}"}
 
 import re
-from datetime import datetime
+from datetime import datetime, date
 
-def normalize_dob(dob_str: str) -> str:
-    """Normalizes any date string (YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, etc.) to standard YYYY-MM-DD."""
-    if not dob_str:
-        return "2000-01-01"
-    dob_str = str(dob_str).strip()
+def normalize_dob(dob_raw) -> str:
+    """Converts any date object or string into strict YYYY-MM-DD."""
+    if not dob_raw:
+        return ""
+    if isinstance(dob_raw, (datetime, date)):
+        return dob_raw.strftime("%Y-%m-%d")
     
-    # Remove timestamp if present
-    dob_str = dob_str.split("T")[0].split(" ")[0]
-
-    # Check standard YYYY-MM-DD
-    if re.match(r"^\d{4}-\d{2}-\d{2}$", dob_str):
-        return dob_str
-
-    # Common format handlers
-    formats = ["%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%d.%m.%Y", "%m/%d/%Y", "%Y-%m-%d"]
-    for fmt in formats:
+    s = str(dob_raw).strip().split("T")[0].split(" ")[0]
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", s):
+        return s
+    
+    for fmt in ["%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%m/%d/%Y", "%d.%m.%Y", "%Y-%m-%d"]:
         try:
-            return datetime.strptime(dob_str, fmt).strftime("%Y-%m-%d")
+            return datetime.strptime(s, fmt).strftime("%Y-%m-%d")
         except ValueError:
-            continue
-    
-    # Extract digits only fallback (e.g., 15082000 -> 2000-08-15)
-    digits = re.sub(r"\D", "", dob_str)
+            pass
+
+    digits = re.sub(r"\D", "", s)
     if len(digits) == 8:
         if int(digits[:4]) > 1900:  # YYYYMMDD
             return f"{digits[:4]}-{digits[4:6]}-{digits[6:]}"
         else:  # DDMMYYYY
             return f"{digits[4:]}-{digits[2:4]}-{digits[:2]}"
 
-    return dob_str
+    return s
 
 def direct_update_student(student_id: str, payload: dict):
     try:
@@ -1822,20 +1817,18 @@ def direct_student_login(student_id: str, dob_input: str):
         conn.close()
 
         if not row:
-            return {"authenticated": False, "status": "error", "message": f"Candidate ID '{sid}' not found."}
+            return {"authenticated": False, "status": "error", "message": f"Candidate ID '{sid}' does not exist."}
 
         s = dict(row)
-        stored_dob = s.get("dob")
+        stored_dob = normalize_dob(s.get("dob"))
+        input_dob = normalize_dob(dob_input)
 
-        if not stored_dob:
-            return {"authenticated": True, "status": "success", "student": s, "data": s}
+        if not stored_dob or not input_dob:
+            return {"authenticated": False, "status": "error", "message": "DOB record missing or invalid input."}
 
-        norm_input = normalize_dob(dob_input)
-        norm_stored = normalize_dob(stored_dob)
-
-        if norm_input == norm_stored:
+        if stored_dob == input_dob:
             return {"authenticated": True, "status": "success", "student": s, "data": s}
         else:
-            return {"authenticated": False, "status": "error", "message": f"DOB mismatch. Entered: {norm_input} vs Expected: {norm_stored}"}
+            return {"authenticated": False, "status": "error", "message": f"Incorrect Date of Birth for {sid}. (Entered: {input_dob} vs Expected: {stored_dob})"}
     except Exception as e:
         return {"authenticated": False, "status": "error", "message": str(e)}
