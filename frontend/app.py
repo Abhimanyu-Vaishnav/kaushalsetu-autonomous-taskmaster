@@ -1781,21 +1781,61 @@ def main_app_layout():
                                 modal_confirm_delete_course(c)
                         st.divider()
 
-        # --- TAB 2: STUDENT ROSTER & AI EXAM DISPATCH ---
+        # --- TAB 2: STUDENT ROSTER & ASSESSMENT HUB ---
         with tabs[1]:
-            col_sr1, col_sr2, col_sr3 = st.columns([2.5, 1, 1])
-            with col_sr1:
-                st.subheader(f"👥 Student Candidate Roster ({sel_branch['branch_name']})")
-                st.caption("Enroll candidates manually, upload bulk CSV/Excel rosters, and dispatch AI Exam URLs.")
-            
-            course_opts = {c['course_name']: c['id'] for c in branch_courses} if branch_courses else {"Automotive & Hardware Diagnostics": "CRS-AUTO-01"}
+            st.markdown("## 👥 Student Candidate Roster")
+            st.caption("Enroll candidates manually, upload bulk CSV/Excel rosters, and dispatch AI Exam URLs.")
 
-            with col_sr2:
-                if st.button("👤 Add Single Student", type="primary", use_container_width=True):
+            # --- TOP ACTIONS ROW ---
+            col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1.5, 2])
+            with col_btn1:
+                if st.button("➕ Add Single Student", type="primary", key="btn_toggle_add_student_live", use_container_width=True):
+                    st.session_state["show_student_form"] = not st.session_state.get("show_student_form", False)
+            with col_btn2:
+                if st.button("🏛️ Full Modal Registration", key="btn_modal_add_student_trigger", use_container_width=True):
+                    course_opts = {c['course_name']: c['id'] for c in branch_courses} if branch_courses else {"Automotive & Hardware Diagnostics": "CRS-AUTO-01"}
                     modal_add_student(sel_inst['id'], sel_branch['id'], sel_branch['branch_name'], course_opts)
 
-            with col_sr3:
-                st.markdown('<span style="font-size:0.8rem; font-weight:600; color:#475569;">📁 Bulk Excel Import Available Below</span>', unsafe_allow_html=True)
+            # --- ENROLLMENT FORM ---
+            if st.session_state.get("show_student_form", False):
+                with st.form("form_enroll_candidate_live", clear_on_submit=True):
+                    st.markdown("### 📝 Candidate Registration")
+                    f_name = st.text_input("Candidate Full Name *", value="Alex Mercer")
+                    f_dob = st.date_input("Date of Birth")
+                    f_email = st.text_input("Email Address", value="alex.mercer@skillforge.edu")
+                    f_phone = st.text_input("Phone Number", value="+91 98100 12345")
+                    f_track = st.text_input("Course Track", value="Vocational Diagnostics & Mechatronics")
+                    f_center = st.text_input("Assigned Center", value=sel_branch.get('branch_name', 'Nangloi Center (Delhi)'))
+
+                    col_submit, col_cancel = st.columns(2)
+                    with col_submit:
+                        if st.form_submit_button("💾 Save & Enroll Candidate", type="primary", use_container_width=True):
+                            import uuid
+                            new_id = f"STU-{uuid.uuid4().hex[:6].upper()}"
+                            
+                            conn = get_db()
+                            cur = conn.cursor()
+                            cur.execute("""
+                                INSERT INTO students (id, student_id, name, full_name, dob, email, phone, track, course_name, branch_center, branch_name, institute_id, branch_id, aggregate_score, status_seal, created_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, 'PENDING', CURRENT_TIMESTAMP)
+                            """, (new_id, new_id, f_name.strip(), f_name.strip(), str(f_dob), f_email.strip(), f_phone.strip(), f_track.strip(), f_track.strip(), f_center.strip(), f_center.strip(), sel_inst.get('id', 'INST-ROOT'), sel_branch.get('id', 'BR-MAIN')))
+                            conn.commit()
+                            conn.close()
+
+                            try:
+                                from backend.database import export_database_snapshot
+                                export_database_snapshot()
+                            except Exception:
+                                pass
+
+                            st.session_state["show_student_form"] = False
+                            st.toast(f"✅ Candidate {f_name} ({new_id}) Enrolled!", icon="🎉")
+                            st.rerun()
+
+                    with col_cancel:
+                        if st.form_submit_button("Cancel", use_container_width=True):
+                            st.session_state["show_student_form"] = False
+                            st.rerun()
 
             if "csv_uploader_key" not in st.session_state:
                 st.session_state["csv_uploader_key"] = 0
@@ -1836,36 +1876,49 @@ def main_app_layout():
                                 if r_b.get("status") == "success" or r_b.get("success"):
                                     imported_count += 1
                             st.session_state["csv_uploader_key"] += 1
-                            st.toast(f"✅ Successfully imported {imported_count} candidates into {sel_branch['branch_name']}! Uploader reset.", icon="🎉")
+                            st.toast(f"✅ Successfully imported {imported_count} candidates into {sel_branch['branch_name']}!", icon="🎉")
                             st.rerun()
                     except Exception as ex:
                         st.error(f"Error parsing bulk file: {ex}")
 
             st.divider()
 
-            students = direct_get_students(branch_center=sel_branch.get('branch_name'), branch_id=sel_branch.get('id'), institute_id=sel_inst.get('id'))
-            if not students:
-                students = direct_get_students()
+            # --- FRESH UN-CACHED DIRECT DB READ ---
+            conn = get_db()
+            c = conn.cursor()
+            c.execute("SELECT id, student_id, name, full_name, dob, email, phone, track, course_name, branch_center, aggregate_score, status_seal, created_at, github_url, portfolio_url, exam_completed FROM students ORDER BY created_at DESC")
+            students_list = [dict(r) for r in c.fetchall()]
+            conn.close()
 
-            if not students:
-                st.info(f"No candidates enrolled under {sel_branch['branch_name']} yet. Use **👤 Add Single Student** to add one.")
+            for r in students_list:
+                if not r.get("id"):
+                    r["id"] = r.get("student_id") or "STU-1001"
+                if not r.get("student_id"):
+                    r["student_id"] = r.get("id") or "STU-1001"
+                if not r.get("full_name"):
+                    r["full_name"] = r.get("name") or "Candidate"
+                if not r.get("course_name"):
+                    r["course_name"] = r.get("track") or "Vocational Track"
+
+            if not students_list:
+                st.warning("⚠️ No candidates enrolled in database yet. Click '➕ Add Single Student' above to register.")
             else:
                 col_rh1, col_rh2 = st.columns([3, 1])
                 with col_rh1:
-                    st.markdown(f"#### Enrolled Candidates ({len(students)} Total)")
+                    st.success(f"📊 Active Roster: **{len(students_list)}** Candidates Enrolled")
                 with col_rh2:
                     import pandas as pd
-                    df_export = pd.DataFrame(students)
+                    df_export = pd.DataFrame(students_list)
                     csv_export = df_export.to_csv(index=False).encode('utf-8')
                     st.download_button(
-                        "📥 Export Branch Roster (CSV)",
+                        "📥 Export Roster (CSV)",
                         csv_export,
                         f"roster_{sel_branch['branch_name'].lower().replace(' ', '_')}.csv",
                         "text/csv",
                         use_container_width=True
                     )
                     
-                # Reactive Real-Time Search Bar & Pagination
+                # Search Bar & Pagination
                 search_query = st.text_input(
                     "🔍 Live Search Candidates (Name, Student ID, Email, Phone, Course)",
                     placeholder="Type to filter in real-time...",
@@ -1874,16 +1927,16 @@ def main_app_layout():
 
                 if search_query:
                     filtered_students = [
-                        s for s in students
-                        if search_query in s.get("full_name", "").lower()
-                        or search_query in s.get("student_id", "").lower()
-                        or search_query in s.get("email", "").lower()
-                        or search_query in s.get("phone", "").lower()
-                        or search_query in s.get("course_name", "").lower()
+                        s for s in students_list
+                        if search_query in str(s.get("full_name", "")).lower()
+                        or search_query in str(s.get("student_id", "")).lower()
+                        or search_query in str(s.get("email", "")).lower()
+                        or search_query in str(s.get("phone", "")).lower()
+                        or search_query in str(s.get("course_name", "")).lower()
                     ]
-                    st.markdown(f'<div style="font-size:0.85rem; color:#38BDF8; font-weight:600; margin-bottom:8px;">Displaying {len(filtered_students)} of {len(students)} Candidates (Live Filtered)</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="font-size:0.85rem; color:#38BDF8; font-weight:600; margin-bottom:8px;">Displaying {len(filtered_students)} of {len(students_list)} Candidates (Live Filtered)</div>', unsafe_allow_html=True)
                 else:
-                    filtered_students = students
+                    filtered_students = students_list
                     
                 r_items_per_page = 5
                 r_total_pages = max(1, (len(filtered_students) + r_items_per_page - 1) // r_items_per_page)
