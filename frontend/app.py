@@ -81,6 +81,10 @@ try:
         generate_dynamic_ai_portfolio,
         direct_search_and_match_jobs,
         generate_interview_prep_questions,
+        agentic_synthesize_course,
+        agent_apply_job_for_student,
+        agent_schedule_interview,
+        direct_get_job_applications,
         normalize_dob
     )
 except ImportError:
@@ -109,6 +113,10 @@ except ImportError:
         generate_dynamic_ai_portfolio,
         direct_search_and_match_jobs,
         generate_interview_prep_questions,
+        agentic_synthesize_course,
+        agent_apply_job_for_student,
+        agent_schedule_interview,
+        direct_get_job_applications,
         normalize_dob
     )
 
@@ -696,13 +704,22 @@ def main_app_layout():
                     </div>
                     """, unsafe_allow_html=True)
                     
+                    applied_apps = direct_get_job_applications(student_id=s_id)
+                    already_applied = any(a.get("job_id") == j["id"] or a.get("role_title") == j["title"] for a in applied_apps)
+
                     with st.expander(f"📋 View Required Skills & 1-Click Apply for {j['title']}"):
                         skills_str = ", ".join(j['skills'])
                         st.caption(f"Required Skills: {skills_str} | Experience: {j['exp']} | Type: {j['type']}")
-                        if st.button(f"⚡ 1-Click Apply & Dispatch Portfolio to {j['company']}", key=f"btn_apply_{j['id']}", type="primary"):
-                            direct_dispatch_placement(s_id, j['company'], j['title'], j['match_pct'])
-                            st.toast(f"🚀 Sealed dossier & portfolio successfully dispatched to {j['company']}!", icon="✅")
-                            st.rerun()
+                        if already_applied:
+                            st.success("✅ Applied - Awaiting Interview Scheduling")
+                        else:
+                            if st.button(f"⚡ 1-Click Autonomous Apply & Dispatch to {j['company']}", key=f"btn_apply_{j['id']}", type="primary"):
+                                res = agent_apply_job_for_student(s_id, j)
+                                if res.get("status") == "success":
+                                    st.toast("✅ Dossier dispatched! Application recorded in Institute Mentorship Outbox.", icon="🚀")
+                                    st.rerun()
+                                else:
+                                    st.error(res.get("message"))
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO
             with tab_prep:
@@ -1517,18 +1534,31 @@ def main_app_layout():
                     else:
                         st.error(res_data.get("message", "Failed to create branch"))
 
-        @st.dialog("📚 Context-Rich Course Synthesizer")
+        @st.dialog("📚 Context-Rich Course Synthesizer", width="large")
         def modal_create_course(target_inst_id, target_branch_id, target_branch_name):
             st.markdown(f"Synthesize custom curriculum & skills for **{target_branch_name}**.")
+            
+            raw_topic_input = st.text_input("🤖 Enter Raw Topic or Misspelled Track Name (e.g., 'elctric vehicl mechatrnics')", value="Electric Vehicle Powertrain & Battery Diagnostics", key="raw_synth_input")
+            if st.button("🤖 Agentic Auto-Synthesize Track", type="secondary", use_container_width=True):
+                synth = agentic_synthesize_course(raw_topic_input, target_branch_id)
+                st.session_state["synth_course_data"] = synth
+                st.toast(f"✅ Track '{synth['title']}' Auto-Synthesized by AI Agent!", icon="🪄")
+
+            synth_data = st.session_state.get("synth_course_data", {})
+
             with st.form("modal_course_form"):
-                mc_title = st.text_input("Course Title", value="Full Stack Web Development")
-                mc_desc = st.text_area("Course Description & Objective", value="Comprehensive full stack engineering covering modern frontend frameworks, REST APIs, database design, and cloud deployments.", height=70)
-                mc_sections = st.text_area("Curriculum Modules Breakdown (Comma or Line Separated)", value="Module 1: React & UI Architecture, Module 2: Python FastAPI & Async REST, Module 3: PostgreSQL & Docker Deployment", height=80)
-                mc_skills = st.text_input("Core Practical Skills Acquired (Comma Separated)", value="React, FastAPI, PostgreSQL, Docker, REST, Git")
+                mc_title = st.text_input("Course Title", value=synth_data.get("title", "Full Stack Web Development"))
+                mc_desc = st.text_area("Course Description & Objective", value=synth_data.get("topic", "Comprehensive full stack engineering covering modern frontend frameworks, REST APIs, database design, and cloud deployments."), height=70)
+                
+                default_mods = ", ".join([m.get("title", str(m)) for m in synth_data.get("modules", [])]) if synth_data.get("modules") else "Module 1: React & UI Architecture, Module 2: Python FastAPI & Async REST, Module 3: PostgreSQL & Docker Deployment"
+                mc_sections = st.text_area("Curriculum Modules Breakdown (Comma or Line Separated)", value=default_mods, height=80)
+                
+                default_sk = ", ".join(synth_data.get("skills", [])) if synth_data.get("skills") else "React, FastAPI, PostgreSQL, Docker, REST, Git"
+                mc_skills = st.text_input("Core Practical Skills Acquired (Comma Separated)", value=default_sk)
                 mc_mcqs = st.select_slider("Default MCQ Exam Count", options=[5, 10, 15, 25, 50], value=10)
-                sub_mc = st.form_submit_button("⚡ AI Synthesize & Create Course", type="primary", use_container_width=True)
+                sub_mc = st.form_submit_button("⚡ Save & Register Synthesized Course", type="primary", use_container_width=True)
                 if sub_mc:
-                    with st.spinner("⚡ Gemini 3.5 Auto-Correcting Typos & Synthesizing Curriculum..."):
+                    with st.spinner("⚡ Auto-Saving Course & Initializing Database Record..."):
                         try:
                             modules_list = [m.strip() for m in mc_sections.replace("\n", ",").split(",") if m.strip()]
                             skills_list = [s.strip() for s in mc_skills.replace("\n", ",").split(",") if s.strip()]
@@ -1547,11 +1577,14 @@ def main_app_layout():
                                 "curriculum_sections": modules_str,
                                 "core_skills": skills_str,
                                 "skills": skills_list,
-                                "default_mcq_count": mc_mcqs
+                                "default_mcq_count": mc_mcqs,
+                                "mcqs": json.dumps(synth_data.get("mcqs", [])),
+                                "capstone": synth_data.get("capstone", "")
                             })
                             if res_data.get("status") == "success" or res_data.get("success"):
                                 st.toast(f"🚀 Course '{mc_title.strip()}' Synthesized & Created Successfully!", icon="✅")
                                 st.session_state["courses_last_updated"] = time.time()
+                                st.session_state["synth_course_data"] = None
                                 st.rerun()
                             else:
                                 st.error(f"⚠️ Course creation failed: {res_data.get('message')}")
@@ -1737,16 +1770,52 @@ def main_app_layout():
                         except Exception as ex:
                             st.error(f"Failed to update candidate record: {ex}")
 
-        # --- SLEEK 1-CLICK FAST-FORWARD JUDGE DEMO CONTROL STRIP ---
+        @st.dialog("ℹ️ KaushalSetu Autonomous Agentic Architecture & Operational Guide", width="large")
+        def modal_agent_architecture_guide():
+            st.markdown("""
+            ### 🤖 KaushalSetu Autonomous AI Agentic System Architecture
+
+            #### 1. Dual-AI Engine Strategy
+            - **Gemma Fast-Prescreener (Local CPU / On-Device - 42ms)**: Fast-screens code syntax, sanity checks inputs, and filters obvious errors locally before cloud dispatch.
+            - **Gemini 3.5 Pro Multimodal Agent (Cloud API)**: Deep reasoning, rubrics-based capstone grading, weakness diagnostics, and custom micro-curriculum generation.
+
+            #### 2. Self-Healing SQLite Engine
+            - Autonomous dynamic column migration via `PRAGMA table_info` checks before queries execute, preventing runtime schema breakages.
+            - In-process execution routines (`direct_*`) ensure 100% zero HTTP network failures.
+
+            #### 3. Cryptographic Ledger & Dossier Outbox
+            - Evaluated marksheet digests are hashed via **SHA-256** into tamper-proof seals (`0x...`).
+            - Automated outbox engine dispatches candidate dossiers to hiring partners with real-time match scoring.
+
+            #### 4. Institutional Mentorship & Auto-Apply
+            - Live candidate application tracking with 1-click interview scheduling and automated in-app email notifications.
+            """)
+
+        @st.dialog("🗓️ Schedule Technical Interview")
+        def modal_schedule_interview(app_data):
+            st.markdown(f"Schedule Interview for **{app_data.get('student_name')}** ({app_data.get('role_title')} @ **{app_data.get('company_name')}**)")
+            with st.form("form_schedule_interview"):
+                d_val = st.date_input("Interview Date", value=datetime.date.today() + datetime.timedelta(days=2))
+                t_val = st.time_input("Interview Time", value=datetime.time(11, 0))
+                sub_sch = st.form_submit_button("📅 Confirm & Dispatch Email Notifications", type="primary", use_container_width=True)
+                if sub_sch:
+                    res = agent_schedule_interview(app_data["id"], str(d_val), t_val.strftime("%I:%M %p"))
+                    if res.get("status") == "success":
+                        st.toast(f"🗓️ Interview scheduled! Meeting link: {res.get('meet_link')}", icon="✅")
+                        st.rerun()
+                    else:
+                        st.error(res.get("message"))
+
+        # --- SLEEK UNIFIED AUTONOMOUS MISSION CONTROL STRIP ---
         st.markdown("""
         <div class="modern-card" style="background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%); border: 1px solid #6366F1; margin-bottom: 16px;">
             <div style="font-size:0.95rem; font-weight:700; color:#818CF8; margin-bottom:10px;">
-                ⚡ Fast-Forward Judge Demo Simulation (1-Click Autonomous Loop)
+                ⚡ Autonomous Agent Mission Control (1-Click Pipeline Operations)
             </div>
         """, unsafe_allow_html=True)
-        col_dbar1, col_dbar2 = st.columns(2)
+        col_dbar1, col_dbar2, col_dbar3 = st.columns(3)
         with col_dbar1:
-            if st.button("🔥 Simulate Top Candidate (92% Score → Portfolio → Outbox Dispatched)", key="btn_sim_top_perf", type="primary", use_container_width=True):
+            if st.button("🔥 Simulate Top Candidate (92% Score)", key="btn_sim_top_perf", type="primary", use_container_width=True):
                 with st.spinner("🤖 Running autonomous simulation loop for Top Candidate..."):
                     res = direct_simulate_candidate_loop(score_type="TOP")
                     if res.get("status") == "success" or res.get("success"):
@@ -1763,7 +1832,7 @@ def main_app_layout():
                     else:
                         st.error(res.get("message"))
         with col_dbar2:
-            if st.button("⚠️ Simulate Remedial Candidate (54% Score → Weakness Diagnostics → 7-Day Curriculum)", key="btn_sim_remedial_perf", use_container_width=True):
+            if st.button("⚠️ Simulate Remedial Candidate (54% Score)", key="btn_sim_remedial_perf", use_container_width=True):
                 with st.spinner("🤖 Running autonomous remediation simulation loop..."):
                     res = direct_simulate_candidate_loop(score_type="REMEDIAL")
                     if res.get("status") == "success" or res.get("success"):
@@ -1778,6 +1847,9 @@ def main_app_layout():
                         st.rerun()
                     else:
                         st.error(res.get("message"))
+        with col_dbar3:
+            if st.button("ℹ️ Agent Architecture Guide", key="btn_agent_arch_guide", use_container_width=True):
+                modal_agent_architecture_guide()
         st.markdown('</div>', unsafe_allow_html=True)
 
         # --- DISPLAY POST-SIMULATION ACTION GUIDANCE BANNER (IF ACTIVE) ---
@@ -1785,11 +1857,6 @@ def main_app_layout():
             sb_info = st.session_state["simulation_banner"]
             if sb_info["type"] == "top":
                 st.success(sb_info["text"])
-                st.markdown("""
-                <div style="background:#0F172A; border:1px solid #38BDF8; p-3; padding:12px; border-radius:10px; margin-bottom:12px;">
-                    <b style="color:#38BDF8;">👉 Quick Action Inspection Controls:</b>
-                </div>
-                """, unsafe_allow_html=True)
                 col_act1, col_act2, col_act3 = st.columns(3)
                 with col_act1:
                     st.link_button("🌐 Open Generated Portfolio Dossier", f"{BACKEND_URL}/portfolio/STU-1001", use_container_width=True)
@@ -1799,17 +1866,14 @@ def main_app_layout():
                     st.link_button("💼 Inspect Live Web Job Hub", f"{FRONTEND_URL}/?page=student_dashboard&sid=STU-1001", use_container_width=True)
             else:
                 st.warning(sb_info["text"])
-                col_act1, col_act2 = st.columns(2)
-                with col_act1:
-                    st.link_button("📜 View Student Marksheet & Remedial Plan", f"{FRONTEND_URL}/?page=student_dashboard&sid=STU-1002", use_container_width=True)
-                with col_act2:
-                    st.link_button("🎓 Open Retest Portal", f"{FRONTEND_URL}/?page=exam&sid=STU-1002", use_container_width=True)
-                    
-            if st.button("✕ Dismiss Guidance Banner"):
-                st.session_state["simulation_banner"] = None
-                st.rerun()
 
-        # --- CLEAN SETUP GOVERNANCE BAR ---
+        # --- TENANT SELECTION GATE ---
+        institutes = direct_get_institutes()
+        if not institutes:
+            st.info("No institutes initialized yet. Purging and running initial seed setup...")
+            direct_create_institute({"name": "SkillForge Vocational Foundation", "code": "SKILLFORGE-HQ"})
+            institutes = direct_get_institutes()
+
         inst_opts = ["Select Institute Network..."] + [f"{i['name']} ({i['code']})" for i in institutes]
         inst_id_map = {i['id']: f"{i['name']} ({i['code']})" for i in institutes}
         label_inst_map = {f"{i['name']} ({i['code']})": i for i in institutes}
@@ -1877,7 +1941,7 @@ def main_app_layout():
             """, unsafe_allow_html=True)
             st.stop()
 
-        # --- UNLOCKED 4-TAB COMMAND CENTER ---
+        # --- UNLOCKED 5-TAB COMMAND CENTER ---
         st.markdown(f'<div style="font-size:0.85rem; color:#9CA3AF; margin-bottom:12px;">Active Node: <span style="color:#38BDF8; font-weight:600;">{sel_inst["name"]}</span> → <span style="color:#34D399; font-weight:600;">{sel_branch["branch_name"]} ({sel_branch["city"]})</span></div>', unsafe_allow_html=True)
 
         tabs = st.tabs([
@@ -2172,21 +2236,44 @@ def main_app_layout():
                                     st.error(f"Error removing candidate: {del_s_res.get('message')}")
                         st.divider()
 
-        # --- TAB 3: AUTONOMOUS PLACEMENT & LIVE LEDGER ---
+        # --- TAB 3: CANDIDATE PLACEMENT & APPLICATION LEDGER (INSTITUTE MENTORSHIP) ---
         with tabs[2]:
-            st.subheader(f"🤖 Autonomous Placement Ledger & Interview Outbox ({sel_branch['branch_name']})")
-            st.caption("Real-time tracking of AI-applied job vacancies, recruiter interview alerts, and candidate dossiers.")
-            
-            # ZERO-HITL VISUAL PIPELINE TRACE
-            st.markdown("""
-            <div style="background:#0F172A; border:1px solid #1E293B; padding:12px 18px; border-radius:10px; margin-bottom:16px;">
-                <div style="font-size:0.8rem; color:#10B981; font-weight:700; margin-bottom:6px;">🤖 100% Autonomous Zero-HITL (Zero Human-in-the-Loop) Pipeline Active</div>
-                <div style="font-family:monospace; font-size:0.75rem; color:#38BDF8; word-break:break-all;">
-                    Candidate Submission ──(0-HITL)──> Gemma AST Pre-Screen (42ms) ──(0-HITL)──> Gemini 3.5 Multimodal Grading ──(0-HITL)──> Google Search Job Radar ──(0-HITL)──> Recruiter Outbox Dispatched
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
+            st.subheader(f"💼 Candidate Placement & Application Ledger ({sel_branch['branch_name']})")
+            st.caption("Institutional Mentorship Hub: Track student job dispatches, match ratings, and schedule live technical interviews.")
+
+            apps = direct_get_job_applications(branch_id=sel_branch['id'])
+            if not apps:
+                st.info("No candidate job applications registered for this branch yet. When students click 1-Click Apply, applications appear here live!")
+            else:
+                for a in apps:
+                    st.markdown(f"""
+                    <div style="background:#0F172A; border:1px solid #1E293B; border-radius:12px; padding:16px; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                            <div>
+                                <h3 style="color:#60A5FA; margin:0;">{a.get('student_name')} (`{a.get('student_id')}`)</h3>
+                                <b style="color:#F9FAFB;">{a.get('role_title')}</b> at <span style="color:#38BDF8;">{a.get('company_name')}</span>
+                                <div style="font-size:0.85rem; color:#9CA3AF; margin-top:4px;">Track: {a.get('track')}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <span style="background:#064E3B; color:#34D399; padding:4px 12px; border-radius:15px; font-weight:700; font-size:0.85rem;">
+                                    🎯 {a.get('match_percentage')}% Match
+                                </span>
+                                <div style="font-size:0.85rem; color:#FBBF24; margin-top:4px;">Status: <b>{a.get('status')}</b></div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    if a.get('status') == 'INTERVIEW_SCHEDULED':
+                        st.success(f"🗓️ Technical Interview Confirmed: **{a.get('interview_date')}** at **{a.get('interview_time')}** | [Join Meeting Link]({a.get('interview_link')})")
+                    else:
+                        if st.button(f"🗓️ Schedule Technical Interview for {a.get('student_name')}", key=f"btn_sch_{a['id']}", type="primary"):
+                            modal_schedule_interview(a)
+
+        # --- TAB 4: AUTONOMOUS PLACEMENT & AGENT ACTION LEDGER ---
+        with tabs[3]:
+            st.subheader(f"🤖 Autonomous Placement & Signed Dossier Ledger ({sel_branch['branch_name']})")
+            st.caption("Cryptographic ledger verifying candidate dossiers dispatched to hiring partners.")
+
             ledger_res = direct_get_placement_ledger(branch_id=sel_branch['id'])
             if ledger_res.get("status") == "success" or ledger_res.get("success"):
                 ledger = ledger_res.get("ledger") or ledger_res.get("data") or []
@@ -2209,8 +2296,8 @@ def main_app_layout():
             else:
                 st.error(f"Error loading placement ledger: {ledger_res.get('message')}")
 
-        # --- TAB 4: REAL-TIME AGENT OPERATIONAL AUDIT LOG ---
-        with tabs[3]:
+        # --- TAB 5: REAL-TIME AGENT OPERATIONAL AUDIT LOG ---
+        with tabs[4]:
             if "log_page" not in st.session_state:
                 st.session_state.log_page = 1
 

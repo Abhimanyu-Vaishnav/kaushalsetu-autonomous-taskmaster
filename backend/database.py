@@ -334,6 +334,39 @@ def init_complete_db():
         )
     """)
 
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS job_applications (
+            id TEXT PRIMARY KEY,
+            student_id TEXT NOT NULL,
+            student_name TEXT NOT NULL,
+            track TEXT DEFAULT '',
+            branch_id TEXT DEFAULT 'BR-NANGLOI',
+            job_id TEXT NOT NULL,
+            role_title TEXT NOT NULL,
+            company_name TEXT NOT NULL,
+            match_percentage INTEGER DEFAULT 85,
+            status TEXT DEFAULT 'APPLIED',
+            interview_date TEXT DEFAULT '',
+            interview_time TEXT DEFAULT '',
+            interview_link TEXT DEFAULT '',
+            mentor_notes TEXT DEFAULT '',
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS agent_notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            recipient_type TEXT DEFAULT 'STUDENT',
+            recipient_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            channel TEXT DEFAULT 'IN_APP_EMAIL',
+            is_read INTEGER DEFAULT 0,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     # Seed Default Institute & Branch if empty
     c.execute("SELECT COUNT(*) FROM institutes")
     if c.fetchone()[0] == 0:
