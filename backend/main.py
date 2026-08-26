@@ -1902,6 +1902,7 @@ def direct_simulate_candidate_loop(score_type: str = "TOP"):
         if "student_name" in cols: fields["student_name"] = s_name
         if "full_name" in cols: fields["full_name"] = s_name
         if "course_name" in cols: fields["course_name"] = track
+        if "course_id" in cols: fields["course_id"] = "CRS-MAIN"
         if "branch_name" in cols: fields["branch_name"] = branch
         if "institute_id" in cols: fields["institute_id"] = inst_id
         if "branch_id" in cols: fields["branch_id"] = "BR-NANGLOI"
@@ -2030,3 +2031,92 @@ def direct_student_login(student_id: str, dob_input: str):
             return {"authenticated": False, "status": "error", "message": f"Incorrect Date of Birth for {sid}. (Entered: {input_dob} vs Expected: {stored_dob})"}
     except Exception as e:
         return {"authenticated": False, "status": "error", "message": str(e)}
+
+def direct_create_student(payload: dict):
+    try:
+        s_id = payload.get("id") or f"STU-{uuid.uuid4().hex[:6].upper()}"
+        name = payload.get("name") or payload.get("student_name") or "Candidate"
+        dob = normalize_dob(payload.get("dob", "2000-01-01"))
+        email = payload.get("email", "").strip()
+        phone = payload.get("phone", "").strip()
+        track = payload.get("track", "Vocational Track").strip()
+        course_id = payload.get("course_id") or "CRS-MAIN"
+        branch = payload.get("branch_center", "Nangloi Center (Delhi)").strip()
+
+        conn = get_db()
+        c = conn.cursor()
+        
+        c.execute("PRAGMA table_info(students)")
+        existing_cols = {r[1] for r in c.fetchall()}
+
+        fields = {
+            "id": s_id,
+            "dob": dob,
+            "email": email,
+            "phone": phone,
+            "track": track,
+            "branch_center": branch,
+            "exam_completed": 0,
+            "aggregate_score": 0.0,
+            "status_seal": "PENDING"
+        }
+        if "student_id" in existing_cols: fields["student_id"] = s_id
+        if "name" in existing_cols: fields["name"] = name
+        if "student_name" in existing_cols: fields["student_name"] = name
+        if "full_name" in existing_cols: fields["full_name"] = name
+        if "course_name" in existing_cols: fields["course_name"] = track
+        if "course_id" in existing_cols: fields["course_id"] = course_id
+        if "branch_name" in existing_cols: fields["branch_name"] = branch
+        if "institute_id" in existing_cols: fields["institute_id"] = "SKILLFORGE-HQ"
+        if "branch_id" in existing_cols: fields["branch_id"] = "BR-NANGLOI"
+
+        col_str = ", ".join(fields.keys())
+        ph_str = ", ".join(["?"] * len(fields))
+
+        c.execute(f"INSERT OR REPLACE INTO students ({col_str}) VALUES ({ph_str})", list(fields.values()))
+        conn.commit()
+        conn.close()
+
+        try:
+            log_agent_activity("ENROLL_STUDENT", "student", s_id, f"Enrolled candidate {name} under {branch}")
+        except Exception:
+            pass
+
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
+
+        return {"status": "success", "success": True, "message": "Enrolled successfully", "id": s_id}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def direct_get_students():
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM students ORDER BY rowid DESC")
+        rows = [dict(r) for r in c.fetchall()]
+        conn.close()
+        return rows
+    except Exception:
+        return []
+
+def direct_delete_student(s_id: str):
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        sid = str(s_id).strip()
+        c.execute("DELETE FROM students WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (sid, sid))
+        c.execute("DELETE FROM placement_ledger WHERE UPPER(student_id) = UPPER(?)", (sid,))
+        conn.commit()
+        conn.close()
+
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
+
+        return {"status": "success", "success": True}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

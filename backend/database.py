@@ -239,7 +239,7 @@ def init_complete_db():
         "branch_name": "TEXT DEFAULT 'Delhi Nangloi'",
         "institute_id": "TEXT DEFAULT 'SKILLFORGE-HQ'",
         "branch_id": "TEXT DEFAULT 'BR-NANGLOI'",
-        "course_id": "TEXT DEFAULT ''",
+        "course_id": "TEXT DEFAULT 'CRS-MAIN'",
         "github_url": "TEXT DEFAULT ''",
         "linkedin_url": "TEXT DEFAULT ''",
         "portfolio_url": "TEXT DEFAULT ''",
