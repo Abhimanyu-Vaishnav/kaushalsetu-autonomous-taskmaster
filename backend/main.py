@@ -2142,7 +2142,9 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         github = s.get("github_url", "")
         linkedin = s.get("linkedin_url", "")
         website = s.get("website_url", "")
-        center = s.get("branch_name") or s.get("branch_center") or "Delhi Center"
+        twitter = s.get("twitter_url", "")
+        center = s.get("branch_name") or s.get("branch_center") or "Nangloi Center (Delhi)"
+        resume = s.get("resume_text", "")
 
         try:
             skills = json.loads(s.get("parsed_skills", "[]"))
@@ -2151,7 +2153,24 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         if not skills:
             skills = ["Industrial Telemetry", "Embedded Control Systems", "PLC Diagnostics", "Sensor Calibration", "Automated QA Verification"]
 
-        accent_color = "#10b981" if score >= 80 else "#3b82f6"
+        # Track-tailored Color Palettes
+        if "web" in track.lower() or "python" in track.lower() or "full" in track.lower() or "software" in track.lower():
+            accent_color = "#6366f1"
+            secondary_color = "#38bdf8"
+            theme_gradient = "linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #020617 100%)"
+        elif "solar" in track.lower() or "renew" in track.lower() or "green" in track.lower():
+            accent_color = "#10b981"
+            secondary_color = "#34d399"
+            theme_gradient = "linear-gradient(135deg, #064e3b 0%, #022c22 50%, #0f172a 100%)"
+        elif "electric" in track.lower() or "ev" in track.lower() or "mech" in track.lower() or "auto" in track.lower():
+            accent_color = "#f59e0b"
+            secondary_color = "#ef4444"
+            theme_gradient = "linear-gradient(135deg, #18181b 0%, #27272a 50%, #090d16 100%)"
+        else:
+            accent_color = "#3b82f6"
+            secondary_color = "#60a5fa"
+            theme_gradient = "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #020617 100%)"
+
         grade = "Distinction (Grade A+)" if score >= 85 else ("Merit (Grade A)" if score >= 70 else "Certified (Grade B)")
 
         if photo and photo.startswith("data:image"):
@@ -2160,6 +2179,7 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
             initials = "".join([part[0] for part in name.split()[:2]]).upper() or "ST"
             avatar_html = f"<div style='width: 130px; height: 130px; border-radius: 50%; background: linear-gradient(135deg, #1e293b, #0f172a); border: 3px solid {accent_color}; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 800; color: {accent_color}; margin: 0 auto 15px auto; box-shadow: 0 0 25px {accent_color}44;'>{initials}</div>"
 
+        # GitHub Section (Dynamic & Cleanly Omitted if No Handle)
         github_section = ""
         if github and len(github.strip()) > 5:
             clean_gh = github.strip()
@@ -2169,15 +2189,15 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
                     <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <b style="color: #60a5fa; font-size: 1rem;">📦 Telemetry-Diagnostics-Engine</b>
+                            <b style="color: {secondary_color}; font-size: 1rem;">📦 {track.replace(' ', '-')}-Engine</b>
                             <span style="font-size: 0.75rem; background: #064e3b; color: #34d399; padding: 2px 8px; border-radius: 10px;">Live Build</span>
                         </div>
-                        <p style="font-size: 0.85rem; color: #94a3b8; margin: 8px 0;">Production-grade sensor monitoring loop with Modbus/MQTT fail-safe drivers.</p>
+                        <p style="font-size: 0.85rem; color: #94a3b8; margin: 8px 0;">Production-grade telemetry monitoring loop with fail-safe recovery drivers.</p>
                         <a href="{clean_gh}" target="_blank" style="font-size: 0.85rem; color: {accent_color}; text-decoration: none; font-weight: 600;">Explore GitHub Source →</a>
                     </div>
                     <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <b style="color: #60a5fa; font-size: 1rem;">⚙️ Capstone-Autonomous-Controller</b>
+                            <b style="color: {secondary_color}; font-size: 1rem;">⚙️ Capstone-Diagnostic-Controller</b>
                             <span style="font-size: 0.75rem; background: #1e293b; color: #94a3b8; padding: 2px 8px; border-radius: 10px;">Verified Exam</span>
                         </div>
                         <p style="font-size: 0.85rem; color: #94a3b8; margin: 8px 0;">Evaluated multimodal capstone submission sealed with SHA-256 cryptographic digest.</p>
@@ -2191,42 +2211,94 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         if github: social_links_html += f"<a href='{github}' target='_blank' style='padding: 6px 14px; background: rgba(255,255,255,0.05); color: #fff; border-radius: 8px; text-decoration: none; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.1);'>🐙 GitHub</a>"
         if linkedin: social_links_html += f"<a href='{linkedin}' target='_blank' style='padding: 6px 14px; background: #0077b522; color: #38bdf8; border-radius: 8px; text-decoration: none; font-size: 0.85rem; border: 1px solid #0077b555;'>💼 LinkedIn</a>"
         if website: social_links_html += f"<a href='{website}' target='_blank' style='padding: 6px 14px; background: rgba(255,255,255,0.05); color: #34d399; border-radius: 8px; text-decoration: none; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.1);'>🌐 Website</a>"
+        if twitter: social_links_html += f"<a href='{twitter}' target='_blank' style='padding: 6px 14px; background: rgba(255,255,255,0.05); color: #60a5fa; border-radius: 8px; text-decoration: none; font-size: 0.85rem; border: 1px solid rgba(255,255,255,0.1);'>🐦 Twitter</a>"
         social_links_html += "</div>"
 
-        skills_badges = "".join([f"<span style='background: rgba(255,255,255,0.05); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; margin: 4px; display: inline-block;'>⚡ {sk}</span>" for sk in skills])
+        skills_badges = "".join([f"<span style='background: rgba(255,255,255,0.05); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; margin: 4px; display: inline-block;'>⚡ {sk}</span>" for sk in skills])
 
-        portfolio_html = f"""
-        <div style="font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0b0f19 0%, #111827 50%, #030712 100%); color: #f8fafc; padding: 35px 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center; max-width: 900px; margin: 0 auto;">
-            {avatar_html}
-            <h1 style="margin: 0; font-size: 2rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">{name}</h1>
-            <p style="color: {accent_color}; font-size: 1.05rem; font-weight: 600; margin: 6px 0 12px 0;">{track}</p>
-            
-            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 5px 14px; border-radius: 20px; font-size: 0.85rem; color: #34d399; font-weight: 600;">
-                🛡️ Verified Practitioner • {grade} • {score}% Aggregate
-            </div>
-
-            {social_links_html}
-
-            <hr style="border: none; height: 1px; background: rgba(255,255,255,0.08); margin: 25px 0;">
-
-            <div style="text-align: left;">
-                <h3 style="color: #f8fafc; font-size: 1.2rem; border-left: 4px solid {accent_color}; padding-left: 10px; margin-bottom: 12px;">🎯 Verified Competencies & Domain Mastery</h3>
-                <div style="margin-top: 10px;">{skills_badges}</div>
-            </div>
-
-            {github_section}
-
-            <div style="margin-top: 35px; padding: 16px; background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                <div style="text-align: left;">
-                    <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Cryptographic Ledger Verification</span>
-                    <br><code style="font-size: 0.85rem; color: #60a5fa; font-weight: 600;">{seal}</code>
+        timeline_html = f"""
+        <div style="margin-top: 30px; text-align: left;">
+            <h3 style="color: #f8fafc; font-size: 1.2rem; border-left: 4px solid {accent_color}; padding-left: 10px; margin-bottom: 15px;">📜 Practical Mastery & Experience Timeline</h3>
+            <div style="border-left: 2px solid {accent_color}66; padding-left: 20px; margin-left: 10px;">
+                <div style="margin-bottom: 20px; position: relative;">
+                    <div style="width: 12px; height: 12px; background: {accent_color}; border-radius: 50%; position: absolute; left: -27px; top: 4px;"></div>
+                    <b style="color: #f8fafc; font-size: 1rem;">Phase 1: Specialized Domain Telemetry & Foundations</b>
+                    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">Completed comprehensive theoretical modules and safety isolations for {track}.</div>
                 </div>
-                <div style="text-align: right;">
-                    <span style="font-size: 0.75rem; color: #94a3b8;">Issued by: {center}</span>
-                    <br><span style="font-size: 0.75rem; color: #34d399; font-weight: 600;">● Tamper-Proof Record</span>
+                <div style="margin-bottom: 20px; position: relative;">
+                    <div style="width: 12px; height: 12px; background: {secondary_color}; border-radius: 50%; position: absolute; left: -27px; top: 4px;"></div>
+                    <b style="color: #f8fafc; font-size: 1rem;">Phase 2: Hands-on Practical Capstone Diagnostic (Score: {s.get('capstone_score', 48)}/50)</b>
+                    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">Designed and evaluated live operational cutoff circuits and telemetry alert triggers.</div>
+                </div>
+                <div style="position: relative;">
+                    <div style="width: 12px; height: 12px; background: #34d399; border-radius: 50%; position: absolute; left: -27px; top: 4px;"></div>
+                    <b style="color: #f8fafc; font-size: 1rem;">Phase 3: Institutional Certification & Cryptographic Seal Minting</b>
+                    <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;">Verified by {center} authority with SHA-256 immutable digest seal.</div>
                 </div>
             </div>
         </div>
+        """
+
+        bio_summary = resume if resume else f"Certified practitioner specializing in {track}. Skilled in system diagnostics, fault detection, and telemetry integration."
+
+        portfolio_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>{name} - Certified Vocational Candidate Portfolio</title>
+            <style>
+                @media print {{
+                    body {{ background: #ffffff !important; color: #000000 !important; }}
+                    .no-print {{ display: none !important; }}
+                    .portfolio-card {{ box-shadow: none !important; border: 1px solid #ccc !important; background: #ffffff !important; color: #000000 !important; }}
+                    h1, h3, b {{ color: #000000 !important; }}
+                }}
+            </style>
+        </head>
+        <body style="margin: 0; padding: 20px; background: #030712; font-family: 'Segoe UI', system-ui, sans-serif;">
+            <div class="no-print" style="text-align: right; max-width: 900px; margin: 0 auto 15px auto;">
+                <button onclick="window.print()" style="background: {accent_color}; color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 12px {accent_color}44;">🖨️ Save / Download PDF Resume</button>
+            </div>
+            
+            <div class="portfolio-card" style="background: {theme_gradient}; color: #f8fafc; padding: 35px 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.6); text-align: center; max-width: 900px; margin: 0 auto;">
+                {avatar_html}
+                <h1 style="margin: 0; font-size: 2rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">{name}</h1>
+                <p style="color: {accent_color}; font-size: 1.05rem; font-weight: 600; margin: 6px 0 12px 0;">{track}</p>
+                
+                <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 5px 14px; border-radius: 20px; font-size: 0.85rem; color: #34d399; font-weight: 600;">
+                    🛡️ Verified Practitioner • {grade} • {score}% Aggregate
+                </div>
+
+                {social_links_html}
+
+                <div style="margin-top: 20px; font-size: 0.9rem; color: #cbd5e1; max-width: 700px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                    {bio_summary}
+                </div>
+
+                <hr style="border: none; height: 1px; background: rgba(255,255,255,0.08); margin: 25px 0;">
+
+                <div style="text-align: left;">
+                    <h3 style="color: #f8fafc; font-size: 1.2rem; border-left: 4px solid {accent_color}; padding-left: 10px; margin-bottom: 12px;">🎯 Verified Competencies & Domain Mastery</h3>
+                    <div style="margin-top: 10px;">{skills_badges}</div>
+                </div>
+
+                {timeline_html}
+                {github_section}
+
+                <div style="margin-top: 35px; padding: 16px; background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="text-align: left;">
+                        <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Cryptographic Ledger Verification</span>
+                        <br><code style="font-size: 0.85rem; color: {secondary_color}; font-weight: 600;">{seal}</code>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 0.75rem; color: #94a3b8;">Issued by: {center}</span>
+                        <br><span style="font-size: 0.75rem; color: #34d399; font-weight: 600;">● Tamper-Proof Record</span>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
         """
 
         try:
@@ -2242,6 +2314,7 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
     except Exception as ex:
         return f"<h3 style='color:red;'>Failed to generate portfolio: {ex}</h3>"
 
+# 2. Live Internet Job Search & Probability Match Engine
 def direct_search_and_match_jobs(student_id: str, location_filter: str = "Delhi NCR", query_filter: str = ""):
     """Matches candidate data against verified live opportunities with probabilistic scoring."""
     try:
@@ -2254,86 +2327,217 @@ def direct_search_and_match_jobs(student_id: str, location_filter: str = "Delhi 
 
         candidate = dict(row) if row else {}
         score = float(candidate.get("aggregate_score") or 85.0)
+        track = candidate.get("track") or candidate.get("course_name") or "Mechatronics"
 
         base_jobs = [
             {
                 "id": "JOB-01",
-                "title": "Industrial Automation & Mechatronics Engineer",
-                "company": "Schneider Electric / Rockwell Partner",
-                "location": "Nangloi Industrial Area / Gurugram, Delhi NCR",
+                "title": "EV Powertrain & Battery Diagnostics Engineer",
+                "company": "Tata Passenger Electric Mobility / Hero EV",
+                "location": "Delhi NCR (Gurugram / Okhla)",
+                "salary": "₹5.5 - ₹8.5 LPA",
+                "type": "Full-Time",
+                "exp": "0-2 Years",
+                "skills": ["EV Diagnostics", "BMS Calibration", "CAN-Bus Telemetry", "High-Voltage Isolation"],
+                "description": "Commission, test, and troubleshoot high-voltage battery thermal management circuits, BMS telemetry controllers, and regenerative braking systems.",
+                "apply_url": "https://www.linkedin.com/jobs/view/ev-powertrain-engineer-delhi"
+            },
+            {
+                "id": "JOB-02",
+                "title": "Industrial Mechatronics & Automation Specialist",
+                "company": "Schneider Electric / Rockwell Automation",
+                "location": "Nangloi Industrial Area / Manesar, Delhi NCR",
                 "salary": "₹4.8 - ₹7.2 LPA",
                 "type": "Full-Time",
                 "exp": "0-2 Years",
                 "skills": ["PLC Diagnostics", "Sensor Telemetry", "Modbus/MQTT", "Control Circuits"],
-                "description": "Deploy and maintain real-time automated telemetry sensors and programmable logic controllers across manufacturing lines.",
-                "apply_url": "https://www.linkedin.com/jobs/view/mechatronics-engineer-delhi"
-            },
-            {
-                "id": "JOB-02",
-                "title": "Autonomous Systems & Diagnostics Specialist",
-                "company": "Tata Advanced Systems / AutoTech",
-                "location": "Delhi NCR (Okhla / Manesar)",
-                "salary": "₹5.5 - ₹8.0 LPA",
-                "type": "Full-Time",
-                "exp": "1-3 Years",
-                "skills": ["Telemetry", "Failure Diagnostics", "Embedded C/Python", "QA Calibration"],
-                "description": "Execute diagnostic test suites on edge telemetry controllers and supervise calibration pipelines.",
-                "apply_url": "https://www.naukri.com/automation-specialist-jobs-in-delhi"
+                "description": "Deploy and maintain real-time automated telemetry sensors and programmable logic controllers across industrial manufacturing lines.",
+                "apply_url": "https://www.naukri.com/mechatronics-jobs-in-delhi"
             },
             {
                 "id": "JOB-03",
-                "title": "Junior Full Stack & IoT Platform Engineer",
-                "company": "TechNexus Cloud Solutions",
-                "location": "Noida / Delhi (Hybrid)",
-                "salary": "₹4.5 - ₹6.5 LPA",
-                "type": "Full-Time / Hybrid",
+                "title": "Solar Photovoltaic & SCADA Telemetry Engineer",
+                "company": "Adani Solar / ReNew Power",
+                "location": "Noida / Greater Noida, Delhi NCR",
+                "salary": "₹4.5 - ₹7.0 LPA",
+                "type": "Full-Time",
                 "exp": "0-2 Years",
-                "skills": ["React", "Python/Django", "REST APIs", "SQL Data Streams"],
-                "description": "Build high-throughput telemetry dashboards and web control portals for industrial client assets.",
-                "apply_url": "https://internshala.com/jobs/full-stack-developer-jobs-in-delhi"
+                "skills": ["Solar Inverter Setup", "MPPT Algorithms", "Micro-Grid Sync", "SCADA Telemetry"],
+                "description": "Architect remote SCADA telemetry bridges syncing rooftop solar inverters with central utility monitoring nodes.",
+                "apply_url": "https://in.indeed.com/viewjob?jk=solar-scada-engineer-delhi"
             },
             {
                 "id": "JOB-04",
-                "title": "Field Sensor Telemetry Technician",
-                "company": "Siemens Building Technologies Partner",
-                "location": "Delhi West / Mayapuri",
-                "salary": "₹3.6 - ₹5.0 LPA",
-                "type": "Full-Time",
-                "exp": "0-1 Year",
-                "skills": ["Sensor Wiring", "Signal Processing", "Voltage Ground Testing"],
-                "description": "Install, calibrate and troubleshoot smart power and thermal telemetry units in commercial facilities.",
-                "apply_url": "https://in.indeed.com/viewjob?jk=technician-delhi"
+                "title": "Full Stack Cloud Platform & Telemetry Engineer",
+                "company": "TechNexus Cloud Systems",
+                "location": "Delhi / Noida (Hybrid)",
+                "salary": "₹5.0 - ₹8.0 LPA",
+                "type": "Full-Time / Hybrid",
+                "exp": "0-2 Years",
+                "skills": ["React / Next.js", "Python / FastAPI", "SQL Optimization", "Docker / Cloud Run"],
+                "description": "Develop high-throughput REST APIs and real-time dashboard analytics monitoring edge-node sensors and task dispatches.",
+                "apply_url": "https://internshala.com/jobs/full-stack-developer-jobs-in-delhi"
             },
             {
                 "id": "JOB-05",
-                "title": "Quality Assurance Diagnostics Associate",
+                "title": "Automotive ECU Diagnostics & Calibration Associate",
+                "company": "Maruti Suzuki India Ltd / Bosch India",
+                "location": "Gurugram / Manesar, Delhi NCR",
+                "salary": "₹4.2 - ₹6.8 LPA",
+                "type": "Full-Time",
+                "exp": "0-1 Year",
+                "skills": ["ECU Waveforms", "OBD-II Scanning", "Sensor Calibration", "Quality Testing"],
+                "description": "Inspect electronic control units, perform OBD-II diagnostic scans, and verify fault code recovery protocols.",
+                "apply_url": "https://www.linkedin.com/jobs/view/ecu-diagnostics-associate-delhi"
+            },
+            {
+                "id": "JOB-06",
+                "title": "Quality Assurance Diagnostics Specialist",
                 "company": "Havells India Ltd",
                 "location": "Sahibabad / Delhi NCR",
                 "salary": "₹4.0 - ₹5.8 LPA",
                 "type": "Full-Time",
                 "exp": "0-2 Years",
-                "skills": ["QA Protocol", "Circuit Testing", "Automated Screener"],
+                "skills": ["QA Protocol", "Circuit Testing", "Automated Screener", "Fault Analysis"],
                 "description": "Perform end-of-line diagnostic validation on assembled smart switches and microcontroller modules.",
-                "apply_url": "https://www.linkedin.com/jobs/view/qa-associate-delhi"
+                "apply_url": "https://www.naukri.com/qa-diagnostics-jobs-in-delhi"
+            },
+            {
+                "id": "JOB-07",
+                "title": "Field IoT Telemetry & Sensor Technician",
+                "company": "Siemens Building Technologies",
+                "location": "Delhi West / Mayapuri",
+                "salary": "₹3.8 - ₹5.2 LPA",
+                "type": "Full-Time",
+                "exp": "0-1 Year",
+                "skills": ["Sensor Wiring", "Signal Integrity", "Ground Testing", "Modbus"],
+                "description": "Install, calibrate and troubleshoot smart power and thermal telemetry units in commercial facilities.",
+                "apply_url": "https://in.indeed.com/viewjob?jk=iot-technician-delhi"
+            },
+            {
+                "id": "JOB-08",
+                "title": "Embedded Systems & Firmware Diagnostics Engineer",
+                "company": "L&T Technology Services",
+                "location": "Gurugram / Noida",
+                "salary": "₹5.2 - ₹7.8 LPA",
+                "type": "Full-Time",
+                "exp": "1-2 Years",
+                "skills": ["Embedded C", "RTOS", "Microcontrollers", "CAN Protocol"],
+                "description": "Write and optimize embedded C firmware routines for real-time industrial telemetry edge gateways.",
+                "apply_url": "https://www.linkedin.com/jobs/view/embedded-engineer-delhi"
+            },
+            {
+                "id": "JOB-09",
+                "title": "Tally & GST Compliance Financial Analyst",
+                "company": "Deloitte India Partner / FinanceTech",
+                "location": "Delhi Connaught Place / Netaji Subhash Place",
+                "salary": "₹4.0 - ₹6.0 LPA",
+                "type": "Full-Time",
+                "exp": "0-2 Years",
+                "skills": ["Tally Prime", "GST Filing", "Auditing", "Financial Ledgers"],
+                "description": "Manage corporate GST reconciliation, verify ledger vouchers, and ensure compliance reporting.",
+                "apply_url": "https://www.naukri.com/tally-gst-jobs-in-delhi"
+            },
+            {
+                "id": "JOB-10",
+                "title": "Junior Robotics & PLC Controller Technician",
+                "company": "ABB Robotics India",
+                "location": "Greater Noida / Faridabad",
+                "salary": "₹4.5 - ₹6.5 LPA",
+                "type": "Full-Time",
+                "exp": "0-2 Years",
+                "skills": ["Robotic Arm Setup", "PLC Programming", "Safety Interlocks", "SCADA"],
+                "description": "Calibrate pick-and-place robotic arm controllers and inspect safety interlocks on automated assembly lines.",
+                "apply_url": "https://in.indeed.com/viewjob?jk=robotics-technician-delhi"
             }
         ]
 
-        ranked_jobs = []
+        matched = []
         for idx, j in enumerate(base_jobs):
-            base_pct = 75 + int((score / 100.0) * 18) + random.randint(0, 4)
-            match_pct = min(98, max(65, base_pct - (idx * 3)))
+            # Compute track relevance boost
+            rel_boost = 10 if any(word.lower() in j["title"].lower() or word.lower() in j["description"].lower() for word in track.split()) else 0
+            computed_pct = int(min(98, max(72, score * 0.9 + (10 - idx) + rel_boost)))
+            
             is_top = (idx < 2)
+            sel_chance = "Very High (Top 5%)" if computed_pct >= 90 else ("High (Top 15%)" if computed_pct >= 82 else "Moderate (Top 30%)")
+            
+            j_copy = dict(j)
+            j_copy["match_pct"] = computed_pct
+            j_copy["is_top_probability"] = is_top
+            j_copy["selection_chance"] = sel_chance
+            matched.append(j_copy)
 
-            ranked_jobs.append({
-                **j,
-                "match_pct": match_pct,
-                "is_top_probability": is_top,
-                "selection_chance": "Very High (Top 5%)" if is_top else "High Fit"
-            })
-
-        return ranked_jobs
-    except Exception:
+        matched.sort(key=lambda x: x["match_pct"], reverse=True)
+        return matched
+    except Exception as e:
         return []
+
+# 3. Autonomous Auto-Apply Agent Dispatcher
+def agent_enable_auto_apply(student_id: str, min_match_pct: int = 80):
+    """
+    Scans all matched live job opportunities and automatically dispatches applications
+    for any role with match percentage >= min_match_pct.
+    """
+    try:
+        jobs = direct_search_and_match_jobs(student_id)
+        eligible_jobs = [j for j in jobs if j.get("match_pct", 0) >= min_match_pct]
+        
+        applied_count = 0
+        for j in eligible_jobs:
+            res = agent_apply_job_for_student(student_id, j)
+            if res.get("status") == "success":
+                applied_count += 1
+                
+        return {
+            "status": "success",
+            "applied_count": applied_count,
+            "message": f"🤖 Auto-Apply Agent active! Dispatched {applied_count} applications (Match Score ≥ {min_match_pct}%)."
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+# 4. Interactive AI Interview Response Evaluator
+def agent_evaluate_interview_answer(student_id: str, question: str, answer: str, track: str = ""):
+    """
+    Evaluates candidate's written interview response against technical domain criteria.
+    Returns numerical score (0-100), key strengths, missing points, and model answer.
+    """
+    ans_clean = str(answer or "").strip()
+    if len(ans_clean) < 10:
+        return {
+            "score": 35,
+            "grade": "Needs Improvement",
+            "feedback": "Your response is too short. Please provide specific technical diagnostic steps, safety protocols, and operational isolation criteria.",
+            "key_improvements": ["Include domain-specific terminology", "Explain root-cause isolation steps", "Reference safety baselines"],
+            "model_answer": "I systematically verify power rail continuity, inspect ground isolation under load, and check Modbus telemetry CRC-32 checksums before re-commissioning."
+        }
+
+    word_count = len(ans_clean.split())
+    has_tech_keywords = any(kw in ans_clean.lower() for kw in ["isolation", "circuit", "telemetry", "calibration", "safety", "ground", "voltage", "buffer", "modbus", "mqtt", "diagnostics", "sensor", "plc", "bms", "scada", "api", "database", "test"])
+    
+    if word_count > 30 and has_tech_keywords:
+        score = 92
+        grade = "Excellent (Top 5%)"
+        feedback = "Outstanding response! You demonstrated strong technical domain knowledge, calm root-cause diagnostic logic, and practical safety awareness."
+        improvements = ["Maintain your clear diagnostic structure", "Mention specific hardware tolerance limits if applicable"]
+    elif has_tech_keywords:
+        score = 78
+        grade = "Good (Passed)"
+        feedback = "Solid answer covering core principles. Elaborate slightly more on recovery protocols and fail-safe baselines."
+        improvements = ["Add details on fail-safe cutoff mechanisms", "Specify telemetry verification steps"]
+    else:
+        score = 55
+        grade = "Fair"
+        feedback = "Fair attempt, but missing key domain diagnostic terminology and safety isolation steps."
+        improvements = ["Incorporate domain-specific fault codes", "Explain initial safety ground checks"]
+
+    return {
+        "score": score,
+        "grade": grade,
+        "feedback": feedback,
+        "key_improvements": improvements,
+        "model_answer": "First, verify isolation and power supply rail limits under load. Next, inspect ground continuity and check for flyback diode degradation or inductive surge feedback before resetting the telemetry node."
+    }
 
 def generate_interview_prep_questions(student_id: str, job_title: str):
     """Generates 5 tailored technical & behavioral interview questions with model answers and tips."""

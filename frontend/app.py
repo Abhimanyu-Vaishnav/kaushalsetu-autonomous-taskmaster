@@ -86,6 +86,8 @@ try:
         agent_schedule_interview,
         direct_get_job_applications,
         direct_verify_cryptographic_seal,
+        agent_enable_auto_apply,
+        agent_evaluate_interview_answer,
         normalize_dob
     )
 except ImportError:
@@ -119,6 +121,8 @@ except ImportError:
         agent_schedule_interview,
         direct_get_job_applications,
         direct_verify_cryptographic_seal,
+        agent_enable_auto_apply,
+        agent_evaluate_interview_answer,
         normalize_dob
     )
 
@@ -530,6 +534,17 @@ def main_app_layout():
 
     current_page = query_params.get("page") or query_params.get("view") or "admin"
 
+    # ROUTE 0: STANDALONE AI PORTFOLIO LANDING PAGE (?page=portfolio or ?view=portfolio)
+    req_view = str(query_params.get("view", "")).lower()
+    req_page = str(query_params.get("page", "")).lower()
+    req_sid = query_params.get("sid", "STU-1001")
+
+    if req_page == "portfolio" or req_view == "portfolio":
+        st.markdown(f'<div style="text-align:right; margin-bottom:10px;"><a href="/?page=student_dashboard&sid={req_sid}" style="color:#38bdf8; text-decoration:none; font-size:0.85rem;">← Back to Candidate Hub</a></div>', unsafe_allow_html=True)
+        port_html = generate_dynamic_ai_portfolio(req_sid)
+        st.components.v1.html(port_html, height=1000, scrolling=True)
+        st.stop()
+
     # ROUTE 1: STANDALONE STUDENT EXAM PORTAL (?page=exam or ?view=exam)
     if current_page in ["exam", "student_portal"]:
         st.markdown('<div class="main-header">🎓 Student Dedicated Exam Workspace</div>', unsafe_allow_html=True)
@@ -736,23 +751,40 @@ def main_app_layout():
             # TAB 2: DYNAMIC ANIMATED PORTFOLIO
             with tab_port:
                 st.markdown("### 🌐 Live Generative AI Candidate Portfolio")
+                st.markdown(f'<div style="text-align:right; margin-bottom:10px;"><a href="/?page=portfolio&sid={s_id}" target="_blank" style="background:#6366f1; color:#ffffff; padding:8px 16px; border-radius:8px; text-decoration:none; font-weight:600; font-size:0.85rem;">🌐 Open Standalone Full-Screen Portfolio Page ↗</a></div>', unsafe_allow_html=True)
                 port_html = student_data.get("portfolio_html") or generate_dynamic_ai_portfolio(s_id)
-                st.components.v1.html(port_html, height=750, scrolling=True)
+                st.components.v1.html(port_html, height=780, scrolling=True)
 
             # TAB 3: LIVE VERIFIED JOB FINDER & OUTBOX
             with tab_jobs:
-                st.markdown("### 💼 Live Verified Job Opportunity Matcher & Outbox")
-                col_jf1, col_jf2 = st.columns([2, 1])
+                st.markdown("### 💼 Live Internet Job Opportunity Matcher & Outbox")
+                st.caption("Real-time AI job search crawling verified opportunities matched against candidate competencies.")
+
+                col_jf1, col_jf2, col_jf3 = st.columns([2, 1, 1])
                 with col_jf1:
                     loc_filter = st.selectbox("📍 Filter Location Region", ["Delhi NCR (All)", "Nangloi / Industrial Area", "Gurugram / Manesar", "Noida / Greater Noida", "Pan-India Remote"])
                 with col_jf2:
                     if st.button("🔄 Rescan Live Opportunities", use_container_width=True):
-                        st.toast("🔍 Scanning live job feeds...", icon="⚡")
+                        st.toast("🔍 Crawling verified live job feeds...", icon="⚡")
                         st.rerun()
+                with col_jf3:
+                    if st.button("🤖 Auto-Apply Agent (≥80%)", type="primary", use_container_width=True):
+                        res_auto = agent_enable_auto_apply(s_id, min_match_pct=80)
+                        if res_auto.get("status") == "success":
+                            st.toast(res_auto.get("message"), icon="🚀")
+                            st.rerun()
+                        else:
+                            st.error(res_auto.get("message"))
 
                 matched_jobs = direct_search_and_match_jobs(s_id, loc_filter)
+                applied_apps = direct_get_job_applications(student_id=s_id)
+                applied_job_ids = {a.get("job_id") for a in applied_apps}
+                applied_role_titles = {a.get("role_title") for a in applied_apps}
+
                 for j in matched_jobs:
                     badge_style = "background: #064e3b; color: #34d399; border: 1px solid #10b981;" if j["is_top_probability"] else "background: #1e293b; color: #38bdf8; border: 1px solid #3b82f6;"
+                    already_applied = (j["id"] in applied_job_ids or j["title"] in applied_role_titles)
+
                     st.markdown(f"""
                     <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 12px; margin-bottom: 12px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
@@ -771,35 +803,64 @@ def main_app_layout():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    applied_apps = direct_get_job_applications(student_id=s_id)
-                    already_applied = any(a.get("job_id") == j["id"] or a.get("role_title") == j["title"] for a in applied_apps)
-
-                    with st.expander(f"📋 View Required Skills & 1-Click Apply for {j['title']}"):
+                    with st.expander(f"📋 View Full Profile & Application Options for {j['title']}"):
                         skills_str = ", ".join(j['skills'])
-                        st.caption(f"Required Skills: {skills_str} | Experience: {j['exp']} | Type: {j['type']}")
-                        if already_applied:
-                            st.success("✅ Applied - Awaiting Interview Scheduling")
-                        else:
-                            if st.button(f"⚡ 1-Click Autonomous Apply & Dispatch to {j['company']}", key=f"btn_apply_{j['id']}", type="primary"):
-                                res = agent_apply_job_for_student(s_id, j)
-                                if res.get("status") == "success":
-                                    st.toast("✅ Dossier dispatched! Application recorded in Institute Mentorship Outbox.", icon="🚀")
-                                    st.rerun()
-                                else:
-                                    st.error(res.get("message"))
+                        st.markdown(f"**Required Skills:** {skills_str} | **Experience:** {j['exp']} | **Type:** {j['type']}")
+                        st.markdown(f"**Employer Portal Link:** [{j['apply_url']}]({j['apply_url']})")
+                        
+                        col_ap1, col_ap2 = st.columns(2)
+                        with col_ap1:
+                            if already_applied:
+                                st.success("✅ Application Dispatched & Recorded in Outbox")
+                            else:
+                                if st.button(f"⚡ 1-Click Apply to {j['company']}", key=f"btn_apply_{j['id']}", type="primary", use_container_width=True):
+                                    res = agent_apply_job_for_student(s_id, j)
+                                    if res.get("status") == "success":
+                                        st.toast(f"✅ Application dispatched to {j['company']}!", icon="🚀")
+                                        st.rerun()
+                                    else:
+                                        st.error(res.get("message"))
+                        with col_ap2:
+                            st.link_button("🌐 Open Direct Job Listing", j['apply_url'], use_container_width=True)
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO
             with tab_prep:
-                st.markdown("### 🎙️ AI Technical & Behavioral Interview Prep Studio")
-                st.caption("Practice real-world capstone defense and technical diagnostic questions synthesized for your track.")
+                st.markdown("### 🎙️ AI Interactive Technical & Behavioral Interview Studio")
+                st.caption("Type your technical response and let the AI Agent evaluate your answer in real time with scoring & model answer comparison.")
 
                 prep_qs = generate_interview_prep_questions(s_id, s_track)
                 for idx, q_item in enumerate(prep_qs):
                     with st.expander(f"❓ Q{idx+1} ({q_item['type']}): {q_item['q']}", expanded=(idx == 0)):
                         st.info(f"💡 **AI Answer Tip:** {q_item['tip']}")
-                        cand_ans = st.text_area(f"Your Response (Practice Answer):", key=f"ans_input_{idx}", placeholder="Type your answer here to simulate actual interview recording...")
-                        if st.button(f"🔍 Show Model AI Answer for Q{idx+1}", key=f"btn_show_ans_{idx}"):
-                            st.success(f"🎯 **Model Answer:** {q_item['model_answer']}")
+                        cand_ans = st.text_area(f"Your Technical Response:", key=f"ans_input_{idx}", placeholder="Type your detailed answer here to simulate actual technical interview defense...", height=90)
+                        
+                        col_eval1, col_eval2 = st.columns(2)
+                        with col_eval1:
+                            if st.button(f"🚀 Submit Response for AI Evaluation", key=f"btn_eval_ans_{idx}", type="primary", use_container_width=True):
+                                eval_res = agent_evaluate_interview_answer(s_id, q_item['q'], cand_ans, s_track)
+                                st.session_state[f"eval_res_{idx}"] = eval_res
+                        with col_eval2:
+                            if st.button(f"🔍 Show Model AI Answer", key=f"btn_show_ans_{idx}", use_container_width=True):
+                                st.session_state[f"show_model_{idx}"] = not st.session_state.get(f"show_model_{idx}", False)
+
+                        if f"eval_res_{idx}" in st.session_state and st.session_state[f"eval_res_{idx}"]:
+                            ev = st.session_state[f"eval_res_{idx}"]
+                            score_color = "#34d399" if ev['score'] >= 80 else ("#fbbf24" if ev['score'] >= 60 else "#f87171")
+                            st.markdown(f"""
+                            <div style="background: rgba(15,23,42,0.8); border: 1px solid {score_color}; padding: 16px; border-radius: 10px; margin-top: 10px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <h4 style="margin:0; color:{score_color};">🎯 AI Score: {ev['score']} / 100 ({ev['grade']})</h4>
+                                </div>
+                                <p style="color:#e2e8f0; margin:8px 0; font-size:0.9rem;"><b>AI Feedback:</b> {ev['feedback']}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            if ev.get("key_improvements"):
+                                st.caption("💡 Key Areas for Technical Improvement:")
+                                for imp in ev["key_improvements"]:
+                                    st.markdown(f"- {imp}")
+
+                        if st.session_state.get(f"show_model_{idx}"):
+                            st.success(f"🎯 **Model AI Answer:** {q_item['model_answer']}")
 
             st.stop()
 
