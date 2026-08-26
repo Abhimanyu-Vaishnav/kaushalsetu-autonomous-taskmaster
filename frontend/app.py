@@ -1829,39 +1829,28 @@ def main_app_layout():
         @st.dialog("✏️ Edit Student Candidate Record", width="large")
         def modal_edit_student_record(student_data):
             st.markdown(f"Updating Institutional Candidate Record: **{student_data['full_name']}** (`ID: {student_data['student_id']}`)")
+            st.caption("🔒 Security Governance: Full Name, DOB, Student ID, and Branch Node are locked immutable academic records.")
+            
             with st.form(f"modal_edit_student_record_form_{student_data['student_id']}"):
                 col_m1, col_m2 = st.columns(2)
                 with col_m1:
-                    st.markdown("##### 👤 Personal & Academic Identity")
-                    m_name = st.text_input("Full Name", value=student_data.get('full_name', ''))
+                    st.markdown("##### 👤 Protected Identity & Contact")
+                    st.text_input("Full Name (Locked)", value=student_data.get('full_name', ''), disabled=True)
+                    st.text_input("Date of Birth (Locked)", value=student_data.get('dob', '2000-01-01'), disabled=True)
+                    st.text_input("Branch Center (Locked)", value=student_data.get('branch_name') or student_data.get('branch_center', 'Delhi'), disabled=True)
                     
-                    raw_stored_dob = student_data.get("dob") or "2000-01-01"
-                    try:
-                        parsed_stored_date = datetime.datetime.strptime(normalize_dob(raw_stored_dob), "%Y-%m-%d").date()
-                    except Exception:
-                        parsed_stored_date = datetime.date(2000, 1, 1)
-
-                    m_dob = st.date_input(
-                        "Date of Birth",
-                        value=parsed_stored_date,
-                        min_value=datetime.date(1970, 1, 1),
-                        max_value=datetime.date(2015, 12, 31),
-                        key=f"edit_dob_input_{student_data.get('student_id') or student_data.get('id')}"
-                    )
+                    m_gender = st.selectbox("Gender Identity", ["Male", "Female", "Other"], index=0 if student_data.get('gender') != "Female" else 1)
                     m_email = st.text_input("Email Address", value=student_data.get('email', ''))
                     m_phone = st.text_input("Phone Number", value=student_data.get('phone', ''))
-                    m_track = st.text_input("Vocational Track / Course", value=student_data.get('course_name', ''))
-                    m_city = st.text_input("Branch City / Location", value=student_data.get('city') or student_data.get('branch_name', ''))
                 with col_m2:
                     st.markdown("##### 🌐 Social & Professional Footprint")
                     m_github = st.text_input("GitHub Profile URL", value=student_data.get('github_url', ''))
                     m_linkedin = st.text_input("LinkedIn Profile URL", value=student_data.get('linkedin_url', ''))
                     m_website = st.text_input("Portfolio / Personal Website URL", value=student_data.get('website_url', ''))
                     m_twitter = st.text_input("Twitter / X Handle URL", value=student_data.get('twitter_url', ''))
-                    m_role = st.text_input("Target Role Preference", value=student_data.get('target_role_preference', ''))
-                    m_exp_years = st.number_input("Field Experience (Years)", min_value=0, max_value=30, value=int(student_data.get('work_experience_years', 0)))
+                    m_role = st.text_input("Target Role Preference", value=student_data.get('target_role_preference', 'Specialist Engineer'))
 
-                m_bio = st.text_area("Candidate Bio & Practical Highlights", value=student_data.get('bio') or student_data.get('experience_summary', ''), height=70)
+                m_bio = st.text_area("Candidate Bio & Resume Highlights", value=student_data.get('resume_text') or student_data.get('bio', ''), height=80)
                 
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
@@ -1872,26 +1861,20 @@ def main_app_layout():
                 if sub_save:
                     with st.spinner("Saving changes & updating candidate record..."):
                         try:
-                            saved_iso_dob = m_dob.strftime("%Y-%m-%d") if hasattr(m_dob, "strftime") else normalize_dob(m_dob)
                             up_payload = {
-                                "name": m_name.strip(),
-                                "student_name": m_name.strip(),
-                                "full_name": m_name.strip(),
-                                "dob": saved_iso_dob,
+                                "gender": m_gender,
                                 "email": m_email.strip(),
                                 "phone": m_phone.strip(),
-                                "track": m_track.strip(),
-                                "course_name": m_track.strip(),
-                                "branch_center": m_city.strip(),
-                                "branch_name": m_city.strip(),
                                 "github_url": m_github.strip(),
                                 "linkedin_url": m_linkedin.strip(),
-                                "portfolio_url": m_website.strip(),
-                                "resume_text": m_bio.strip()
+                                "website_url": m_website.strip(),
+                                "twitter_url": m_twitter.strip(),
+                                "resume_text": m_bio.strip(),
+                                "bio": m_bio.strip()
                             }
                             up_res = direct_update_student(student_id=student_data.get('student_id') or student_data.get('id'), payload=up_payload)
                             if up_res.get("status") == "success" or up_res.get("success"):
-                                st.toast(f"✅ Candidate {m_name.strip()} profile updated successfully!", icon="🎉")
+                                st.toast(f"✅ Candidate profile updated successfully!", icon="🎉")
                                 st.rerun()
                             else:
                                 st.error(f"❌ Update Failed: {up_res.get('message')}")

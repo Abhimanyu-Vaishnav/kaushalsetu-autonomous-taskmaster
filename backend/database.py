@@ -240,6 +240,7 @@ def init_complete_db():
         "institute_id": "TEXT DEFAULT 'SKILLFORGE-HQ'",
         "branch_id": "TEXT DEFAULT 'BR-NANGLOI'",
         "course_id": "TEXT DEFAULT 'CRS-MAIN'",
+        "gender": "TEXT DEFAULT 'Male'",
         "profile_photo": "TEXT DEFAULT ''",
         "github_url": "TEXT DEFAULT ''",
         "linkedin_url": "TEXT DEFAULT ''",
