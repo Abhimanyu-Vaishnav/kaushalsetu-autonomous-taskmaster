@@ -227,6 +227,7 @@ def init_complete_db():
 
     required_student_columns = {
         "student_id": "TEXT DEFAULT ''",
+        "student_name": "TEXT DEFAULT ''",
         "name": "TEXT DEFAULT ''",
         "full_name": "TEXT DEFAULT ''",
         "dob": "TEXT DEFAULT '2000-01-01'",
@@ -242,6 +243,8 @@ def init_complete_db():
         "github_url": "TEXT DEFAULT ''",
         "linkedin_url": "TEXT DEFAULT ''",
         "portfolio_url": "TEXT DEFAULT ''",
+        "website_url": "TEXT DEFAULT ''",
+        "resume_text": "TEXT DEFAULT ''",
         "exam_completed": "INTEGER DEFAULT 0",
         "mcq_score": "REAL DEFAULT 0.0",
         "capstone_score": "REAL DEFAULT 0.0",
@@ -261,18 +264,38 @@ def init_complete_db():
     c.execute("""
         CREATE TABLE IF NOT EXISTS agent_activity_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            action TEXT,
+            action TEXT DEFAULT 'GENERAL_ACTIVITY',
             action_type TEXT DEFAULT 'ACTION',
-            entity_type TEXT,
-            entity_id TEXT,
+            entity_type TEXT DEFAULT '',
+            entity_id TEXT DEFAULT '',
             student_id TEXT DEFAULT '',
             branch_id TEXT DEFAULT '',
             institute_id TEXT DEFAULT '',
-            details TEXT,
+            details TEXT DEFAULT '',
             description TEXT DEFAULT '',
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # Dynamic Column Migration for agent_activity_logs table
+    c.execute("PRAGMA table_info(agent_activity_logs)")
+    l_cols = {r[1] for r in c.fetchall()}
+
+    log_required = {
+        "action": "TEXT DEFAULT 'GENERAL_ACTIVITY'",
+        "action_type": "TEXT DEFAULT 'ACTION'",
+        "entity_type": "TEXT DEFAULT ''",
+        "entity_id": "TEXT DEFAULT ''",
+        "details": "TEXT DEFAULT ''",
+        "timestamp": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    for col, col_type in log_required.items():
+        if col not in l_cols:
+            try:
+                c.execute(f"ALTER TABLE agent_activity_logs ADD COLUMN {col} {col_type}")
+            except Exception:
+                pass
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS placement_ledger (
