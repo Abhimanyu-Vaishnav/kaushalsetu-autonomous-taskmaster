@@ -59,6 +59,7 @@ try:
     from backend.main import (
         direct_get_agent_logs,
         direct_create_student,
+        direct_update_student,
         direct_delete_student,
         direct_get_students,
         direct_add_student,
@@ -81,6 +82,7 @@ except ImportError:
     from main import (
         direct_get_agent_logs,
         direct_create_student,
+        direct_update_student,
         direct_delete_student,
         direct_get_students,
         direct_add_student,
