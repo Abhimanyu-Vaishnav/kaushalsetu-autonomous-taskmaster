@@ -74,6 +74,7 @@ try:
         direct_get_branches,
         direct_create_institute,
         direct_create_branch,
+        direct_evaluate_and_dispatch_exam,
         normalize_dob
     )
 except ImportError:
@@ -95,6 +96,7 @@ except ImportError:
         direct_get_branches,
         direct_create_institute,
         direct_create_branch,
+        direct_evaluate_and_dispatch_exam,
         normalize_dob
     )
 
@@ -629,31 +631,26 @@ def main_app_layout():
                 st.image(img_file, caption="Uploaded Artifact Preview", width=300)
                 
             if st.button("⚡ Submit Assessment to Dual-AI Evaluation Engine", type="primary", use_container_width=True):
-                with st.spinner("⚡ Gemma Fast Screener (42ms) + Gemini 3.5 Multimodal Grader evaluating submission..."):
-                    mcq_answers_list = [st.session_state.get("mcq_answers_dict", {}).get(i, 0) for i in range(len(mcqs))]
-                    mcq_key_list = [q.get("correct_option", 0) for q in mcqs]
-                    
-                    try:
-                        pipe_res = requests.post(f"{BACKEND_URL}/api/student/evaluate-and-dispatch", json={
-                            "student_id": student_data['student_id'],
-                            "assessment_id": exam_data.get("exam_id", "EXAM-100"),
-                            "mcq_answers": mcq_answers_list,
-                            "mcq_key": mcq_key_list,
-                            "practical_task": exam_data.get("practical_task", ""),
-                            "grading_rubric": exam_data.get("grading_rubric", ["Quality", "Safety"]),
-                            "submission_text": prac_submission,
-                            "image_base64": img_b64
-                        }, timeout=20)
-                        
-                        if pipe_res.status_code == 200:
-                            st.success("🎉 Assessment Successfully Graded & SHA-256 Hasher Sealed!")
-                            st.balloons()
-                            target_dash = f"{FRONTEND_URL}/?page=student_dashboard&sid={student_data['student_id']}"
-                            st.markdown(f'<meta http-equiv="refresh" content="0;url={target_dash}">', unsafe_allow_html=True)
-                        else:
-                            st.error(f"Pipeline error: {pipe_res.text}")
-                    except Exception as e:
-                        st.error(f"Connection error: {e}")
+                with st.spinner("🤖 Multimodal Evaluation & Placement Dispatch in progress..."):
+                    mcq_answers_dict = {i: st.session_state.get("mcq_answers_dict", {}).get(i, 0) for i in range(len(mcqs))}
+                    eval_payload = {
+                        "student_id": student_data.get('student_id') or student_data.get('id'),
+                        "course_id": exam_data.get("exam_id", "EXAM-100"),
+                        "mcq_answers": mcq_answers_dict,
+                        "capstone_submission": prac_submission,
+                        "github_url": "",
+                        "live_link": ""
+                    }
+                    eval_res = direct_evaluate_and_dispatch_exam(eval_payload)
+
+                    if eval_res.get("status") == "success" or eval_res.get("success"):
+                        st.balloons()
+                        st.success(f"🎉 Assessment Completed! Aggregate Score: **{eval_res.get('aggregate_score', 85.0)}%**")
+                        st.info(f"🔒 SHA-256 Ledger Seal: `{eval_res.get('status_seal')}` | Dispatched to: **{eval_res.get('dispatched_company')}**")
+                        st.session_state["current_exam"] = None
+                        st.rerun()
+                    else:
+                        st.error(eval_res.get("message", "Evaluation error"))
 
     # ROUTE 2: STUDENT CAREER & OFFICIAL MARKSHEET PORTAL (?page=student_dashboard)
     elif current_page == "student_dashboard":
@@ -1791,55 +1788,67 @@ def main_app_layout():
             st.markdown("## 👥 Student Candidate Roster")
             st.caption("Enroll candidates manually, upload bulk CSV/Excel rosters, and dispatch AI Exam URLs.")
 
-            # --- TOP ACTIONS ROW ---
-            col_btn1, col_btn2, col_btn3 = st.columns([1.5, 1.5, 2])
-            with col_btn1:
-                if st.button("➕ Add Single Student", type="primary", key="btn_toggle_add_student_live", use_container_width=True):
-                    st.session_state["show_student_form"] = not st.session_state.get("show_student_form", False)
-            with col_btn2:
-                if st.button("🏛️ Full Modal Registration", key="btn_modal_add_student_trigger", use_container_width=True):
-                    course_opts = {c['course_name']: c['id'] for c in branch_courses} if branch_courses else {"Automotive & Hardware Diagnostics": "CRS-AUTO-01"}
-                    modal_add_student(sel_inst['id'], sel_branch['id'], sel_branch['branch_name'], course_opts)
+            st.markdown("### 👥 Student Candidate Roster")
+            st.caption("Enroll candidates with complete demographic verification, manage rosters, and trigger multimodal AI assessments.")
 
-            # --- ENROLLMENT FORM ---
-            if st.session_state.get("show_student_form", False):
-                with st.form("form_enroll_candidate_live", clear_on_submit=True):
-                    st.markdown("### 📝 Candidate Registration")
-                    f_name = st.text_input("Candidate Full Name *", value="Alex Mercer")
-                    f_dob = st.date_input("Date of Birth")
-                    f_email = st.text_input("Email Address", value="alex.mercer@skillforge.edu")
-                    f_phone = st.text_input("Phone Number", value="+91 98100 12345")
-                    f_track = st.text_input("Course Track", value="Vocational Diagnostics & Mechatronics")
-                    f_center = st.text_input("Assigned Center", value=sel_branch.get('branch_name', 'Nangloi Center (Delhi)'))
+            # --- CLEAN PRIMARY ACTION BAR ---
+            col_reg, col_space = st.columns([1.5, 2])
+            with col_reg:
+                if st.button("🏛️ Enroll Candidate (Full Registration)", type="primary", use_container_width=True, key="btn_open_full_modal_reg"):
+                    st.session_state["show_full_modal_reg"] = not st.session_state.get("show_full_modal_reg", False)
 
-                    col_submit, col_cancel = st.columns(2)
-                    with col_submit:
-                        if st.form_submit_button("💾 Save & Enroll Candidate", type="primary", use_container_width=True):
-                            import uuid
-                            new_id = f"STU-{uuid.uuid4().hex[:6].upper()}"
-                            
-                            conn = get_db()
-                            cur = conn.cursor()
-                            cur.execute("""
-                                INSERT INTO students (id, student_id, name, full_name, dob, email, phone, track, course_name, branch_center, branch_name, institute_id, branch_id, aggregate_score, status_seal, created_at)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, 'PENDING', CURRENT_TIMESTAMP)
-                            """, (new_id, new_id, f_name.strip(), f_name.strip(), str(f_dob), f_email.strip(), f_phone.strip(), f_track.strip(), f_track.strip(), f_center.strip(), f_center.strip(), sel_inst.get('id', 'INST-ROOT'), sel_branch.get('id', 'BR-MAIN')))
-                            conn.commit()
-                            conn.close()
+            # --- FULL INSTITUTIONAL REGISTRATION FORM ---
+            if st.session_state.get("show_full_modal_reg", False):
+                with st.form("form_full_modal_candidate_registration", clear_on_submit=True):
+                    st.markdown("#### 📝 Institutional Candidate Registration")
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        r_name = st.text_input("Candidate Full Name *", placeholder="e.g. Rahul Sharma")
+                        r_dob = st.date_input("Date of Birth")
+                        r_email = st.text_input("Email Address", placeholder="rahul@domain.com")
+                    with c2:
+                        r_phone = st.text_input("Phone Number", placeholder="+91 9876543210")
+                        
+                        courses_db = direct_get_courses()
+                        course_names = [c.get("title") or c.get("course_name") or "Vocational Track" for c in courses_db] if courses_db else ["Full Stack Web Development", "Vocational Diagnostics & Mechatronics"]
+                        r_track = st.selectbox("Assigned Course Track *", options=course_names)
+                        
+                        active_center_name = sel_branch.get("branch_name", "Main Center")
+                        st.text_input("Assigned Center", value=active_center_name, disabled=True)
 
-                            try:
-                                from backend.database import export_database_snapshot
-                                export_database_snapshot()
-                            except Exception:
-                                pass
-
-                            st.session_state["show_student_form"] = False
-                            st.toast(f"✅ Candidate {f_name} ({new_id}) Enrolled!", icon="🎉")
-                            st.rerun()
-
-                    with col_cancel:
+                    col_sub, col_can = st.columns([1, 1])
+                    with col_sub:
+                        if st.form_submit_button("💾 Complete Enrollment", type="primary", use_container_width=True):
+                            if not r_name.strip():
+                                st.error("Candidate Name is required!")
+                            else:
+                                import uuid
+                                new_stu_id = f"STU-{uuid.uuid4().hex[:6].upper()}"
+                                reg_res = direct_create_student({
+                                    "id": new_stu_id,
+                                    "name": r_name.strip(),
+                                    "student_name": r_name.strip(),
+                                    "full_name": r_name.strip(),
+                                    "dob": str(r_dob),
+                                    "email": r_email.strip(),
+                                    "phone": r_phone.strip(),
+                                    "track": r_track,
+                                    "course_name": r_track,
+                                    "branch_center": active_center_name,
+                                    "branch_name": active_center_name,
+                                    "branch_id": sel_branch.get("id", "BR-MAIN"),
+                                    "institute_id": sel_inst.get("id", "INST-ROOT")
+                                })
+                                if reg_res.get("status") == "success" or reg_res.get("success"):
+                                    st.session_state["show_full_modal_reg"] = False
+                                    st.toast(f"✅ Candidate {r_name} ({new_stu_id}) enrolled successfully!", icon="🎉")
+                                    st.rerun()
+                                else:
+                                    st.error(reg_res.get("message"))
+                    with col_can:
                         if st.form_submit_button("Cancel", use_container_width=True):
-                            st.session_state["show_student_form"] = False
+                            st.session_state["show_full_modal_reg"] = False
                             st.rerun()
 
             if "csv_uploader_key" not in st.session_state:
