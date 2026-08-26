@@ -1867,10 +1867,6 @@ def log_agent_activity(action: str, entity_type: str, entity_id: str, details: s
         print(f"Logging notice: {e}")
 
 def direct_simulate_candidate_loop(score_type: str = "TOP"):
-    """
-    Simulates complete autonomous loop (Student Creation -> Evaluation -> Seal -> Placement/Remediation)
-    Entirely in-process with ZERO HTTP calls.
-    """
     try:
         conn = get_db()
         c = conn.cursor()
@@ -1880,25 +1876,45 @@ def direct_simulate_candidate_loop(score_type: str = "TOP"):
         s_name = "Alex Mercer (Top Performer)" if is_top else "Rohan Verma (Remedial Case)"
         track = "Vocational Diagnostics & Mechatronics"
         branch = "Nangloi Center (Delhi)"
+        inst_id = "SKILLFORGE-HQ"
         agg_score = 92.0 if is_top else 54.0
         mcq_s = 46.0 if is_top else 24.0
         cap_s = 46.0 if is_top else 30.0
 
-        # 1. Ensure Demo Candidate Exists in students table
-        c.execute("""
-            INSERT OR REPLACE INTO students 
-            (id, student_id, name, student_name, full_name, dob, email, phone, track, course_name, branch_center, branch_name, mcq_score, capstone_score, aggregate_score, status_seal, exam_completed, created_at)
-            VALUES (?, ?, ?, ?, ?, '2000-01-01', 'demo@skillforge.edu', '+91 98100 12345', ?, ?, ?, ?, ?, ?, ?, 'PENDING', 1, CURRENT_TIMESTAMP)
-        """, (s_id, s_id, s_name, s_name, s_name, track, track, branch, branch, mcq_s, cap_s, agg_score))
+        # Dynamic Column Insertion
+        c.execute("PRAGMA table_info(students)")
+        cols = {r[1] for r in c.fetchall()}
 
-        # 2. Generate SHA-256 Ledger Seal
+        fields = {
+            "id": s_id,
+            "dob": "2000-01-01",
+            "email": "demo@skillforge.edu",
+            "phone": "+91 98100 12345",
+            "track": track,
+            "branch_center": branch,
+            "mcq_score": mcq_s,
+            "capstone_score": cap_s,
+            "aggregate_score": agg_score,
+            "exam_completed": 1
+        }
+        if "student_id" in cols: fields["student_id"] = s_id
+        if "name" in cols: fields["name"] = s_name
+        if "student_name" in cols: fields["student_name"] = s_name
+        if "full_name" in cols: fields["full_name"] = s_name
+        if "course_name" in cols: fields["course_name"] = track
+        if "branch_name" in cols: fields["branch_name"] = branch
+        if "institute_id" in cols: fields["institute_id"] = inst_id
+        if "branch_id" in cols: fields["branch_id"] = "BR-NANGLOI"
+
+        col_str = ", ".join(fields.keys())
+        ph_str = ", ".join(["?"] * len(fields))
+        c.execute(f"INSERT OR REPLACE INTO students ({col_str}) VALUES ({ph_str})", list(fields.values()))
+
+        # Generate Ledger Seal
         raw_digest = f"{s_id}|{agg_score}|{datetime.now().isoformat()}"
         status_seal = f"0x{hashlib.sha256(raw_digest.encode()).hexdigest()[:16].upper()}"
-
-        # 3. Update status seal in student record
         c.execute("UPDATE students SET status_seal = ? WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (status_seal, s_id, s_id))
 
-        # 4. Handle Top Candidate Dispatch vs Remedial Diagnosis
         if is_top:
             plc_id = f"PLC-{uuid.uuid4().hex[:6].upper()}"
             company = "TechNexus Automation Systems"
@@ -1908,43 +1924,86 @@ def direct_simulate_candidate_loop(score_type: str = "TOP"):
                 (id, student_id, student_name, track, branch_id, company_name, role_title, match_percentage, status, ledger_hash)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 92, 'DISPATCHED', ?)
             """, (plc_id, s_id, s_name, track, branch, company, role, status_seal))
-
             log_details = f"Candidate {s_name} scored 92% | Seal: {status_seal} | Dispatched to {company}"
         else:
             log_details = f"Remedial Candidate {s_name} scored 54% | Weakness: Sensor Calibration | 7-Day Micro-Curriculum Triggered"
 
-        conn.commit()
-        conn.close()
-
-        # 5. Add Log Entry safely via helper
         try:
-            log_agent_activity(
-                action="EXAM_EVALUATED",
-                entity_type="student",
-                entity_id=s_id,
-                details=log_details
-            )
+            log_agent_activity("EXAM_EVALUATED", "student", s_id, log_details)
         except Exception:
             pass
 
-        # Trigger persistent backup
+        conn.commit()
+        conn.close()
+
         try:
             export_database_snapshot()
         except Exception:
             pass
 
-        return {
-            "status": "success",
-            "success": True,
-            "score": agg_score,
-            "student_id": s_id,
-            "name": s_name,
-            "seal": status_seal,
-            "is_top": is_top,
-            "details": log_details
-        }
+        return {"status": "success", "success": True, "score": agg_score, "student_id": s_id, "name": s_name, "seal": status_seal, "is_top": is_top}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+def direct_get_exam_for_student(student_id: str = None, track_name: str = None):
+    """Returns verified exam data with instant fallback MCQs if course is not in DB."""
+    default_mcqs = [
+        {
+            "question": "What is the primary protocol used for real-time sensor telemetry in automated control units?",
+            "options": ["A) HTTP/1.1", "B) MQTT / Modbus", "C) FTP", "D) SMTP"],
+            "correct_option": 1,
+            "correct_answer": "B) MQTT / Modbus"
+        },
+        {
+            "question": "When diagnosing an unexpected PLC voltage drop across an inductive load, the first safety check is:",
+            "options": ["A) Replace MCU", "B) Verify Flyback Diode / Ground Continuity", "C) Overclock Clock Cycle", "D) Re-flash Firmware"],
+            "correct_option": 1,
+            "correct_answer": "B) Verify Flyback Diode / Ground Continuity"
+        },
+        {
+            "question": "In closed-loop PID control architectures, the 'Integral' term primarily functions to eliminate:",
+            "options": ["A) Steady-state error", "B) Overshoot", "C) High-frequency noise", "D) Derivative kick"],
+            "correct_option": 0,
+            "correct_answer": "A) Steady-state error"
+        }
+    ]
+    default_capstone = "Design and document a fail-safe sensor telemetry pipeline handling intermittent disconnections."
+
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        t_name = str(track_name or "").strip()
+        c.execute("SELECT * FROM courses WHERE title LIKE ? OR course_name LIKE ? LIMIT 1", (f"%{t_name}%", f"%{t_name}%"))
+        row = c.fetchone()
+        conn.close()
+
+        if row:
+            c_dict = dict(row)
+            parsed_mcqs = None
+            if isinstance(c_dict.get("mcqs"), str) and c_dict["mcqs"].startswith("["):
+                try:
+                    parsed_mcqs = json.loads(c_dict["mcqs"])
+                except Exception:
+                    pass
+            return {
+                "course_id": c_dict.get("id", "CRS-DEFAULT"),
+                "exam_id": c_dict.get("id", "CRS-DEFAULT"),
+                "course_title": c_dict.get("title") or c_dict.get("course_name") or "Vocational Track",
+                "mcqs": parsed_mcqs if parsed_mcqs else default_mcqs,
+                "capstone": c_dict.get("capstone") or default_capstone,
+                "practical_task": c_dict.get("capstone") or default_capstone
+            }
+    except Exception as e:
+        print(f"Exam fetch notice: {e}")
+
+    return {
+        "course_id": "CRS-VOCATIONAL-MAIN",
+        "exam_id": "CRS-VOCATIONAL-MAIN",
+        "course_title": track_name or "Vocational Diagnostics & Mechatronics",
+        "mcqs": default_mcqs,
+        "capstone": default_capstone,
+        "practical_task": default_capstone
+    }
 
 def direct_student_login(student_id: str, dob_input: str):
     try:

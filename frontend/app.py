@@ -77,6 +77,7 @@ try:
         direct_create_branch,
         direct_evaluate_and_dispatch_exam,
         direct_simulate_candidate_loop,
+        direct_get_exam_for_student,
         normalize_dob
     )
 except ImportError:
@@ -101,6 +102,7 @@ except ImportError:
         direct_create_branch,
         direct_evaluate_and_dispatch_exam,
         direct_simulate_candidate_loop,
+        direct_get_exam_for_student,
         normalize_dob
     )
 
@@ -588,28 +590,23 @@ def main_app_layout():
         st.markdown("### 📝 Stepper Assessment & Capstone Submission")
         
         if "current_exam" not in st.session_state or not st.session_state["current_exam"]:
-            with st.spinner(f"⚡ AI Agent is dynamically synthesizing assessment for {student_data['course_name']}..."):
-                try:
-                    e_res = requests.post(f"{BACKEND_URL}/api/assessment/generate", json={
-                        "topic": student_data['course_name'],
-                        "difficulty": "Intermediate"
-                    })
-                    if e_res.status_code == 200:
-                        st.session_state["current_exam"] = e_res.json()["data"]
-                        st.session_state["mcq_step"] = 0
-                        st.session_state["mcq_answers_dict"] = {}
-                    else:
-                        st.session_state["current_exam"] = {
-                            "title": f"{student_data['course_name']} Assessment",
-                            "mcqs": [{"question": f"Core competency test for {student_data['course_name']}?", "options": ["Adhere to safety lockout & specs", "Ignore circuit specs", "Skip documentation", "Bypass grounds"], "correct_option": 0}],
-                            "practical_task": f"Build a complete practical capstone demonstrating {student_data['course_name']} concepts.",
-                            "grading_rubric": ["Safety & Quality", "Diagnostic Accuracy", "Documentation"]
-                        }
-                except Exception:
-                    pass
-                    
-        exam_data = st.session_state.get("current_exam", {})
-        mcqs = exam_data.get("mcqs", [])
+            st.session_state["current_exam"] = direct_get_exam_for_student(
+                student_id=student_data.get("student_id") or student_data.get("id"),
+                track_name=student_data.get("course_name") or student_data.get("track")
+            )
+            st.session_state["mcq_step"] = 0
+            st.session_state["mcq_answers_dict"] = {}
+
+        exam_data = st.session_state.get("current_exam")
+        if not isinstance(exam_data, dict):
+            exam_data = direct_get_exam_for_student(
+                student_id=student_data.get("student_id") or student_data.get("id"),
+                track_name=student_data.get("course_name") or student_data.get("track")
+            )
+
+        mcqs = exam_data.get("mcqs", []) if isinstance(exam_data, dict) else []
+        capstone_prompt = exam_data.get("capstone") or exam_data.get("practical_task", "Submit practical portfolio link") if isinstance(exam_data, dict) else ""
+        active_course_id = exam_data.get("course_id") or exam_data.get("exam_id", "CRS-MAIN") if isinstance(exam_data, dict) else "CRS-MAIN"
         
         if mcqs and st.session_state.get("mcq_step", 0) < len(mcqs):
             cur_idx = min(st.session_state.get("mcq_step", 0), len(mcqs) - 1)
