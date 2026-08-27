@@ -243,7 +243,7 @@ if query_params.get("view") == "portfolio" and ("sid" in query_params or "id" in
             st.error(f"Failed to load portfolio: {e}")
             st.stop()
 
-# Custom CSS for Modern UI & Visual Architecture Reset (Sanitized)
+# Custom CSS for Modern UI & Visual Architecture Reset (Sanitized & Fully Responsive)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -252,42 +252,46 @@ st.markdown("""
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
         background-color: #0B0F19;
         color: #F9FAFB;
+        box-sizing: border-box;
     }
 
     .stApp {
         background-color: #0B0F19;
     }
 
-    /* Headings */
+    /* Fluid Dynamic Typography */
     h1, h2, h3, h4, h5, h6 {
         color: #F9FAFB !important;
         font-weight: 700 !important;
+        letter-spacing: -0.02em;
     }
 
     .main-header {
-        font-size: 2.0rem;
+        font-size: clamp(1.4rem, 4vw, 2.2rem);
         font-weight: 800;
         color: #F9FAFB;
         letter-spacing: -0.025em;
-        line-height: 1.35 !important;
-        padding-top: 8px !important;
-        margin-bottom: 0.2rem;
+        line-height: 1.25 !important;
+        padding-top: 4px !important;
+        margin-bottom: 0.3rem;
         overflow: visible !important;
     }
     .sub-header {
         color: #9CA3AF;
-        font-size: 0.95rem;
-        line-height: 1.4 !important;
+        font-size: clamp(0.85rem, 2vw, 1.05rem);
+        line-height: 1.45 !important;
         margin-bottom: 1.2rem;
     }
 
-    /* Modern Card Styles */
-    .modern-card {
-        background-color: #111827;
-        border: 1px solid #1F2937;
-        border-radius: 12px;
-        padding: 20px;
+    /* Glassmorphic Modern Card Containers */
+    .modern-card, div[data-testid="stExpander"], div[data-testid="stMetricValue"] {
+        background: rgba(17, 24, 39, 0.8) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 14px !important;
+        padding: clamp(12px, 3vw, 22px);
         margin-bottom: 16px;
+        backdrop-filter: blur(10px) !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     }
 
     /* Status Badges */
@@ -295,96 +299,116 @@ st.markdown("""
         background-color: #065F46;
         color: #34D399;
         font-weight: 600;
-        padding: 4px 10px;
+        padding: 5px 12px;
         border-radius: 20px;
         font-size: 0.75rem;
         border: 1px solid #059669;
+        display: inline-block;
     }
     .badge-blue {
         background-color: #1E3A8A;
         color: #60A5FA;
         font-weight: 600;
-        padding: 4px 10px;
+        padding: 5px 12px;
         border-radius: 20px;
         font-size: 0.75rem;
         border: 1px solid #2563EB;
+        display: inline-block;
     }
     .badge-amber {
         background-color: #78350F;
         color: #FBBF24;
         font-weight: 600;
-        padding: 4px 10px;
+        padding: 5px 12px;
         border-radius: 20px;
         font-size: 0.75rem;
         border: 1px solid #D97706;
+        display: inline-block;
     }
     .badge-interview {
         background-color: #312E81;
         color: #818CF8;
         font-weight: 600;
-        padding: 4px 10px;
+        padding: 5px 12px;
         border-radius: 20px;
         font-size: 0.75rem;
         border: 1px solid #4F46E5;
+        display: inline-block;
     }
 
-    /* Layout Padding & Container Reset (Prevents Top Header Clipping) */
-    header[data-testid="stHeader"] {
+    /* Touch Target Sizing & Responsive Buttons */
+    .stButton > button, button {
+        min-height: 42px !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease-in-out !important;
+        touch-action: manipulation;
+    }
+
+    /* Responsive Inputs & Textareas */
+    input, select, textarea {
+        font-size: 0.95rem !important;
+        border-radius: 8px !important;
+    }
+
+    /* Container Reset & Padding */
+    header[data-testid="stHeader"], div[data-testid="stHeader"] {
         display: none !important;
         height: 0px !important;
         visibility: hidden !important;
     }
-    div[data-testid="stHeader"] {
-        display: none !important;
-        height: 0px !important;
-    }
     .block-container {
-        padding-top: 3.5rem !important;
-        padding-bottom: 3rem !important;
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
-        max-width: 98% !important;
+        padding-top: clamp(1.5rem, 4vw, 3rem) !important;
+        padding-bottom: 2.5rem !important;
+        padding-left: clamp(0.75rem, 3vw, 2rem) !important;
+        padding-right: clamp(0.75rem, 3vw, 2rem) !important;
+        max-width: 100% !important;
     }
-    
-    /* Responsive Viewport & Mobile Optimization */
-    @media (max-width: 768px) {
+
+    /* Multi-Device Media Breakpoints */
+    @media (max-width: 1024px) {
         .block-container {
-            padding-top: 2rem !important;
+            max-width: 100% !important;
         }
-        .stColumns > div {
-            min-width: 100% !important;
-            margin-bottom: 0.75rem !important;
+    }
+
+    @media (max-width: 768px) {
+        div[data-testid="stHorizontalBlock"] {
+            flex-direction: column !important;
+            gap: 0.75rem !important;
         }
-        h1, .main-header { font-size: 1.5rem !important; }
-        h2 { font-size: 1.25rem !important; }
-        h3 { font-size: 1.1rem !important; }
-        .sub-header { font-size: 0.85rem !important; }
-        .stButton > button {
+        div[data-testid="column"] {
             width: 100% !important;
-            padding: 0.6rem !important;
+            min-width: 100% !important;
             margin-bottom: 0.5rem !important;
         }
+        .stButton > button {
+            width: 100% !important;
+            min-height: 46px !important;
+        }
+        .main-header { font-size: 1.5rem !important; }
+        .sub-header { font-size: 0.88rem !important; }
     }
-    
-    /* Smooth Glassmorphic Aesthetics */
-    div[data-testid="stExpander"], div[data-testid="stMetricValue"], .modern-card {
-        background: rgba(17, 24, 39, 0.75) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 12px !important;
-        backdrop-filter: blur(8px) !important;
+
+    @media (max-width: 480px) {
+        .block-container {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        div[data-testid="stMetric"] {
+            padding: 8px !important;
+        }
     }
+
+    /* Clean UI Clutter Removal */
     div[data-testid="stVerticalBlock"] > div:empty,
     div[data-testid="stVerticalBlockBorderWrapper"]:has(> div:empty) {
         display: none !important;
         height: 0px !important;
         margin: 0px !important;
         padding: 0px !important;
-        border: none !important;
     }
-
-    /* Hide Streamlit branding clutter */
-    #MainMenu { visibility: hidden; display: none !important; }
-    footer { visibility: hidden; display: none !important; }
+    #MainMenu, footer { visibility: hidden; display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
