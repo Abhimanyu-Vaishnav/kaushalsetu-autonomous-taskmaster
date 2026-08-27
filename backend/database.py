@@ -413,6 +413,17 @@ def init_complete_db():
             "overall_score": "REAL DEFAULT 0.0",
             "feedback_summary": "TEXT DEFAULT ''",
             "status": "TEXT DEFAULT 'IN_PROGRESS'"
+        },
+        "branches": {
+            "branch_name": "TEXT DEFAULT 'Nangloi Center (Delhi)'",
+            "name": "TEXT DEFAULT 'Nangloi Center (Delhi)'",
+            "location": "TEXT DEFAULT 'Delhi NCR'",
+            "city": "TEXT DEFAULT 'Delhi NCR'",
+            "institute_id": "TEXT DEFAULT 'SKILLFORGE-HQ'"
+        },
+        "institutes": {
+            "name": "TEXT DEFAULT 'SkillForge Vocational Foundation'",
+            "code": "TEXT DEFAULT 'SKILLFORGE-HQ'"
         }
     }
 
@@ -442,13 +453,23 @@ def init_complete_db():
         )
     """)
 
-    # Seed Default Institute & Branch if empty
-    c.execute("SELECT COUNT(*) FROM institutes")
-    if c.fetchone()[0] == 0:
-        c.execute("INSERT INTO institutes (id, name, code) VALUES ('SKILLFORGE-HQ', 'SkillForge Vocational Foundation', 'SKILLFORGE-HQ')")
-    c.execute("SELECT COUNT(*) FROM branches")
-    if c.fetchone()[0] == 0:
-        c.execute("INSERT INTO branches (id, institute_id, name, location) VALUES ('BR-NANGLOI', 'SKILLFORGE-HQ', 'Nangloi Center (Delhi)', 'Delhi NCR')")
+    # Seed Default Institute & Branch if empty (Resilient to Schema Differences)
+    try:
+        c.execute("SELECT COUNT(*) FROM institutes")
+        if c.fetchone()[0] == 0:
+            c.execute("INSERT OR IGNORE INTO institutes (id, name, code) VALUES ('SKILLFORGE-HQ', 'SkillForge Vocational Foundation', 'SKILLFORGE-HQ')")
+    except Exception:
+        pass
+
+    try:
+        c.execute("SELECT COUNT(*) FROM branches")
+        if c.fetchone()[0] == 0:
+            c.execute("""
+                INSERT OR IGNORE INTO branches (id, institute_id, branch_name, name, location, city) 
+                VALUES ('BR-NANGLOI', 'SKILLFORGE-HQ', 'Nangloi Center (Delhi)', 'Nangloi Center (Delhi)', 'Delhi NCR', 'Delhi NCR')
+            """)
+    except Exception:
+        pass
 
     conn.commit()
     conn.close()
