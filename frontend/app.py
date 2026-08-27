@@ -80,6 +80,7 @@ try:
         direct_get_exam_for_student,
         generate_dynamic_ai_portfolio,
         direct_search_and_match_jobs,
+        direct_search_live_jobs,
         generate_interview_prep_questions,
         agentic_synthesize_course,
         agent_apply_job_for_student,
@@ -115,6 +116,7 @@ except ImportError:
         direct_get_exam_for_student,
         generate_dynamic_ai_portfolio,
         direct_search_and_match_jobs,
+        direct_search_live_jobs,
         generate_interview_prep_questions,
         agentic_synthesize_course,
         agent_apply_job_for_student,
@@ -757,18 +759,25 @@ def main_app_layout():
 
             # TAB 3: LIVE VERIFIED JOB FINDER & OUTBOX
             with tab_jobs:
-                st.markdown("### 💼 Live Internet Job Opportunity Matcher & Outbox")
-                st.caption("Real-time AI job search crawling verified opportunities matched against candidate competencies.")
+                st.markdown("### 💼 Autonomous Career Intelligence & Live Placement Outbox")
+                st.caption("Real-time industry vacancies aggregated from National Career Service (NCS), LinkedIn, and Authorized Partners, matched against your verified skills and score.")
 
-                col_jf1, col_jf2, col_jf3 = st.columns([2, 1, 1])
-                with col_jf1:
-                    loc_filter = st.selectbox("📍 Filter Location Region", ["Delhi NCR (All)", "Nangloi / Industrial Area", "Gurugram / Manesar", "Noida / Greater Noida", "Pan-India Remote"])
-                with col_jf2:
-                    if st.button("🔄 Rescan Live Opportunities", use_container_width=True):
-                        st.toast("🔍 Crawling verified live job feeds...", icon="⚡")
+                if "job_page" not in st.session_state:
+                    st.session_state.job_page = 1
+
+                # Search & Filter Bar
+                f_col1, f_col2, f_col3, f_col4 = st.columns([2, 1, 1, 1])
+                with f_col1:
+                    job_search_query = st.text_input("🔍 Search Role, Skill, or Company", placeholder="e.g. PLC, Mechatronics, Solar, Python", key="job_search_inp")
+                with f_col2:
+                    job_loc_filter = st.selectbox("📍 Region / Location", options=["Delhi NCR", "Nangloi / West Delhi", "All India", "Hybrid / Remote"], key="job_loc_sel")
+                with f_col3:
+                    if st.button("🔄 Rescan Live Feed", type="secondary", use_container_width=True, key="btn_rescan_jobs"):
+                        st.toast("⚡ Refreshed active vacancies against candidate profile!", icon="🔄")
+                        st.session_state.job_page = 1
                         st.rerun()
-                with col_jf3:
-                    if st.button("🤖 Auto-Apply Agent (≥80%)", type="primary", use_container_width=True):
+                with f_col4:
+                    if st.button("🤖 Auto-Apply (≥80%)", type="primary", use_container_width=True, key="btn_auto_apply_all"):
                         res_auto = agent_enable_auto_apply(s_id, min_match_pct=80)
                         if res_auto.get("status") == "success":
                             st.toast(res_auto.get("message"), icon="🚀")
@@ -776,52 +785,85 @@ def main_app_layout():
                         else:
                             st.error(res_auto.get("message"))
 
-                matched_jobs = direct_search_and_match_jobs(s_id, loc_filter)
-                applied_apps = direct_get_job_applications(student_id=s_id)
-                applied_job_ids = {a.get("job_id") for a in applied_apps}
-                applied_role_titles = {a.get("role_title") for a in applied_apps}
+                # Fetch Live Paginated Jobs
+                job_results = direct_search_live_jobs(
+                    student_id=s_id,
+                    location=job_loc_filter,
+                    query=job_search_query,
+                    page=st.session_state.job_page,
+                    page_size=4
+                )
+                jobs_list = job_results.get("jobs", [])
+                total_pages = job_results.get("total_pages", 1)
+                total_count = job_results.get("total_jobs", 0)
 
-                for j in matched_jobs:
-                    badge_style = "background: #064e3b; color: #34d399; border: 1px solid #10b981;" if j["is_top_probability"] else "background: #1e293b; color: #38bdf8; border: 1px solid #3b82f6;"
-                    already_applied = (j["id"] in applied_job_ids or j["title"] in applied_role_titles)
+                # Fetch Applied IDs for this student
+                applied_jobs = direct_get_job_applications(student_id=s_id)
+                applied_job_ids = {a.get("job_id") for a in applied_jobs}
+                applied_role_titles = {a.get("role_title") for a in applied_jobs}
 
-                    st.markdown(f"""
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 12px; margin-bottom: 12px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-                            <div>
-                                <h3 style="color: #60a5fa; margin: 0;">{j['title']}</h3>
-                                <b style="color: #e2e8f0;">{j['company']}</b> &nbsp;|&nbsp; <span style="color: #94a3b8;">{j['location']}</span>
+                st.markdown(f"**Found {total_count} Verified Live Openings** (Sorted by Algorithmic Competency Fit)")
+
+                if not jobs_list:
+                    st.info("ℹ️ No active vacancies matching this specific filter. Try clearing your search keyword or changing location.")
+                else:
+                    for job in jobs_list:
+                        jid = job.get("id")
+                        j_match = job.get("match_pct", 85)
+                        is_top = job.get("is_top_probability", False)
+                        is_already_applied = (jid in applied_job_ids or job.get("title") in applied_role_titles)
+
+                        top_badge_html = "<span style='background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; margin-left: 8px;'>⭐ TOP 2 HIGHEST SELECTION PROBABILITY</span>" if is_top else ""
+                        
+                        st.markdown(f"""
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid {'#f59e0b' if is_top else 'rgba(255,255,255,0.08)'}; border-radius: 12px; padding: 20px; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+                                <div>
+                                    <h3 style="margin: 0; color: #ffffff; font-size: 1.25rem;">{job.get('title')} {top_badge_html}</h3>
+                                    <p style="margin: 4px 0 8px 0; color: #60a5fa; font-weight: 600;">🏢 {job.get('company')} &nbsp;•&nbsp; 📍 {job.get('location')} &nbsp;•&nbsp; 💰 {job.get('salary')}</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 1.1rem; font-weight: 800; color: {'#34d399' if j_match >= 85 else '#60a5fa'};">{j_match}% Match</span>
+                                    <br><span style="font-size: 0.75rem; color: #9ca3af;">{job.get('source', 'Verified Partner')}</span>
+                                </div>
                             </div>
-                            <div style="text-align: right;">
-                                <span style="padding: 4px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: 700; {badge_style}">
-                                    🎯 {j['match_pct']}% Match • {j['selection_chance']}
-                                </span>
-                                <div style="font-size: 0.85rem; color: #fbbf24; margin-top: 4px;">💰 {j['salary']}</div>
+                            <p style="color: #cbd5e1; font-size: 0.9rem; margin: 10px 0;">{job.get('description')}</p>
+                            <div style="margin-bottom: 12px;">
+                                {' '.join([f"<span style='background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 5px;'>✓ {s}</span>" for s in job.get('skills', [])])}
                             </div>
                         </div>
-                        <p style="font-size: 0.88rem; color: #cbd5e1; margin: 10px 0;">{j['description']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    with st.expander(f"📋 View Full Profile & Application Options for {j['title']}"):
-                        skills_str = ", ".join(j['skills'])
-                        st.markdown(f"**Required Skills:** {skills_str} | **Experience:** {j['exp']} | **Type:** {j['type']}")
-                        st.markdown(f"**Employer Portal Link:** [{j['apply_url']}]({j['apply_url']})")
-                        
-                        col_ap1, col_ap2 = st.columns(2)
-                        with col_ap1:
-                            if already_applied:
-                                st.success("✅ Application Dispatched & Recorded in Outbox")
+                        """, unsafe_allow_html=True)
+
+                        col_app, col_ext, col_view = st.columns([2, 2, 2])
+                        with col_app:
+                            if is_already_applied:
+                                st.success("✅ Application Dispatched")
                             else:
-                                if st.button(f"⚡ 1-Click Apply to {j['company']}", key=f"btn_apply_{j['id']}", type="primary", use_container_width=True):
-                                    res = agent_apply_job_for_student(s_id, j)
-                                    if res.get("status") == "success":
-                                        st.toast(f"✅ Application dispatched to {j['company']}!", icon="🚀")
+                                if st.button("🚀 1-Click Autonomous Apply", key=f"apply_btn_{jid}", type="primary", use_container_width=True):
+                                    apply_res = agent_apply_job_for_student(s_id, job)
+                                    if apply_res.get("status") == "success":
+                                        st.toast(f"🎉 Dossier dispatched to {job.get('company')}! Logged in Institute Ledger.", icon="✅")
                                         st.rerun()
                                     else:
-                                        st.error(res.get("message"))
-                        with col_ap2:
-                            st.link_button("🌐 Open Direct Job Listing", j['apply_url'], use_container_width=True)
+                                        st.error(apply_res.get("message"))
+                        with col_ext:
+                            st.link_button("🌐 View Official Portal", job.get("apply_url"), use_container_width=True)
+                        with col_view:
+                            if st.button("📋 Requirements & Prep", key=f"req_btn_{jid}", use_container_width=True):
+                                st.info(f"**Experience:** {job.get('exp')} | **Job Type:** {job.get('type')}\n\n**Candidate Advantage:** High practical capstone score matches requirement for {job.get('title')}.")
+
+                # Pagination Controls
+                col_prev, col_info, col_next = st.columns([1, 2, 1])
+                with col_prev:
+                    if st.button("⬅️ Previous", disabled=(st.session_state.job_page <= 1), key="job_prev_btn", use_container_width=True):
+                        st.session_state.job_page -= 1
+                        st.rerun()
+                with col_info:
+                    st.markdown(f"<p style='text-align: center; color: #9ca3af; margin-top: 8px;'>Page {st.session_state.job_page} of {total_pages}</p>", unsafe_allow_html=True)
+                with col_next:
+                    if st.button("Next Page ➡️", disabled=(st.session_state.job_page >= total_pages), key="job_next_btn", use_container_width=True):
+                        st.session_state.job_page += 1
+                        st.rerun()
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO
             with tab_prep:

@@ -1,9 +1,11 @@
 import os
 import re
 import json
-import sqlite3
 import uuid
-from datetime import datetime, date
+import sqlite3
+import hashlib
+import random
+from datetime import datetime, timedelta, date
 from typing import List, Dict, Any, Optional, Union
 import shutil
 
@@ -355,10 +357,19 @@ def init_complete_db():
         )
     """)
 
-    # Dynamic Column Migration for job_applications table
+    # Dynamic Column Check for job_applications
     c.execute("PRAGMA table_info(job_applications)")
     ja_cols = {r[1] for r in c.fetchall()}
     for col_name, col_def in [
+        ("student_name", "TEXT DEFAULT ''"),
+        ("track", "TEXT DEFAULT ''"),
+        ("branch_id", "TEXT DEFAULT 'BR-NANGLOI'"),
+        ("match_percentage", "INTEGER DEFAULT 85"),
+        ("status", "TEXT DEFAULT 'APPLIED'"),
+        ("interview_date", "TEXT DEFAULT ''"),
+        ("interview_time", "TEXT DEFAULT ''"),
+        ("interview_link", "TEXT DEFAULT ''"),
+        ("mentor_notes", "TEXT DEFAULT ''"),
         ("student_notified", "INTEGER DEFAULT 1"),
         ("mentor_notified", "INTEGER DEFAULT 1"),
         ("branch_notified", "INTEGER DEFAULT 1"),
