@@ -923,27 +923,53 @@ def main_app_layout():
                 st.markdown("### 🎙️ AI Conversational Technical Interview Studio")
                 st.caption("Turn-by-turn interactive technical round powered by Autonomous AI Recruiter Agent matched directly to your profile.")
 
-                # Profile-Aware Role Suggestion
+                # Profile-Aware Domain Role Options Isolation
                 s_track = str(student_data.get("course_name") or student_data.get("track") or "").lower()
                 if any(w in s_track for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
                     auto_role = "Senior Tally & GST Accountant"
+                    role_options = [
+                        f"🎯 Auto-Matched ({auto_role})",
+                        "Senior Tally & GST Accountant",
+                        "Corporate Tax & Audit Compliance Specialist",
+                        "Accounts Payable & BRS Reconciliation Officer",
+                        "Financial Ledger & Management Accountant"
+                    ]
                 elif any(w in s_track for w in ["web", "python", "full", "software", "code", "cloud"]):
                     auto_role = "Full Stack Cloud & API Engineer"
+                    role_options = [
+                        f"🎯 Auto-Matched ({auto_role})",
+                        "Full Stack Cloud & API Engineer",
+                        "Python Backend & FastAPI Developer",
+                        "Frontend React.js & UI/UX Specialist",
+                        "DevOps & Cloud Microservices Engineer"
+                    ]
                 elif any(w in s_track for w in ["solar", "renew", "green"]):
                     auto_role = "Solar SCADA & Inverter Telemetry Engineer"
+                    role_options = [
+                        f"🎯 Auto-Matched ({auto_role})",
+                        "Solar SCADA & Inverter Telemetry Engineer",
+                        "Grid-Tie Solar Sub-Station Inspector",
+                        "Renewable Energy Telemetry Specialist",
+                        "Solar PV System Diagnostic Technician"
+                    ]
                 elif any(w in s_track for w in ["electric", "ev", "battery"]):
                     auto_role = "EV Battery Systems & ECU Diagnostic Specialist"
+                    role_options = [
+                        f"🎯 Auto-Matched ({auto_role})",
+                        "EV Battery Systems & ECU Diagnostic Specialist",
+                        "Autonomous Powertrain & CAN-Bus Test Engineer",
+                        "BMS Thermal & Cell Balancing Technician",
+                        "High-Voltage EV Isolation Inspector"
+                    ]
                 else:
                     auto_role = "Industrial Automation & Mechatronics Engineer"
-
-                role_options = [
-                    f"🎯 Auto-Matched ({auto_role})",
-                    "Senior Tally & GST Accountant",
-                    "Full Stack Cloud & API Engineer",
-                    "Industrial Automation & Mechatronics Engineer",
-                    "EV Battery Systems & ECU Diagnostic Specialist",
-                    "Solar SCADA & Inverter Telemetry Engineer"
-                ]
+                    role_options = [
+                        f"🎯 Auto-Matched ({auto_role})",
+                        "Industrial Automation & Mechatronics Engineer",
+                        "PLC Control Systems & SCADA Specialist",
+                        "Robotic Actuator & Sensor Calibration Engineer",
+                        "Smart Factory Instrumentation Technician"
+                    ]
 
                 sel_role_raw = st.selectbox("🎯 Select Target Job Role for Mock Technical Round", options=role_options, key="sel_interview_role")
                 selected_job_role = auto_role if "Auto-Matched" in sel_role_raw else sel_role_raw
