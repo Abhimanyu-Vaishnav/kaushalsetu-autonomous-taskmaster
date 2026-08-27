@@ -971,6 +971,23 @@ def main_app_layout():
                 st.markdown("### ✏️ Candidate Profile & Social Footprint Hub")
                 st.caption("Update your personal details, resume highlights, and social links. The AI Agent harvests your real GitHub repositories and updates your portfolio live.")
 
+                u_resume_file = st.file_uploader("📄 Upload Candidate Resume (PDF / TXT)", type=["pdf", "txt"], key="student_resume_uploader")
+                extracted_resume_text = ""
+                if u_resume_file:
+                    try:
+                        fname = u_resume_file.name.lower()
+                        b_content = u_resume_file.getvalue()
+                        if fname.endswith(".txt"):
+                            extracted_resume_text = b_content.decode("utf-8", errors="ignore")
+                        elif fname.endswith(".pdf"):
+                            import io, pypdf
+                            reader = pypdf.PdfReader(io.BytesIO(b_content))
+                            extracted_resume_text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+                        if extracted_resume_text.strip():
+                            st.success(f"📄 Resume text auto-extracted ({len(extracted_resume_text)} chars) from '{u_resume_file.name}'!")
+                    except Exception as ex_pdf:
+                        st.info(f"Resume text extraction notice: {ex_pdf}")
+
                 with st.form("form_student_self_edit"):
                     col_e1, col_e2 = st.columns(2)
                     with col_e1:
@@ -985,7 +1002,8 @@ def main_app_layout():
                         edit_twitter = st.text_input("🐦 Twitter / X Profile URL", value=student_data.get("twitter_url") or "", placeholder="https://x.com/your-username")
 
                     edit_bio = st.text_area("📝 Professional Summary & Bio", value=student_data.get("bio_summary") or "", height=80)
-                    edit_resume = st.text_area("📄 Practical Experience & Capstone Highlights", value=student_data.get("resume_text") or "", height=100)
+                    default_res = extracted_resume_text.strip() if extracted_resume_text.strip() else (student_data.get("resume_text") or "")
+                    edit_resume = st.text_area("📄 Practical Experience & Capstone Highlights", value=default_res, height=100)
 
                     if st.form_submit_button("⚡ Save Profile & Re-Harvest GitHub Portfolio", type="primary", use_container_width=True):
                         up_payload = {
