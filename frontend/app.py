@@ -92,6 +92,7 @@ try:
         start_or_get_interview_session,
         evaluate_interview_turn,
         direct_retake_exam_for_student,
+        direct_get_student_by_id,
         normalize_dob
     )
 except ImportError:
@@ -131,6 +132,7 @@ except ImportError:
         start_or_get_interview_session,
         evaluate_interview_turn,
         direct_retake_exam_for_student,
+        direct_get_student_by_id,
         normalize_dob
     )
 
@@ -565,62 +567,51 @@ def main_app_layout():
         if param_branch:
             st.info(f"📍 **Branch Exam Portal Context:** `{param_branch.replace('_', ' ').title()}`")
             
-        if not st.session_state.get("authenticated_student"):
-            with st.container():
-                st.markdown("""
-                <div style="background:#0F172A; border:1px solid #334155; padding:24px; border-radius:12px; max-width:600px; margin:20px auto;">
-                    <h3 style="color:#38BDF8; margin-top:0;">🔑 Candidate Exam Authentication</h3>
-                    <p style="color:#94A3B8; font-size:0.9rem;">Please enter your registered Student ID and Date of Birth to unlock your dynamic assessment.</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                with st.form("student_auth_card_form"):
-                    auth_sid = st.text_input("Candidate Student ID", value=param_sid or "STU-1001")
-                    auth_dob = st.date_input(
-                        "Date of Birth",
-                        value=datetime.date(2000, 1, 1),
-                        min_value=datetime.date(1970, 1, 1),
-                        max_value=datetime.date(2015, 12, 31)
-                    )
-                    submit_auth = st.form_submit_button("Verify & Start Exam 🚀", type="primary", use_container_width=True)
-                    
-                if submit_auth:
-                    try:
-                        formatted_dob = normalize_dob(auth_dob)
-                        data = perform_student_login(auth_sid.strip(), formatted_dob)
-                        if data.get("authenticated") or data.get("success"):
-                            s_data = data.get("student") or data.get("data")
-                            st.session_state["authenticated_student"] = s_data
-                            st.session_state["student_logged_in"] = True
-                            
-                            # Auto-synthesize assessment for student's course
-                            try:
-                                e_res = safe_api_call("POST", "/api/assessment/generate", payload={
-                                    "topic": s_data.get('course_name', 'Vocational Training'),
-                                    "difficulty": "Intermediate"
-                                }, timeout=10)
-                                if e_res and e_res.status_code == 200:
-                                    st.session_state["current_exam"] = e_res.json().get("data")
-                                    st.session_state["mcq_step"] = 0
-                                    st.session_state["mcq_answers_dict"] = {}
-                            except Exception:
-                                pass
-                            st.success(f"✅ Credentials & Date of Birth Verified! Welcome {s_data.get('full_name', 'Candidate')}.")
+        if "authenticated_student" not in st.session_state or st.session_state["authenticated_student"] is None:
+            st.markdown("### 🔐 Candidate Assessment Portal Login")
+            st.caption("Enter your assigned Student ID and verified Date of Birth to access your curriculum and examination.")
+
+            with st.form("form_candidate_portal_login", clear_on_submit=False):
+                login_stu_id = st.text_input("Candidate Student ID *", value=param_sid or "", placeholder="e.g. STU-EA9952", key="inp_login_student_id")
+                login_dob = st.date_input("Date of Birth *", value=datetime.date(2000, 1, 1), min_value=datetime.date(1970, 1, 1), max_value=datetime.date(2015, 12, 31), key="inp_login_dob")
+
+                if st.form_submit_button("Verify & Open Candidate Portal 🚀", type="primary", use_container_width=True):
+                    if not login_stu_id.strip():
+                        st.error("Please enter a valid Student ID.")
+                    else:
+                        auth_res = direct_student_login(login_stu_id.strip(), login_dob.strftime("%Y-%m-%d"))
+                        if auth_res.get("authenticated"):
+                            fresh_s = auth_res.get("student") or auth_res.get("data")
+                            st.session_state["authenticated_student"] = fresh_s
+                            st.session_state["active_student_view"] = "results" if fresh_s.get("exam_completed") == 1 else "exam"
+                            st.session_state["current_exam"] = None
+                            st.toast(f"✅ Welcome, {fresh_s.get('full_name') or fresh_s.get('name')}!", icon="🎉")
                             st.rerun()
                         else:
-                            err_msg = data.get("message", "Authentication failed: Invalid Student ID or Date of Birth.")
-                            st.error(f"❌ {err_msg}")
-                    except Exception as e:
-                        st.error(f"Authentication error: {e}")
-                st.stop()
-                
-        student_data = st.session_state["authenticated_student"]
-        
-        st.markdown(f"#### Logged in: **{student_data['full_name']}** (`{student_data['student_id']}`) | Branch: **{student_data['branch_name']}** | Course: **{student_data['course_name']}**")
-        if st.button("🚪 Logout / Switch Student"):
-            st.session_state["authenticated_student"] = None
-            st.session_state["student_logged_in"] = False
-            st.rerun()
+                            st.error(f"❌ {auth_res.get('message')}")
+            st.stop()
+        else:
+            current_cand = st.session_state["authenticated_student"]
+            c_id = current_cand.get("id") or current_cand.get("student_id")
+            fresh_pull = direct_get_student_by_id(c_id)
+            if fresh_pull:
+                current_cand = fresh_pull
+                st.session_state["authenticated_student"] = fresh_pull
+
+            top_c1, top_c2 = st.columns([4, 1])
+            with top_c1:
+                c_name = current_cand.get("full_name") or current_cand.get("name") or "Candidate"
+                c_sid = current_cand.get("student_id") or current_cand.get("id")
+                c_track = current_cand.get("course_name") or current_cand.get("track") or "Vocational Track"
+                st.markdown(f"Logged in as: **{c_name}** (`{c_sid}`) | Track: **{c_track}**")
+            with top_c2:
+                if st.button("🚪 Switch / Logout", key="btn_logout_cand_portal", use_container_width=True):
+                    st.session_state["authenticated_student"] = None
+                    st.session_state["active_student_view"] = None
+                    st.session_state["current_exam"] = None
+                    st.rerun()
+
+        student_data = current_cand
             
         # Check post-exam completed state
         is_exam_done = (student_data.get("exam_completed") == 1) or (st.session_state.get("active_student_view") == "results")
@@ -2433,8 +2424,14 @@ def main_app_layout():
                             else:
                                 st.markdown('<span class="badge-amber">⏳ PENDING EXAM</span>', unsafe_allow_html=True)
                         with col_st3:
-                            exam_url = f"{FRONTEND_URL}/?page=exam&sid={stu['student_id']}&branch={sel_branch['id']}"
-                            st.markdown(f'<a href="{exam_url}" target="_blank" style="text-decoration:none;"><button style="background:#2563EB; color:white; border:none; border-radius:6px; padding:6px 12px; font-weight:600; cursor:pointer; width:100%;">🎓 Launch Exam</button></a>', unsafe_allow_html=True)
+                            if st.button("🚀 Launch Exam", key=f"launch_exam_stu_{stu['student_id']}", type="primary", use_container_width=True):
+                                fresh_student = direct_get_student_by_id(stu['student_id'])
+                                if fresh_student:
+                                    st.session_state["authenticated_student"] = fresh_student
+                                    st.session_state["active_student_view"] = "results" if fresh_student.get("exam_completed") == 1 else "exam"
+                                    st.session_state["current_exam"] = None
+                                    st.toast(f"Switched session to {fresh_student.get('full_name') or fresh_student.get('name')} ({stu['student_id']})", icon="👤")
+                                    st.rerun()
                         with col_st4:
                             if st.button("✏️ Edit", key=f"btn_edit_student_{stu['student_id']}", use_container_width=True):
                                 modal_edit_student_record(stu)

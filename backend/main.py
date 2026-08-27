@@ -2008,54 +2008,42 @@ def direct_get_exam_for_student(student_id: str = None, track_name: str = None):
         "practical_task": default_capstone
     }
 
-def direct_student_login(student_id: str, dob_input: str):
+def direct_get_student_by_id(student_id: str):
+    """Fetches real-time student record cleanly by ID."""
     try:
         conn = get_db()
         c = conn.cursor()
         sid = str(student_id or "").strip()
-        clean_sid = sid.upper().replace(" ", "").replace("-", "")
-        
-        c.execute("SELECT * FROM students")
-        rows = [dict(r) for r in c.fetchall()]
+        c.execute("SELECT * FROM students WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (sid, sid))
+        row = c.fetchone()
         conn.close()
+        if row:
+            return dict(row)
+        return None
+    except Exception as e:
+        print(f"Fetch student error: {e}")
+        return None
 
-        target_student = None
-        for r in rows:
-            r_id = str(r.get("id") or "").upper().replace(" ", "").replace("-", "")
-            r_sid = str(r.get("student_id") or "").upper().replace(" ", "").replace("-", "")
-            if clean_sid in [r_id, r_sid] or clean_sid.endswith(r_id) or r_id.endswith(clean_sid):
-                target_student = r
-                break
+def direct_student_login(student_id: str, dob_input: str):
+    """Strict authentication matching exact student record."""
+    try:
+        sid = str(student_id or "").strip()
+        s = direct_get_student_by_id(sid)
+        if not s:
+            return {"authenticated": False, "message": f"Candidate ID '{sid}' does not exist."}
 
-        if not target_student:
-            # Self-healing auto-provision for candidate IDs to ensure zero login failure
-            try:
-                from database import add_student
-                heal_res = add_student(
-                    id=sid,
-                    student_id=sid,
-                    full_name="Alex Mercer",
-                    dob=str(dob_input or "2000-01-01"),
-                    email="candidate@skillforge-edu.org",
-                    track="Vocational Diagnostics & Mechatronics",
-                    branch_center="Nangloi Center (Delhi)"
-                )
-                target_student = heal_res.get("data") or {
-                    "id": sid, "student_id": sid, "full_name": "Alex Mercer",
-                    "dob": str(dob_input or "2000-01-01"), "email": "candidate@skillforge-edu.org"
-                }
-            except Exception:
-                return {"authenticated": False, "status": "error", "message": f"Candidate ID '{sid}' not found."}
-
-        stored_dob = normalize_dob(target_student.get("dob"))
+        stored_dob = normalize_dob(s.get("dob"))
         input_dob = normalize_dob(dob_input)
 
-        if not stored_dob or stored_dob == input_dob or not dob_input:
-            return {"authenticated": True, "status": "success", "student": target_student, "data": target_student}
+        if not stored_dob or not input_dob:
+            return {"authenticated": False, "message": "Date of Birth required for authentication."}
+
+        if stored_dob == input_dob:
+            return {"authenticated": True, "student": s, "data": s}
         else:
-            return {"authenticated": False, "status": "error", "message": f"Incorrect Date of Birth for {sid}. (Entered: {input_dob} vs Expected: {stored_dob})"}
+            return {"authenticated": False, "message": f"Incorrect Date of Birth for candidate {sid}."}
     except Exception as e:
-        return {"authenticated": False, "status": "error", "message": str(e)}
+        return {"authenticated": False, "message": str(e)}
 
 def direct_create_student(payload: dict):
     if not isinstance(payload, dict):
