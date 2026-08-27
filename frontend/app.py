@@ -696,11 +696,12 @@ def main_app_layout():
 
             st.success(f"🎓 Assessment Completed & Verified! Digest Seal: `{student_data.get('status_seal', '0x27A524D65BA86A69')}`")
 
-            tab_card, tab_port, tab_jobs, tab_prep = st.tabs([
+            tab_card, tab_port, tab_jobs, tab_prep, tab_profile = st.tabs([
                 "📜 Official Marksheet & Certificate",
                 "🌐 Dynamic Animated Portfolio",
                 "💼 Live Verified Job Finder & Outbox",
-                "🎙️ AI Interview Studio"
+                "🎙️ AI Interview Studio",
+                "✏️ Edit Profile & Social Links"
             ])
 
             # TAB 1: OFFICIAL MARKSHEET & CERTIFICATE
@@ -965,7 +966,49 @@ def main_app_layout():
                             conn.close()
                         except Exception:
                             pass
-                        st.rerun()
+            # TAB 5: EDIT CANDIDATE PROFILE & SOCIAL LINKS
+            with tab_profile:
+                st.markdown("### ✏️ Candidate Profile & Social Footprint Hub")
+                st.caption("Update your personal details, resume highlights, and social links. The AI Agent harvests your real GitHub repositories and updates your portfolio live.")
+
+                with st.form("form_student_self_edit"):
+                    col_e1, col_e2 = st.columns(2)
+                    with col_e1:
+                        edit_name = st.text_input("Full Name", value=student_data.get("full_name") or student_data.get("name") or "")
+                        edit_dob = st.text_input("Date of Birth (YYYY-MM-DD)", value=student_data.get("dob") or "2002-01-01")
+                        edit_phone = st.text_input("Contact Phone Number", value=student_data.get("phone") or "")
+                        edit_email = st.text_input("Contact Email", value=student_data.get("email") or "")
+                    with col_e2:
+                        edit_github = st.text_input("🐙 GitHub Profile URL", value=student_data.get("github_url") or "", placeholder="https://github.com/your-username")
+                        edit_linkedin = st.text_input("💼 LinkedIn Profile URL", value=student_data.get("linkedin_url") or "", placeholder="https://linkedin.com/in/your-username")
+                        edit_website = st.text_input("🌐 Portfolio / Personal Website URL", value=student_data.get("website_url") or "", placeholder="https://yourwebsite.com")
+                        edit_twitter = st.text_input("🐦 Twitter / X Profile URL", value=student_data.get("twitter_url") or "", placeholder="https://x.com/your-username")
+
+                    edit_bio = st.text_area("📝 Professional Summary & Bio", value=student_data.get("bio_summary") or "", height=80)
+                    edit_resume = st.text_area("📄 Practical Experience & Capstone Highlights", value=student_data.get("resume_text") or "", height=100)
+
+                    if st.form_submit_button("⚡ Save Profile & Re-Harvest GitHub Portfolio", type="primary", use_container_width=True):
+                        up_payload = {
+                            "full_name": edit_name.strip(),
+                            "dob": edit_dob.strip(),
+                            "phone": edit_phone.strip(),
+                            "email": edit_email.strip(),
+                            "github_url": edit_github.strip(),
+                            "linkedin_url": edit_linkedin.strip(),
+                            "website_url": edit_website.strip(),
+                            "twitter_url": edit_twitter.strip(),
+                            "bio_summary": edit_bio.strip(),
+                            "resume_text": edit_resume.strip()
+                        }
+                        res_up = direct_update_student(student_id=s_id, payload=up_payload)
+                        if res_up.get("status") == "success":
+                            student_data.update(up_payload)
+                            st.session_state["authenticated_student"] = student_data
+                            generate_dynamic_ai_portfolio(s_id)
+                            st.toast("✅ Candidate Profile & Live GitHub Repositories Updated!", icon="🚀")
+                            st.rerun()
+                        else:
+                            st.error(res_up.get("message"))
 
             st.stop()
 

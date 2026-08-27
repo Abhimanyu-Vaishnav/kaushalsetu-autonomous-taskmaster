@@ -2045,14 +2045,58 @@ def direct_student_login(student_id: str, dob_input: str):
     except Exception as e:
         return {"authenticated": False, "message": str(e)}
 
-def direct_create_student(payload: dict):
-    if not isinstance(payload, dict):
-        return {"status": "error", "message": "Invalid payload format"}
+def direct_update_student(student_id: str = "", payload: dict = None, updates: dict = None):
+    """Updates candidate profile fields (DOB, Bio, Resume, GitHub, LinkedIn, Website, Email, Phone, Skills)."""
     try:
-        from database import add_student
-        return add_student(**payload)
+        conn = get_db()
+        c = conn.cursor()
+        up_dict = payload or updates or {}
+        if not isinstance(up_dict, dict):
+            return {"status": "error", "message": "Invalid update payload"}
+
+        sid = str(student_id or up_dict.get("student_id") or up_dict.get("id") or "").strip()
+        if not sid:
+            return {"status": "error", "message": "Student ID is required"}
+
+        c.execute("SELECT * FROM students WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (sid, sid))
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            return {"status": "error", "message": f"Candidate ID '{sid}' not found."}
+
+        allowed_fields = [
+            "full_name", "student_name", "dob", "bio_summary", "resume_text",
+            "github_url", "linkedin_url", "website_url", "twitter_url",
+            "email", "phone", "gender", "parsed_skills", "research_projects", "profile_photo", "course_name"
+        ]
+
+        set_clauses = []
+        params = []
+        for field in allowed_fields:
+            if field in up_dict:
+                val = up_dict[field]
+                if isinstance(val, (dict, list)):
+                    val = json.dumps(val)
+                set_clauses.append(f"{field} = ?")
+                params.append(val)
+
+        if set_clauses:
+            params.extend([sid, sid])
+            query = f"UPDATE students SET {', '.join(set_clauses)} WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)"
+            c.execute(query, params)
+            conn.commit()
+
+        conn.close()
+
+        # Regenerate portfolio with fresh data & live harvested GitHub repos
+        try:
+            generate_dynamic_ai_portfolio(sid)
+        except Exception:
+            pass
+
+        return {"status": "success", "message": "Candidate profile updated successfully!"}
     except Exception as e:
-        return {"status": "error", "message": f"Student creation failed: {str(e)}"}
+        return {"status": "error", "message": str(e)}
 
 def direct_get_students():
     try:
@@ -2344,24 +2388,56 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         # Skills markup
         skills_html = "".join([f"<span style='background:rgba(255,255,255,0.05); color:#e2e8f0; border:1px solid rgba(255,255,255,0.1); padding:6px 14px; border-radius:20px; font-size:0.85rem; margin:4px; display:inline-block;'>⚡ {sk}</span>" for sk in skills])
 
-        # GitHub Section
+        # GitHub Live Harvesting Section
         github_section = ""
         if github:
-            github_section = f"""
-            <div style="margin-top:28px; text-align:left;">
-                <h3 style="color:#f8fafc; font-size:1.15rem; border-left:4px solid {accent_color}; padding-left:10px; margin-bottom:12px;">🚀 Verified Technical Builds & Code Repositories</h3>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+            try:
+                try:
+                    from backend.dossier_generator import fetch_live_github_profile
+                except ImportError:
+                    from dossier_generator import fetch_live_github_profile
+                
+                gh_info = fetch_live_github_profile(github)
+                repos = gh_info.get("projects", [])
+                
+                if repos:
+                    repo_cards = "".join([f"""
                     <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <b style="color:{secondary_color}; font-size:0.95rem;">📦 {track.replace(' ', '-')}-Engine</b>
-                            <span style="font-size:0.75rem; background:#064e3b; color:#34d399; padding:2px 8px; border-radius:10px;">Live Build</span>
+                            <b style="color:{secondary_color}; font-size:0.95rem;">📦 {p.get('name')}</b>
+                            <span style="font-size:0.75rem; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px;">{p.get('lang')}</span>
                         </div>
-                        <p style="font-size:0.82rem; color:#94a3b8; margin:8px 0;">Production-grade diagnostic telemetry pipeline with automated recovery drivers.</p>
-                        <a href="{github}" target="_blank" style="font-size:0.85rem; color:{accent_color}; text-decoration:none; font-weight:600;">Explore Source Repository →</a>
+                        <p style="font-size:0.82rem; color:#94a3b8; margin:8px 0; line-height:1.4;">{p.get('desc')}</p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                            <span style="font-size:0.75rem; color:#fbbf24;">⭐ {p.get('stars')} Stars • 🍴 {p.get('forks')} Forks</span>
+                            <a href="{p.get('url')}" target="_blank" style="font-size:0.82rem; color:{accent_color}; text-decoration:none; font-weight:600;">View Repository ↗</a>
+                        </div>
                     </div>
+                    """ for p in repos])
+                    
+                    github_section = f"""
+                    <div style="margin-top:28px; text-align:left;">
+                        <h3 style="color:#f8fafc; font-size:1.15rem; border-left:4px solid {accent_color}; padding-left:10px; margin-bottom:12px;">🚀 Real Verified GitHub Repositories ({gh_info.get('public_repos', len(repos))} Public Repos)</h3>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+                            {repo_cards}
+                        </div>
+                    </div>
+                    """
+                else:
+                    github_section = f"""
+                    <div style="margin-top:28px; text-align:left;">
+                        <h3 style="color:#f8fafc; font-size:1.15rem; border-left:4px solid {accent_color}; padding-left:10px; margin-bottom:12px;">🚀 Verified GitHub Profile</h3>
+                        <a href="{github}" target="_blank" style="color:{secondary_color}; font-weight:600; text-decoration:none;">Explore {github} on GitHub ↗</a>
+                    </div>
+                    """
+            except Exception as gh_ex:
+                print(f"[GITHUB PORTFOLIO HARVEST NOTICE] {gh_ex}")
+                github_section = f"""
+                <div style="margin-top:28px; text-align:left;">
+                    <h3 style="color:#f8fafc; font-size:1.15rem; border-left:4px solid {accent_color}; padding-left:10px; margin-bottom:12px;">🚀 Verified GitHub Profile</h3>
+                    <a href="{github}" target="_blank" style="color:{secondary_color}; font-weight:600; text-decoration:none;">Explore {github} on GitHub ↗</a>
                 </div>
-            </div>
-            """
+                """
 
         # Research markup
         research_html = "".join([f"""
