@@ -2428,22 +2428,79 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
             ]
 
         matched_kws = [kw for kw in keywords if kw in ans_clean.lower()]
-        
-        # Multi-Criteria Scoring Algorithm
-        if ans_len >= 25 and len(matched_kws) >= 3:
-            turn_score = 9 if ans_len < 45 else 10
-            feedback = f"🌟 Excellent response! You demonstrated strong technical domain knowledge, using key industry concepts ({', '.join([k.upper() for k in matched_kws[:4]])})."
-            improvements = ["Maintain your structured explanation style", "Mention specific industry compliance baselines"]
-        elif ans_len >= 12 or len(matched_kws) >= 2:
-            turn_score = 7
-            feedback = f"👍 Solid answer covering core principles ({', '.join([k.upper() for k in matched_kws[:2]]) if matched_kws else 'good logic'}). Elaborate slightly more on step-by-step troubleshooting."
-            improvements = ["Include more domain-specific technical terms", "Detail your error mitigation steps"]
-        else:
-            turn_score = 4
-            feedback = "⚠️ Answer is too brief. In technical interviews, articulate your complete methodology, safety protocols, and step-by-step reasoning."
-            improvements = ["Provide a detailed multi-step explanation", "Use domain terminology to demonstrate hands-on experience"]
+        previous_answers = [h.get("candidate_answer", "").strip().lower() for h in history[:-1] if "candidate_answer" in h]
 
-        turn_score = min(10, max(3, turn_score))
+        # 1. Repetitive Answer Penalty Check
+        is_repetitive = False
+        for prev_ans in previous_answers:
+            if len(prev_ans) > 10 and (ans_clean.lower() in prev_ans or prev_ans in ans_clean.lower() or ans_clean.lower() == prev_ans):
+                is_repetitive = True
+                break
+
+        turn_score = 4
+        feedback = ""
+        improvements = []
+
+        if is_repetitive:
+            turn_score = 3
+            feedback = "⚠️ Repetitive response detected! You submitted the same generic answer as a previous round without addressing the specific question asked."
+            improvements = ["Address the exact question asked", "Do not reuse canned or generic answers"]
+            ideal_model = f"A specific response for '{last_q}' should directly explain step-by-step resolution rather than repeating previous answers."
+        else:
+            # 2. Strict Gemini LLM Real Recruiter Evaluator
+            gemini_key = os.environ.get("GEMINI_API_KEY")
+            llm_eval = None
+            if gemini_key and len(ans_clean) >= 5:
+                try:
+                    from google import genai
+                    client = genai.Client(api_key=gemini_key)
+                    prompt = f"""
+                    You are a strict Senior Corporate Technical Recruiter interviewing for '{job_role}'.
+                    Question Asked: '{last_q}'
+                    Candidate Answer: '{ans_clean}'
+
+                    Evaluate the candidate's answer strictly against the question.
+                    Return JSON:
+                    {{
+                      "score": int (1 to 10 based on exact relevance and technical accuracy),
+                      "feedback": "2-sentence executive feedback highlighting exact performance",
+                      "improvements": ["array of 2 specific gap areas"],
+                      "model_answer": "ideal 10/10 response to this specific question"
+                    }}
+                    """
+                    resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                    if resp and resp.text:
+                        match = re.search(r'\{.*\}', resp.text, re.DOTALL)
+                        if match:
+                            llm_eval = json.loads(match.group(0))
+                except Exception:
+                    pass
+
+            if llm_eval and "score" in llm_eval:
+                turn_score = int(llm_eval.get("score", 7))
+                feedback = str(llm_eval.get("feedback") or "Evaluated against senior recruiter benchmarks.")
+                improvements = llm_eval.get("improvements") or ["Deepen domain terminology", "Structure step-by-step workflow"]
+                if llm_eval.get("model_answer"):
+                    ideal_model = str(llm_eval.get("model_answer"))
+            else:
+                # 3. Fallback Semantic Relevance Check against Last Question
+                q_words = set(re.findall(r'\w+', last_q.lower())) - {"what", "how", "you", "the", "and", "for", "with", "this", "your", "that", "step", "walk", "tell", "about"}
+                ans_q_matches = [w for w in q_words if w in ans_clean.lower()]
+                
+                if ans_len >= 20 and len(matched_kws) >= 2 and len(ans_q_matches) >= 1:
+                    turn_score = 9 if ans_len >= 35 else 8
+                    feedback = f"🌟 Strong, relevant response! You directly addressed the question and demonstrated domain terminology ({', '.join([k.upper() for k in matched_kws[:3]])})."
+                    improvements = ["Maintain structured explanation style", "Mention specific compliance standards"]
+                elif ans_len >= 12 and (len(matched_kws) >= 1 or len(ans_q_matches) >= 1):
+                    turn_score = 6
+                    feedback = "👍 Moderately relevant answer, but lacks specific technical depth or exact steps asked in the question."
+                    improvements = ["Provide a step-by-step troubleshooting breakdown", "Include specific domain terminology"]
+                else:
+                    turn_score = 4
+                    feedback = "⚠️ Answer is off-topic or lacks technical substance. Address the exact question asked with multi-step methodology."
+                    improvements = ["Directly address the question topic", "Elaborate on hands-on practical steps"]
+
+        turn_score = min(10, max(2, turn_score))
 
         # Update last question entry in history
         if history:

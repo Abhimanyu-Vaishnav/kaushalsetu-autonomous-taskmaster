@@ -1058,11 +1058,12 @@ def main_app_layout():
                 if session_data.get("status") != "COMPLETED":
                     st.markdown("#### ✍️ Provide Your Technical Response:")
                     
-                    draft_input = st.text_area("Your Response:", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=120, key="int_reply_box_draft")
+                    input_key = f"int_reply_box_draft_{session_data.get('id')}_{cur_turn}"
+                    draft_input = st.text_area("Your Response:", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=120, key=input_key)
                     
                     col_ref1, col_ref2 = st.columns([1, 1])
                     with col_ref1:
-                        if st.button("✨ AI Refine & Polish My Answer (Zero-Failure Coaching)", key="btn_refine_ans", use_container_width=True):
+                        if st.button("✨ AI Refine & Polish My Answer (Zero-Failure Coaching)", key=f"btn_refine_ans_{cur_turn}", use_container_width=True):
                             if len(draft_input.strip()) < 5:
                                 st.warning("Please type a draft response first before refining.")
                             else:
@@ -1075,13 +1076,15 @@ def main_app_layout():
 
                     with col_ref2:
                         final_submit_ans = st.session_state.get("refined_ans_cache") or draft_input
-                        if st.button("⚡ Submit Final Answer to Recruiter 🎙️", type="primary", use_container_width=True, key="btn_submit_int_ans"):
+                        if st.button("⚡ Submit Final Answer to Recruiter 🎙️", type="primary", use_container_width=True, key=f"btn_submit_int_ans_{cur_turn}"):
                             if len(final_submit_ans.strip()) < 8:
                                 st.warning("Please provide a complete response.")
                             else:
                                 with st.spinner("🤖 AI Recruiter evaluating technical depth & domain terminology..."):
                                     eval_turn = evaluate_interview_turn(session_data.get("id"), final_submit_ans)
                                     st.session_state["refined_ans_cache"] = None
+                                    if input_key in st.session_state:
+                                        st.session_state[input_key] = ""
                                     if eval_turn.get("status") == "completed":
                                         st.balloons()
                                         st.toast(f"🎉 Technical Interview Completed! Score: {eval_turn.get('overall_score')}%", icon="🏆")
