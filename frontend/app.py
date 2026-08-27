@@ -1774,10 +1774,11 @@ def main_app_layout():
             raw_topic_input = st.text_input("🤖 Enter Raw Topic or Misspelled Track Name (e.g., 'elctric vehicl mechatrnics')", value="Electric Vehicle Powertrain & Battery Diagnostics", key="raw_synth_input")
             if st.button("🤖 Agentic Auto-Synthesize Track", type="secondary", use_container_width=True):
                 synth = agentic_synthesize_course(raw_topic_input, target_branch_id)
-                st.session_state["synth_course_data"] = synth
-                st.toast(f"✅ Track '{synth['title']}' Auto-Synthesized by AI Agent!", icon="🪄")
+                st.session_state["synth_course_data"] = synth if isinstance(synth, dict) else {}
+                st.toast(f"✅ Track '{synth.get('title', 'Course Track')}' Auto-Synthesized by AI Agent!", icon="🪄")
 
-            synth_data = st.session_state.get("synth_course_data", {})
+            synth_raw = st.session_state.get("synth_course_data")
+            synth_data = synth_raw if isinstance(synth_raw, dict) else {}
 
             with st.form("modal_course_form"):
                 mc_title = st.text_input("Course Title", value=synth_data.get("title", "Full Stack Web Development"))
@@ -1817,7 +1818,7 @@ def main_app_layout():
                             if res_data.get("status") == "success" or res_data.get("success"):
                                 st.toast(f"🚀 Course '{mc_title.strip()}' Synthesized & Created Successfully!", icon="✅")
                                 st.session_state["courses_last_updated"] = time.time()
-                                st.session_state["synth_course_data"] = None
+                                st.session_state["synth_course_data"] = {}
                                 st.rerun()
                             else:
                                 st.error(f"⚠️ Course creation failed: {res_data.get('message')}")
