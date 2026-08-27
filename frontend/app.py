@@ -1027,35 +1027,40 @@ def main_app_layout():
                     active_item = history[-1]
                     t_num = active_item.get("turn", cur_turn)
                     q_text = active_item.get("question", "")
-                    clean_q_speech = re.sub(r'[*_#`\n]', ' ', q_text).replace('"', '\\"')
+                    clean_q_speech = re.sub(r'[*_#`\n]', ' ', q_text).replace("'", "\\'").replace('"', '\\"')
 
                     col_q1, col_q2 = st.columns([4, 1])
                     with col_q1:
-                        st.markdown(f"""
-                        <div style="background: rgba(15,23,42,0.85); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                        # Render Question Box + TTS Audio Read-Aloud inside components.html for 100% reliability
+                        components.html(f"""
+                        <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(15,23,42,0.95); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 18px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                                 <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 ACTIVE RECRUITER PROBE • TURN {t_num} OF 10</span>
                                 <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 3px 10px; border-radius: 12px; font-weight: 600;">Adaptive Gemini Follow-Up Engine</span>
                             </div>
-                            <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin: 0 0 12px 0;">{q_text}</p>
-                            <button onclick="speakQuestionText('{clean_q_speech}')" style="background: linear-gradient(135deg, {theme_accent}, {theme_sub}); color: #070919; border: none; padding: 7px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 15px {theme_accent}66; display: inline-flex; align-items: center; gap: 6px;">
+                            <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin: 0 0 14px 0;">{q_text}</p>
+                            <button id="tts_btn" onclick="playQuestionSpeech('{clean_q_speech}')" style="background: linear-gradient(135deg, {theme_accent}, {theme_sub}); color: #070919; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.85rem; font-weight: 800; cursor: pointer; box-shadow: 0 0 15px {theme_accent}66; display: inline-flex; align-items: center; gap: 6px;">
                                 🔊 Listen to Recruiter Question (Voice AI)
                             </button>
+                            <span id="tts_status" style="font-size: 0.8rem; color: #94a3b8; margin-left: 10px;"></span>
                         </div>
                         <script>
-                        function speakQuestionText(txt) {{
+                        function playQuestionSpeech(txt) {{
+                            var status = document.getElementById("tts_status");
                             if ('speechSynthesis' in window) {{
                                 window.speechSynthesis.cancel();
                                 var msg = new SpeechSynthesisUtterance(txt);
-                                msg.rate = 0.95;
+                                msg.rate = 0.92;
                                 msg.pitch = 1.0;
+                                msg.onstart = function() {{ status.innerText = "🔊 Speaking question..."; }};
+                                msg.onend = function() {{ status.innerText = ""; }};
                                 window.speechSynthesis.speak(msg);
                             }} else {{
-                                alert("Speech synthesis is not supported in this browser.");
+                                alert("Browser does not support Speech Synthesis API.");
                             }}
                         }}
                         </script>
-                        """, unsafe_allow_html=True)
+                        """, height=160)
                     with col_q2:
                         if st.button("🎲 Swap / Generate Alt Question", key="btn_swap_question", help="Skip current question and generate a new dynamic real-world scenario", use_container_width=True):
                             with st.spinner("🤖 AI Generating new dynamic probe..."):
@@ -1073,78 +1078,83 @@ def main_app_layout():
 
                 # Candidate Response Input & Voice Speech STT Microphone Panel
                 if session_data.get("status") != "COMPLETED":
-                    st.markdown("""
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 6px;">
-                        <h4 style="margin: 0; color: #f8fafc;">✍️ Provide Your Response (Type or Speak):</h4>
-                        <span style="font-size: 0.8rem; color: #34d399; font-weight: 600;">🎙️ Microphone STT Voice Dictation Enabled</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    # Web Speech Recognition Mic Widget
-                    components.html("""
-                    <div style="display: flex; align-items: center; gap: 10px; font-family: sans-serif; margin-bottom: 6px;">
-                        <button id="mic_btn" onclick="toggleDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(16,185,129,0.4);">
-                            🎙️ Click to Dictate Answer by Voice
-                        </button>
-                        <span id="dictation_status" style="font-size: 0.8rem; color: #94a3b8;">Click microphone button and speak into your mic...</span>
-                    </div>
-                    <textarea id="speech_transcript_box" style="width: 100%; height: 50px; background: rgba(15,23,42,0.9); color: #38bdf8; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; font-size: 0.85rem;" placeholder="Dictated text will appear here... Copy and paste into response box below."></textarea>
-                    <script>
-                    var recognition;
-                    var isRecognizing = false;
-                    function toggleDictation() {
-                        var btn = document.getElementById("mic_btn");
-                        var status = document.getElementById("dictation_status");
-                        var box = document.getElementById("speech_transcript_box");
-                        
-                        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                        if (!SpeechRecognition) {
-                            status.innerText = "Speech Recognition API not supported on this browser (Use Chrome or Edge).";
-                            return;
-                        }
-                        
-                        if (!isRecognizing) {
-                            recognition = new SpeechRecognition();
-                            recognition.continuous = true;
-                            recognition.interimResults = true;
-                            recognition.lang = "en-US";
-                            
-                            recognition.onstart = function() {
-                                isRecognizing = true;
-                                btn.style.background = "#ef4444";
-                                btn.innerText = "🛑 Stop Voice Recording";
-                                status.innerText = "🎙️ Listening... Speak your technical answer clearly.";
-                            };
-                            
-                            recognition.onresult = function(event) {
-                                var transcript = "";
-                                for (var i = event.resultIndex; i < event.results.length; ++i) {
-                                    transcript += event.results[i][0].transcript;
-                                }
-                                box.value = transcript;
-                            };
-                            
-                            recognition.onerror = function(event) {
-                                status.innerText = "Speech Error: " + event.error;
-                            };
-                            
-                            recognition.onend = function() {
-                                isRecognizing = false;
-                                btn.style.background = "linear-gradient(135deg, #10b981, #059669)";
-                                btn.innerText = "🎙️ Click to Dictate Answer by Voice";
-                                status.innerText = "✓ Recording stopped. Copy transcript above to response box.";
-                            };
-                            
-                            recognition.start();
-                        } else {
-                            if (recognition) recognition.stop();
-                        }
-                    }
-                    </script>
-                    """, height=130)
-                    
                     input_key = f"int_reply_box_draft_{session_data.get('id')}_{cur_turn}"
-                    draft_input = st.text_area("Your Response Text:", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=120, key=input_key)
+
+                    # Microphone Speech Dictation Toolbar (Dictates Live directly into Single Streamlit Text Area)
+                    components.html(f"""
+                    <div style="font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: space-between; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.08); padding: 8px 14px; border-radius: 10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <button id="stt_mic_btn" onclick="startMicDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 7px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 12px rgba(16,185,129,0.3); display: flex; align-items: center; gap: 6px;">
+                                🎙️ Dictate Answer by Voice (Live Mic)
+                            </button>
+                            <span id="stt_mic_status" style="font-size: 0.8rem; color: #34d399; font-weight: 600;">Click mic button & speak out loud...</span>
+                        </div>
+                        <span style="font-size: 0.78rem; color: #94a3b8;">Spoken words type live into the response box below!</span>
+                    </div>
+                    <script>
+                    var dictationRec;
+                    var isDictating = false;
+                    function startMicDictation() {{
+                        var btn = document.getElementById("stt_mic_btn");
+                        var status = document.getElementById("stt_mic_status");
+                        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        
+                        if (!SpeechRecognition) {{
+                            status.innerText = "⚠️ Speech Recognition API requires Chrome / Edge browser.";
+                            return;
+                        }}
+                        
+                        if (!isDictating) {{
+                            dictationRec = new SpeechRecognition();
+                            dictationRec.continuous = true;
+                            dictationRec.interimResults = true;
+                            dictationRec.lang = "en-US";
+                            
+                            dictationRec.onstart = function() {{
+                                isDictating = true;
+                                btn.style.background = "#ef4444";
+                                btn.innerText = "🛑 Stop Voice Dictation";
+                                status.innerText = "🔴 Listening... Speak clearly into your mic.";
+                            }};
+                            
+                            dictationRec.onresult = function(event) {{
+                                var transcript = "";
+                                for (var i = event.resultIndex; i < event.results.length; ++i) {{
+                                    transcript += event.results[i][0].transcript;
+                                }}
+                                try {{
+                                    var parentAreas = window.parent.document.querySelectorAll("textarea");
+                                    if (parentAreas && parentAreas.length > 0) {{
+                                        var targetArea = parentAreas[parentAreas.length - 1];
+                                        targetArea.value = transcript;
+                                        targetArea.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                        targetArea.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                                    }}
+                                }} catch(e) {{
+                                    status.innerText = "Transcribing: " + transcript;
+                                }}
+                            }};
+                            
+                            dictationRec.onerror = function(ev) {{
+                                status.innerText = "Mic Error: " + ev.error;
+                            }};
+                            
+                            dictationRec.onend = function() {{
+                                isDictating = false;
+                                btn.style.background = "linear-gradient(135deg, #10b981, #059669)";
+                                btn.innerText = "🎙️ Dictate Answer by Voice (Live Mic)";
+                                status.innerText = "✓ Dictation saved in response box below.";
+                            }};
+                            
+                            dictationRec.start();
+                        }} else {{
+                            if (dictationRec) dictationRec.stop();
+                        }}
+                    }}
+                    </script>
+                    """, height=65)
+                    
+                    draft_input = st.text_area("✍️ Your Technical Response (Single Box for Type & Voice):", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=130, key=input_key)
                     
                     col_ref1, col_ref2 = st.columns([1, 1])
                     with col_ref1:
