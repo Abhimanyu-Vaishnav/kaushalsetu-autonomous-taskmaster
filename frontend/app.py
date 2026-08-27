@@ -817,7 +817,8 @@ def main_app_layout():
                     job_loc_filter = st.selectbox("📍 Region / Location", options=["Delhi NCR", "Nangloi / West Delhi", "All India", "Hybrid / Remote"], key="job_loc_sel")
                 with f_col3:
                     if st.button("🔄 Rescan Live Feed", type="secondary", use_container_width=True, key="btn_rescan_jobs"):
-                        st.toast("⚡ Refreshed active vacancies against candidate profile!", icon="🔄")
+                        st.session_state["force_live_rescan"] = True
+                        st.toast("🔍 Executing real-time live internet crawl across Google Jobs, LinkedIn, Naukri & NCS...", icon="🌐")
                         st.session_state.job_page = 1
                         st.rerun()
                 with f_col4:
@@ -829,13 +830,15 @@ def main_app_layout():
                         else:
                             st.error(res_auto.get("message"))
 
-                # Fetch Live Paginated Jobs
+                # Fetch Live Paginated Jobs with real-time web crawler
+                is_force_rescan = st.session_state.pop("force_live_rescan", False)
                 job_results = direct_search_live_jobs(
                     student_id=s_id,
                     location=job_loc_filter,
                     query=job_search_query,
                     page=st.session_state.job_page,
-                    page_size=4
+                    page_size=4,
+                    force_rescan=is_force_rescan
                 )
                 jobs_list = job_results.get("jobs", [])
                 total_pages = job_results.get("total_pages", 1)
