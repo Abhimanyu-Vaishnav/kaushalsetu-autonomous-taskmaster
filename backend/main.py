@@ -2131,12 +2131,32 @@ def direct_delete_student(s_id: str):
         return {"status": "error", "message": str(e)}
 
 # --- PART 2: CONVERSATIONAL AI INTERVIEW SESSION ENGINE ---
-def start_or_get_interview_session(student_id: str, job_role: str):
-    """Initializes or retrieves an ongoing conversational mock interview session."""
+def start_or_get_interview_session(student_id: str, job_role: str = ""):
+    """Initializes or retrieves a domain-tailored conversational mock interview session."""
     try:
         conn = get_db()
         c = conn.cursor()
         sid = str(student_id or "").strip()
+        
+        # Retrieve Candidate Profile Data for Domain Intelligence
+        c.execute("SELECT * FROM students WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (sid, sid))
+        s_row = c.fetchone()
+        candidate = dict(s_row) if s_row else {}
+        track = candidate.get("track") or candidate.get("course_name") or "Vocational Specialist"
+        
+        if not job_role or job_role == "Auto-Detect":
+            track_lower = track.lower()
+            if any(w in track_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
+                job_role = "Senior Tally & GST Accountant"
+            elif any(w in track_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
+                job_role = "Full Stack Cloud & API Engineer"
+            elif any(w in track_lower for w in ["solar", "renew", "green"]):
+                job_role = "Solar SCADA & Inverter Telemetry Engineer"
+            elif any(w in track_lower for w in ["electric", "ev", "battery"]):
+                job_role = "EV Battery Systems & ECU Diagnostic Specialist"
+            else:
+                job_role = "Industrial Automation & Mechatronics Engineer"
+
         c.execute("""
             SELECT * FROM interview_sessions 
             WHERE UPPER(student_id) = UPPER(?) AND job_role = ? AND status = 'IN_PROGRESS'
@@ -2153,10 +2173,22 @@ def start_or_get_interview_session(student_id: str, job_role: str):
             conn.close()
             return session
 
-        # New session initialization
+        # New session initialization with domain-accurate Question 1
         sess_id = f"INT-{uuid.uuid4().hex[:6].upper()}"
-        first_question = f"Welcome! We are evaluating your profile for the **{job_role}** position. To start, could you walk me through your practical capstone architecture and how you ensured real-time reliability?"
-        history = [{"role": "interviewer", "question": first_question, "turn": 1}]
+        track_lower = (track + " " + job_role).lower()
+        
+        if any(w in track_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
+            first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through how you record GSTR-3B monthly returns in Tally Prime, reconcile Input Tax Credit (ITC) with GSTR-2B, and handle any ledger discrepancies."
+        elif any(w in track_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
+            first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through your backend REST API architecture, how you handle database connection pooling, and your approach to JWT authentication middleware."
+        elif any(w in track_lower for w in ["solar", "renew", "green"]):
+            first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, explain how you monitor MPPT inverter efficiency curves, log RS-485 Modbus telemetry, and isolate string voltage drops."
+        elif any(w in track_lower for w in ["electric", "ev", "battery"]):
+            first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through BMS cell balancing algorithms, CAN-Bus 2.0B frame parsing, and how you diagnose high-voltage isolation faults."
+        else:
+            first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through your practical PLC ladder logic setup, sensor calibration workflow, and how you ensured real-time telemetry stability."
+
+        history = [{"role": "interviewer", "question": first_q, "turn": 1}]
 
         c.execute("""
             INSERT INTO interview_sessions (id, student_id, job_role, current_turn, conversation_history, status)
@@ -2169,7 +2201,7 @@ def start_or_get_interview_session(student_id: str, job_role: str):
         return {"id": f"INT-ERR", "student_id": student_id, "job_role": job_role, "current_turn": 1, "conversation_history": [{"role": "interviewer", "question": f"Welcome! Walk me through your experience for {job_role}.", "turn": 1}], "status": "IN_PROGRESS"}
 
 def evaluate_interview_turn(session_id: str, student_answer: str):
-    """Evaluates the candidate's response, gives turn marks (out of 10), and produces next targeted question."""
+    """Evaluates candidate response using domain AI criteria and generates next targeted question."""
     try:
         conn = get_db()
         c = conn.cursor()
@@ -2186,47 +2218,104 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
             history = []
         turn = session.get("current_turn", 1)
         job_role = session.get("job_role", "Engineering Specialist")
+        role_lower = job_role.lower()
 
-        ans_len = len(student_answer.strip())
-        # Dynamic Scoring & Intelligent Feedback
-        if ans_len > 120:
-            turn_score = random.randint(8, 10)
-            feedback = "Strong answer with technical depth and practical architectural clarity."
-        elif ans_len > 40:
-            turn_score = random.randint(6, 8)
-            feedback = "Good foundation, but consider citing specific error handling protocols or hardware safety margins."
+        ans_clean = str(student_answer or "").strip()
+        ans_words = ans_clean.split()
+        ans_len = len(ans_words)
+        
+        # Domain Keyword Match Evaluator
+        if any(w in role_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
+            keywords = ["tally", "gst", "gstr", "itc", "tds", "brs", "ledger", "reconciliation", "journal", "trial balance", "invoice", "debit", "credit", "accrual", "tax"]
+            ideal_model = "I open Tally Prime Voucher Entry (F5/F8), verify invoice line items, calculate CGST/SGST/IGST breakdown, cross-check vendor ITC on the GST portal against GSTR-2B, and post adjustment journals for any un-reconciled amounts."
+        elif any(w in role_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
+            keywords = ["python", "fastapi", "react", "api", "rest", "async", "database", "sql", "docker", "endpoint", "middleware", "jwt", "state", "hook", "json"]
+            ideal_model = "I construct asynchronous Pydantic request models in FastAPI, implement dependency injection for database session management, use JWT bearer auth middleware, and handle frontend state using React useEffect hooks."
+        elif any(w in role_lower for w in ["solar", "renew"]):
+            keywords = ["solar", "mppt", "inverter", "scada", "telemetry", "grid", "voltage", "string", "power", "modbus", "rs485", "transformer"]
+            ideal_model = "I verify MPPT tracker duty cycle, inspect RS-485 Modbus serial registers, check string voltage balance under full irradiance, and log telemetry packets to the SCADA gateway."
+        elif any(w in role_lower for w in ["electric", "ev", "battery"]):
+            keywords = ["bms", "can-bus", "battery", "cell", "voltage", "ecu", "soc", "thermal", "hvil", "isolation", "harness", "fault"]
+            ideal_model = "I connect a CAN-Bus logger to capture 0x18FF ECU frames, measure pack isolation resistance (>500 ohms/volt), verify active passive cell balancing, and monitor thermal sensor thermistors."
         else:
-            turn_score = random.randint(4, 5)
-            feedback = "Answer is too brief. In technical rounds, articulate your methodology and design trade-offs."
+            keywords = ["plc", "modbus", "ladder", "sensor", "telemetry", "relay", "actuator", "oscilloscope", "calibration", "circuit", "isolation", "safety"]
+            ideal_model = "I inspect PLC I/O status LEDs, check 24V DC loop power continuity, verify sensor signal noise on an oscilloscope, and re-tune PID loop proportional gain."
 
-        # Record candidate answer & evaluation
+        matched_kws = [kw for kw in keywords if kw in ans_clean.lower()]
+        
+        # Multi-Criteria Scoring Algorithm
+        if ans_len >= 25 and len(matched_kws) >= 3:
+            turn_score = 9 if ans_len < 45 else 10
+            feedback = f"🌟 Excellent response! You demonstrated strong technical domain knowledge, using key industry concepts ({', '.join([k.upper() for k in matched_kws[:4]])})."
+            improvements = ["Maintain your structured explanation style", "Mention specific industry compliance baselines"]
+        elif ans_len >= 12 or len(matched_kws) >= 2:
+            turn_score = 7
+            feedback = f"👍 Solid answer covering core principles ({', '.join([k.upper() for k in matched_kws[:2]]) if matched_kws else 'good logic'}). Elaborate slightly more on step-by-step troubleshooting."
+            improvements = ["Include more domain-specific technical terms", "Detail your error mitigation steps"]
+        else:
+            turn_score = 4
+            feedback = "⚠️ Answer is too brief. In technical interviews, articulate your complete methodology, safety protocols, and step-by-step reasoning."
+            improvements = ["Provide a detailed multi-step explanation", "Use domain terminology to demonstrate hands-on experience"]
+
+        turn_score = min(10, max(3, turn_score))
+
+        # Update last question entry in history
         if history:
             history[-1]["candidate_answer"] = student_answer
             history[-1]["score"] = turn_score
             history[-1]["feedback"] = feedback
+            history[-1]["model_answer"] = ideal_model
+            history[-1]["matched_terms"] = matched_kws
+            history[-1]["improvements"] = improvements
 
-        # Check if interview is completed (4 rounds total)
+        # Check if interview complete (4 rounds total)
         if turn >= 4:
-            total_scores = [h.get("score", 7) for h in history if "score" in h]
-            avg_score = round((sum(total_scores) / max(len(total_scores), 1)) * 10, 1)
-            summary = f"Candidate demonstrated strong core mastery in {job_role}. Practical diagnostic reflexes are solid (Overall Rating: {avg_score}%)."
+            scores = [h.get("score", 7) for h in history if "score" in h]
+            avg_rating = round((sum(scores) / max(len(scores), 1)) * 10, 1)
+            summary = f"Candidate demonstrated outstanding domain competency for {job_role}. Technical vocabulary, diagnostic logic, and practical reflexes scored an aggregate {avg_rating}%."
             
             c.execute("""
                 UPDATE interview_sessions 
                 SET conversation_history = ?, current_turn = ?, overall_score = ?, feedback_summary = ?, status = 'COMPLETED'
                 WHERE id = ?
-            """, (json.dumps(history), turn, avg_score, summary, session_id))
+            """, (json.dumps(history), turn, avg_rating, summary, session_id))
             conn.commit()
             conn.close()
-            return {"status": "completed", "overall_score": avg_score, "summary": summary, "history": history}
+            return {"status": "completed", "overall_score": avg_rating, "summary": summary, "history": history}
 
-        # Next Question Synthesis
+        # Next Question Domain-Tailored Synthesis
         next_turn = turn + 1
-        questions_pool = [
-            f"When diagnosing an intermittent fault in {job_role} deployments, what systematic isolation steps do you prioritize?",
-            f"How do you handle unexpected telemetry buffer overruns or data packet drops under high-throughput conditions?",
-            f"Can you describe a scenario where you had to debug a failing sensor/circuit under strict production uptime constraints?"
-        ]
+        if any(w in role_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
+            questions_pool = [
+                f"Suppose during a month-end ledger audit in {job_role}, you find a ₹50,000 trial balance mismatch between Cash Book and Passbook. What systematic Bank Reconciliation (BRS) steps do you follow to locate the discrepancy?",
+                f"How do you handle TDS deduction under Section 194J vs 194C, and what process do you follow when a vendor submits a lower-deduction certificate?",
+                f"Imagine a senior manager asks you to expedite a financial report under tight deadlines while tax reconciliation is incomplete. How do you balance speed with 100% GAAP compliance?"
+            ]
+        elif any(w in role_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
+            questions_pool = [
+                f"Suppose your production API in {job_role} experiences sudden high-latency spikes during peak traffic. How do you profile slow database queries and implement caching or indexing?",
+                f"How do you handle JWT token expiration, refresh token rotations, and CORS security headers across microservices?",
+                f"Describe a scenario where a production deployment broke on Docker containers due to environment mismatches. How did you diagnose and resolve it?"
+            ]
+        elif any(w in role_lower for w in ["solar", "renew"]):
+            questions_pool = [
+                f"During a solar plant inspection in {job_role}, the SCADA telemetry reports a sudden 20% drop in inverter MPPT efficiency under full sunlight. How do you isolate string faults?",
+                f"What anti-islanding safety protocols and grid-tie synchronization checks must be verified before re-connecting an inverter node to the main grid?",
+                f"How do you handle RS-485 Modbus serial communication noise over long cable runs in high-voltage sub-stations?"
+            ]
+        elif any(w in role_lower for w in ["electric", "ev", "battery"]):
+            questions_pool = [
+                f"If an EV battery pack in {job_role} reports a high cell-voltage delta (>150mV) during rapid charging, how do you diagnose if it's a BMS thermistor error or a cell degradation fault?",
+                f"What High-Voltage Interlock Loop (HVIL) safety steps do you follow before touching 400V DC powertrain components?",
+                f"How do you configure CAN-Bus frame filtering to prevent bus saturation when telemetry packets exceed 500 kbps?"
+            ]
+        else:
+            questions_pool = [
+                f"When diagnosing an intermittent PLC input voltage drop across a 24V industrial sensor line in {job_role}, what systematic isolation steps do you prioritize?",
+                f"How do you handle telemetry buffer overruns or Modbus CRC checksum failures under high-speed manufacturing conditions?",
+                f"Describe how you balance emergency shop-floor maintenance under tight production deadlines while strictly adhering to electrical safety lockouts."
+            ]
+
         next_q = questions_pool[(next_turn - 2) % len(questions_pool)]
         history.append({"role": "interviewer", "question": next_q, "turn": next_turn})
 
