@@ -2458,12 +2458,50 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         </div>
         """ for r in research])
 
+        # LinkedIn & Social Credentials Badge
+        linkedin_badge_html = ""
+        if linkedin:
+            li_username = linkedin.split("in/")[-1].strip("/") if "in/" in linkedin else linkedin
+            linkedin_badge_html = f"""
+            <div style="background: rgba(0, 119, 181, 0.12); border: 1px solid rgba(0, 119, 181, 0.3); padding: 14px 18px; border-radius: 12px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.4rem;">💼</span>
+                    <div>
+                        <b style="color: #38bdf8; font-size: 0.92rem;">Verified LinkedIn Candidate Credential</b>
+                        <br><span style="font-size: 0.8rem; color: #94a3b8;">Profile: linkedin.com/in/{li_username}</span>
+                    </div>
+                </div>
+                <a href="{linkedin}" target="_blank" style="background: #0077b5; color: #ffffff; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 700;">View Profile ↗</a>
+            </div>
+            """
+
+        # Resume Experience Timeline Section
+        experience_html = ""
+        if resume:
+            exp_lines = [line.strip("- •* ") for line in resume.split("\n") if line.strip() and len(line.strip()) > 10][:5]
+            if exp_lines:
+                exp_cards = "".join([f"""
+                <div style="position: relative; padding-left: 24px; margin-bottom: 16px; border-left: 2px solid {accent_color};">
+                    <div style="position: absolute; left: -7px; top: 0; width: 12px; height: 12px; border-radius: 50%; background: {accent_color}; box-shadow: 0 0 8px {accent_color};"></div>
+                    <b style="color: #f8fafc; font-size: 0.9rem;">{item}</b>
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin: 4px 0 0 0;">Verified Practical Execution Record</p>
+                </div>
+                """ for item in exp_lines])
+                experience_html = f"""
+                <div style="margin-top: 28px; text-align: left;">
+                    <h3 style="color: #f8fafc; font-size: 1.15rem; border-left: 4px solid {secondary_color}; padding-left: 10px; margin-bottom: 15px;">💼 Work Experience & Practical Highlights</h3>
+                    <div style="background: rgba(255,255,255,0.02); padding: 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                        {exp_cards}
+                    </div>
+                </div>
+                """
+
         portfolio_html = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8">
-            <title>{name} - World-Class Certified Portfolio & Dossier</title>
+            <title>{name} - Certified Recruiter-Ready AI Portfolio</title>
             <style>
                 @keyframes pulseGlow {{
                     0% {{ box-shadow: 0 0 20px {accent_color}33; }}
@@ -2477,6 +2515,13 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                     h1, h3, b {{ color: #000000 !important; }}
                 }}
             </style>
+            <script>
+                function copyShareLink() {{
+                    const link = window.location.origin + "/?page=portfolio&sid={sid}";
+                    navigator.clipboard.writeText(link);
+                    alert("📋 Recruiter Verification Link Copied to Clipboard!\\n" + link);
+                }}
+            </script>
         </head>
         <body style="margin: 0; padding: 24px; background: #030712; font-family: 'Segoe UI', system-ui, sans-serif;">
             <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; max-width: 950px; margin: 0 auto 15px auto; flex-wrap: wrap; gap: 10px;">
@@ -2484,8 +2529,9 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                     👤 Candidate ID: <code style="color: {secondary_color};">{sid}</code> | Verified Node: <b style="color: #ffffff;">{center}</b>
                 </div>
                 <div style="display: flex; gap: 10px;">
+                    <button onclick="copyShareLink()" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">📋 Copy Recruiter Link</button>
                     <a href="mailto:{email}" style="background: rgba(255,255,255,0.08); color: #ffffff; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.15);">📧 Direct Contact</a>
-                    <button onclick="window.print()" style="background: {accent_color}; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px {accent_color}44;">🖨️ Save / Export PDF CV</button>
+                    <button onclick="window.print()" style="background: {accent_color}; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px {accent_color}44;">🖨️ Export PDF CV</button>
                 </div>
             </div>
 
@@ -2501,6 +2547,7 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                         <p style="margin: 6px 0 10px 0; color: {accent_color}; font-weight: 700; font-size: 1.1rem;">{track}</p>
                         <p style="margin: 0 0 12px 0; color: #cbd5e1; font-size: 0.92rem; line-height: 1.5;">{bio_summary}</p>
                         {socials_html}
+                        {linkedin_badge_html}
                     </div>
                 </div>
 
@@ -2519,6 +2566,8 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                         {chart_svg}
                     </div>
                 </div>
+
+                {experience_html}
 
                 <!-- DETAILED COURSE MODULES BREAKDOWN -->
                 <div style="margin-top: 28px; text-align: left;">
