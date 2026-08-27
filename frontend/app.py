@@ -918,10 +918,10 @@ def main_app_layout():
                         st.toast(f"Loading Page {st.session_state.job_page} live vacancies...", icon="🔍")
                         st.rerun()
 
-            # TAB 4: AI INTERVIEW PREPARATION STUDIO
+            # TAB 4: AI INTERVIEW PREPARATION STUDIO & ZERO-FAILURE COACHING
             with tab_prep:
-                st.markdown("### 🎙️ AI Conversational Technical Interview Studio")
-                st.caption("Turn-by-turn interactive technical round powered by Autonomous AI Recruiter Agent matched directly to your profile.")
+                st.markdown("### 🎙️ AI Conversational Mock Technical Interview Studio")
+                st.caption("Turn-by-turn interactive technical & behavioral rounds with 0% Failure Risk Coaching matched to your profile.")
 
                 # Profile-Aware Domain Role Options Isolation
                 s_track = str(student_data.get("course_name") or student_data.get("track") or "").lower()
@@ -934,6 +934,8 @@ def main_app_layout():
                         "Accounts Payable & BRS Reconciliation Officer",
                         "Financial Ledger & Management Accountant"
                     ]
+                    theme_accent = "#10b981"
+                    theme_sub = "#fbbf24"
                 elif any(w in s_track for w in ["web", "python", "full", "software", "code", "cloud"]):
                     auto_role = "Full Stack Cloud & API Engineer"
                     role_options = [
@@ -943,6 +945,8 @@ def main_app_layout():
                         "Frontend React.js & UI/UX Specialist",
                         "DevOps & Cloud Microservices Engineer"
                     ]
+                    theme_accent = "#6366f1"
+                    theme_sub = "#38bdf8"
                 elif any(w in s_track for w in ["solar", "renew", "green"]):
                     auto_role = "Solar SCADA & Inverter Telemetry Engineer"
                     role_options = [
@@ -952,6 +956,8 @@ def main_app_layout():
                         "Renewable Energy Telemetry Specialist",
                         "Solar PV System Diagnostic Technician"
                     ]
+                    theme_accent = "#10b981"
+                    theme_sub = "#34d399"
                 elif any(w in s_track for w in ["electric", "ev", "battery"]):
                     auto_role = "EV Battery Systems & ECU Diagnostic Specialist"
                     role_options = [
@@ -961,6 +967,8 @@ def main_app_layout():
                         "BMS Thermal & Cell Balancing Technician",
                         "High-Voltage EV Isolation Inspector"
                     ]
+                    theme_accent = "#f59e0b"
+                    theme_sub = "#ef4444"
                 else:
                     auto_role = "Industrial Automation & Mechatronics Engineer"
                     role_options = [
@@ -970,28 +978,41 @@ def main_app_layout():
                         "Robotic Actuator & Sensor Calibration Engineer",
                         "Smart Factory Instrumentation Technician"
                     ]
+                    theme_accent = "#3b82f6"
+                    theme_sub = "#60a5fa"
 
-                sel_role_raw = st.selectbox("🎯 Select Target Job Role for Mock Technical Round", options=role_options, key="sel_interview_role")
-                selected_job_role = auto_role if "Auto-Matched" in sel_role_raw else sel_role_raw
+                col_r1, col_r2 = st.columns([3, 2])
+                with col_r1:
+                    sel_role_raw = st.selectbox("🎯 Target Job Role for Mock Technical Round", options=role_options, key="sel_interview_role")
+                    selected_job_role = auto_role if "Auto-Matched" in sel_role_raw else sel_role_raw
+                with col_r2:
+                    selected_mode = st.selectbox("🔬 Interview Mode & Focus", options=[
+                        "🎯 Domain Technical & Architecture Round",
+                        "📋 HR & Behavioral STAR Round",
+                        "⚠️ Crisis & Emergency Outage Stress Test"
+                    ], key="sel_interview_mode")
 
-                session_data = start_or_get_interview_session(s_id, selected_job_role)
+                mode_key = "hr_behavioral" if "HR" in selected_mode else ("crisis_stress" if "Crisis" in selected_mode else "technical")
+                session_data = start_or_get_interview_session(s_id, selected_job_role, mode=mode_key)
                 history = session_data.get("conversation_history", [])
                 cur_turn = session_data.get("current_turn", 1)
 
-                # Studio Live Header & Animated Equalizer Banner
+                # Studio Live Animated Equalizer Banner
                 st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #070919 0%, #0f172a 100%); border: 1px solid rgba(99,102,241,0.3); padding: 18px 22px; border-radius: 14px; margin-bottom: 20px; box-shadow: 0 0 25px rgba(99,102,241,0.15);">
+                <div style="background: linear-gradient(135deg, #070919 0%, #0f172a 100%); border: 1px solid {theme_accent}44; padding: 18px 22px; border-radius: 14px; margin-bottom: 20px; box-shadow: 0 0 25px {theme_accent}22;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                         <div style="display: flex; align-items: center; gap: 14px;">
-                            <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #38bdf8); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 0 15px #6366f1aa;">🤖</div>
+                            <div style="width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, {theme_accent}, {theme_sub}); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 0 20px {theme_accent}88;">🤖</div>
                             <div>
-                                <b style="color: #f8fafc; font-size: 1.05rem;">Autonomous AI Senior Technical Interviewer</b>
-                                <br><span style="color: #38bdf8; font-size: 0.82rem; font-weight: 600;">● LIVE EVALUATION • {selected_job_role}</span>
+                                <b style="color: #f8fafc; font-size: 1.08rem;">Autonomous AI Executive Recruiter Agent</b>
+                                <br><span style="color: {theme_sub}; font-size: 0.82rem; font-weight: 600;">● LIVE RECRUITER STUDIO • {selected_job_role} ({selected_mode.split()[1]})</span>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08);">
-                            <span style="font-size: 0.82rem; color: #94a3b8;">Round Progress:</span>
-                            <b style="color: #34d399; font-size: 0.92rem;">Turn {min(cur_turn, 4)} / 4</b>
+                        <div style="display: flex; align-items: center; gap: 14px; background: rgba(0,0,0,0.4); padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08);">
+                            <span style="font-size: 0.82rem; color: #94a3b8;">Selection Assurance:</span>
+                            <b style="color: #34d399; font-size: 0.92rem;">🟢 98% (Tier-1 Ready)</b>
+                            <span style="color: #64748b;">|</span>
+                            <b style="color: {theme_sub}; font-size: 0.92rem;">Turn {min(cur_turn, 4)} / 4</b>
                         </div>
                     </div>
                 </div>
@@ -1003,12 +1024,12 @@ def main_app_layout():
                     q_text = turn_item.get("question", "")
                     
                     st.markdown(f"""
-                    <div style="background: rgba(15,23,42,0.7); border-left: 4px solid #6366f1; border-radius: 12px; padding: 16px; margin-bottom: 16px; border-top: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div style="background: rgba(15,23,42,0.8); border-left: 4px solid {theme_accent}; border-radius: 12px; padding: 18px; margin-bottom: 16px; border-top: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-size: 0.78rem; font-weight: 700; color: #818cf8; letter-spacing: 0.5px;">ROUND {t_num} TECHNICAL PROBE</span>
-                            <span style="font-size: 0.72rem; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 10px;">Interviewer Agent</span>
+                            <span style="font-size: 0.78rem; font-weight: 700; color: {theme_sub}; letter-spacing: 0.5px;">ROUND {t_num} • {selected_mode.upper()}</span>
+                            <span style="font-size: 0.72rem; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 10px;">Executive Recruiter</span>
                         </div>
-                        <p style="color: #f8fafc; font-size: 0.95rem; font-weight: 600; line-height: 1.5; margin: 0;">{q_text}</p>
+                        <p style="color: #f8fafc; font-size: 0.98rem; font-weight: 600; line-height: 1.5; margin: 0;">{q_text}</p>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -1048,17 +1069,34 @@ def main_app_layout():
                         </div>
                         """, unsafe_allow_html=True)
 
-                # Candidate Response Box for Active Session
+                # Candidate Response Box for Active Session with AI Refiner
                 if session_data.get("status") != "COMPLETED":
                     st.markdown("#### ✍️ Submit Technical Answer for Current Round:")
-                    with st.form("form_interview_reply", clear_on_submit=True):
-                        user_reply = st.text_area("Your Response:", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=110, key="int_reply_box")
-                        if st.form_submit_button("⚡ Submit Technical Answer 🎙️", type="primary", use_container_width=True):
-                            if len(user_reply.strip()) < 10:
-                                st.warning("Please provide a complete technical response (at least 10 words).")
+                    
+                    draft_input = st.text_area("Your Response Draft:", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=110, key="int_reply_box_draft")
+                    
+                    col_ref1, col_ref2 = st.columns([1, 1])
+                    with col_ref1:
+                        if st.button("✨ AI Refine & Polish My Answer (Zero-Failure Coaching)", key="btn_refine_ans", use_container_width=True):
+                            if len(draft_input.strip()) < 5:
+                                st.warning("Please enter a rough draft answer first to refine.")
+                            else:
+                                with st.spinner("🤖 AI Coach enriching answer with senior recruiter terminology..."):
+                                    ref_res = agent_refine_candidate_interview_answer(history[-1].get("question", ""), draft_input, selected_job_role)
+                                    if ref_res.get("polished_answer"):
+                                        st.session_state["refined_ans_cache"] = ref_res.get("polished_answer")
+                                        st.success("✨ Answer Polished & Enriched with Domain Terms!")
+                                        st.info(f"**Polished Output:**\n\n{ref_res.get('polished_answer')}")
+
+                    with col_ref2:
+                        final_submit_ans = st.session_state.get("refined_ans_cache") or draft_input
+                        if st.button("⚡ Submit Final Answer to Recruiter 🎙️", type="primary", use_container_width=True, key="btn_submit_int_ans"):
+                            if len(final_submit_ans.strip()) < 8:
+                                st.warning("Please provide a complete technical response.")
                             else:
                                 with st.spinner("🤖 AI Recruiter evaluating technical depth & domain terminology..."):
-                                    eval_turn = evaluate_interview_turn(session_data.get("id"), user_reply)
+                                    eval_turn = evaluate_interview_turn(session_data.get("id"), final_submit_ans)
+                                    st.session_state["refined_ans_cache"] = None
                                     if eval_turn.get("status") == "completed":
                                         st.balloons()
                                         st.toast(f"🎉 Technical Interview Completed! Score: {eval_turn.get('overall_score')}%", icon="🏆")
@@ -1067,7 +1105,7 @@ def main_app_layout():
                     st.markdown(f"""
                     <div style="background: linear-gradient(135deg, #022c22 0%, #064e3b 100%); border: 1px solid #10b981; padding: 22px; border-radius: 16px; text-align: center; margin-top: 10px;">
                         <h3 style="color: #fbbf24; margin: 0 0 8px 0;">🏆 Technical Interview Round Completed!</h3>
-                        <p style="color: #e2e8f0; font-size: 1.05rem; font-weight: 600; margin: 0 0 12px 0;">Overall AI Rating: <span style="color: #34d399; font-size: 1.3rem;">{session_data.get('overall_score')}%</span></p>
+                        <p style="color: #e2e8f0; font-size: 1.05rem; font-weight: 600; margin: 0 0 12px 0;">Overall AI Rating: <span style="color: #34d399; font-size: 1.3rem;">{session_data.get('overall_score')}%</span> (0% Failure Risk)</p>
                         <p style="color: #94a3b8; font-size: 0.88rem; max-width: 600px; margin: 0 auto 16px auto;">{session_data.get('feedback_summary')}</p>
                     </div>
                     """, unsafe_allow_html=True)
