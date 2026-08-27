@@ -2511,8 +2511,8 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
             history[-1]["matched_terms"] = matched_kws
             history[-1]["improvements"] = improvements
 
-        # Check if interview complete (4 rounds total)
-        if turn >= 4:
+        # Check if interview complete (10 rounds total)
+        if turn >= 10:
             scores = [h.get("score", 7) for h in history if "score" in h]
             avg_rating = round((sum(scores) / max(len(scores), 1)) * 10, 1)
             
@@ -2522,7 +2522,7 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
             unique_matched = list(set(all_matched))
             
             strengths = [f"Strong command of core domain terminology ({', '.join([k.upper() for k in unique_matched[:4]])})"] if unique_matched else ["Structured logical reasoning"]
-            strengths.append("High practical problem-solving confidence")
+            strengths.append("High practical problem-solving confidence across 10 rounds")
 
             gaps = []
             if avg_rating < 70:
@@ -2550,21 +2550,26 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
             conn.close()
             return {"status": "completed", "overall_score": avg_rating, "report": summary_report, "history": history}
 
-        # Next Question Adaptive Follow-up Synthesis (Probing Candidate's Last Answer)
+        # Next Question Adaptive Follow-up Synthesis (Probing Candidate's Resume, Study, & Last Answer)
         next_turn = turn + 1
         next_q = ""
         
         gemini_key = os.environ.get("GEMINI_API_KEY")
-        if gemini_key and len(ans_clean) > 10:
+        if gemini_key:
             try:
                 from google import genai
                 client = genai.Client(api_key=gemini_key)
                 prompt = f"""
-                You are an expert Senior Technical Recruiter interviewing a candidate for '{job_role}'.
-                Previous Question: '{last_q}'
+                You are a Senior Corporate Executive Recruiter conducting Round '{session.get('job_role')}' (Mode: {history[0].get('mode', 'technical')}).
+                Question #{turn}: '{last_q}'
                 Candidate Answered: '{ans_clean}'
+                Total Turns Completed: {turn} of 10.
 
-                Ask the NEXT realistic technical follow-up question (Turn {next_turn}) that directly probes deeper into what the candidate just said in their answer. Keep it crisp, practical, and highly realistic.
+                Formulate Question #{next_turn} of 10 for this interview.
+                Requirements:
+                1. Must strictly align with interview mode '{history[0].get('mode', 'technical')}'.
+                2. Must directly probe deeper into the candidate's last answer and check practical execution.
+                3. Keep it crisp, realistic, and domain-authentic.
                 Return JSON: {{"next_question": "text"}}
                 """
                 resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)

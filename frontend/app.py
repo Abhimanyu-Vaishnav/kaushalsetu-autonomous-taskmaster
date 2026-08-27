@@ -1016,28 +1016,45 @@ def main_app_layout():
                             <span style="font-size: 0.82rem; color: #94a3b8;">Selection Readiness:</span>
                             <b style="color: #34d399; font-size: 0.92rem;">🟢 98% (Tier-1 Corporate Ready)</b>
                             <span style="color: #64748b;">|</span>
-                            <b style="color: {theme_sub}; font-size: 0.92rem;">Turn {min(cur_turn, 4)} / 4</b>
+                            <b style="color: {theme_sub}; font-size: 0.92rem;">Turn {min(cur_turn, 10)} / 10</b>
                         </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Active Question Display (Current Step Focus)
+                # Active Question Display (Current Step Focus with Speech TTS Audio Player)
                 if history:
                     active_item = history[-1]
                     t_num = active_item.get("turn", cur_turn)
                     q_text = active_item.get("question", "")
+                    clean_q_speech = re.sub(r'[*_#`\n]', ' ', q_text).replace('"', '\\"')
 
                     col_q1, col_q2 = st.columns([4, 1])
                     with col_q1:
                         st.markdown(f"""
                         <div style="background: rgba(15,23,42,0.85); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 ACTIVE RECRUITER PROBE • TURN {t_num} OF 4</span>
+                                <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 ACTIVE RECRUITER PROBE • TURN {t_num} OF 10</span>
                                 <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 3px 10px; border-radius: 12px; font-weight: 600;">Adaptive Gemini Follow-Up Engine</span>
                             </div>
-                            <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin: 0;">{q_text}</p>
+                            <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin: 0 0 12px 0;">{q_text}</p>
+                            <button onclick="speakQuestionText('{clean_q_speech}')" style="background: linear-gradient(135deg, {theme_accent}, {theme_sub}); color: #070919; border: none; padding: 7px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 15px {theme_accent}66; display: inline-flex; align-items: center; gap: 6px;">
+                                🔊 Listen to Recruiter Question (Voice AI)
+                            </button>
                         </div>
+                        <script>
+                        function speakQuestionText(txt) {{
+                            if ('speechSynthesis' in window) {{
+                                window.speechSynthesis.cancel();
+                                var msg = new SpeechSynthesisUtterance(txt);
+                                msg.rate = 0.95;
+                                msg.pitch = 1.0;
+                                window.speechSynthesis.speak(msg);
+                            }} else {{
+                                alert("Speech synthesis is not supported in this browser.");
+                            }}
+                        }}
+                        </script>
                         """, unsafe_allow_html=True)
                     with col_q2:
                         if st.button("🎲 Swap / Generate Alt Question", key="btn_swap_question", help="Skip current question and generate a new dynamic real-world scenario", use_container_width=True):
@@ -1054,12 +1071,80 @@ def main_app_layout():
                             except Exception:
                                 pass
 
-                # Candidate Response Input & AI Refiner Panel
+                # Candidate Response Input & Voice Speech STT Microphone Panel
                 if session_data.get("status") != "COMPLETED":
-                    st.markdown("#### ✍️ Provide Your Technical Response:")
+                    st.markdown("""
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 6px;">
+                        <h4 style="margin: 0; color: #f8fafc;">✍️ Provide Your Response (Type or Speak):</h4>
+                        <span style="font-size: 0.8rem; color: #34d399; font-weight: 600;">🎙️ Microphone STT Voice Dictation Enabled</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    # Web Speech Recognition Mic Widget
+                    components.html("""
+                    <div style="display: flex; align-items: center; gap: 10px; font-family: sans-serif; margin-bottom: 6px;">
+                        <button id="mic_btn" onclick="toggleDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(16,185,129,0.4);">
+                            🎙️ Click to Dictate Answer by Voice
+                        </button>
+                        <span id="dictation_status" style="font-size: 0.8rem; color: #94a3b8;">Click microphone button and speak into your mic...</span>
+                    </div>
+                    <textarea id="speech_transcript_box" style="width: 100%; height: 50px; background: rgba(15,23,42,0.9); color: #38bdf8; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; font-size: 0.85rem;" placeholder="Dictated text will appear here... Copy and paste into response box below."></textarea>
+                    <script>
+                    var recognition;
+                    var isRecognizing = false;
+                    function toggleDictation() {
+                        var btn = document.getElementById("mic_btn");
+                        var status = document.getElementById("dictation_status");
+                        var box = document.getElementById("speech_transcript_box");
+                        
+                        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        if (!SpeechRecognition) {
+                            status.innerText = "Speech Recognition API not supported on this browser (Use Chrome or Edge).";
+                            return;
+                        }
+                        
+                        if (!isRecognizing) {
+                            recognition = new SpeechRecognition();
+                            recognition.continuous = true;
+                            recognition.interimResults = true;
+                            recognition.lang = "en-US";
+                            
+                            recognition.onstart = function() {
+                                isRecognizing = true;
+                                btn.style.background = "#ef4444";
+                                btn.innerText = "🛑 Stop Voice Recording";
+                                status.innerText = "🎙️ Listening... Speak your technical answer clearly.";
+                            };
+                            
+                            recognition.onresult = function(event) {
+                                var transcript = "";
+                                for (var i = event.resultIndex; i < event.results.length; ++i) {
+                                    transcript += event.results[i][0].transcript;
+                                }
+                                box.value = transcript;
+                            };
+                            
+                            recognition.onerror = function(event) {
+                                status.innerText = "Speech Error: " + event.error;
+                            };
+                            
+                            recognition.onend = function() {
+                                isRecognizing = false;
+                                btn.style.background = "linear-gradient(135deg, #10b981, #059669)";
+                                btn.innerText = "🎙️ Click to Dictate Answer by Voice";
+                                status.innerText = "✓ Recording stopped. Copy transcript above to response box.";
+                            };
+                            
+                            recognition.start();
+                        } else {
+                            if (recognition) recognition.stop();
+                        }
+                    }
+                    </script>
+                    """, height=130)
                     
                     input_key = f"int_reply_box_draft_{session_data.get('id')}_{cur_turn}"
-                    draft_input = st.text_area("Your Response:", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=120, key=input_key)
+                    draft_input = st.text_area("Your Response Text:", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=120, key=input_key)
                     
                     col_ref1, col_ref2 = st.columns([1, 1])
                     with col_ref1:
