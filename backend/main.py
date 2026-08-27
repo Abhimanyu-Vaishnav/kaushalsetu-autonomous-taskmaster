@@ -2582,7 +2582,7 @@ Return strictly a JSON list of 6 objects with fields:
 
     return []
 
-def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query: str = "", page: int = 1, page_size: int = 6, force_rescan: bool = False):
+def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query: str = "", page: int = 1, page_size: int = 6, force_rescan: bool = False, **kwargs):
     """
     Intelligently discovers live real-world job openings matched against 
     the student's verified track, extracted resume skills, and location preferences.
