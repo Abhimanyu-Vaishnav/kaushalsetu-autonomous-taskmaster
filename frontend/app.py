@@ -541,6 +541,8 @@ def main_app_layout():
         st.session_state["authenticated_student"] = None
     if "student_logged_in" not in st.session_state:
         st.session_state["student_logged_in"] = False
+    if "current_portal_view" not in st.session_state:
+        st.session_state["current_portal_view"] = "ADMIN"
 
     current_page = query_params.get("page") or query_params.get("view") or "admin"
 
@@ -555,8 +557,21 @@ def main_app_layout():
         st.components.v1.html(port_html, height=1000, scrolling=True)
         st.stop()
 
-    # ROUTE 1: STANDALONE STUDENT EXAM PORTAL (?page=exam or ?view=exam)
-    if current_page in ["exam", "student_portal"]:
+    # ROUTE 1: STANDALONE STUDENT EXAM PORTAL (?page=exam or ?view=exam or current_portal_view == STUDENT_PORTAL)
+    if current_page in ["exam", "student_portal"] or st.session_state.get("current_portal_view") == "STUDENT_PORTAL":
+        # Top Header to Return to Admin Dashboard
+        col_back, col_cand_info = st.columns([1, 4])
+        with col_back:
+            if st.button("⬅️ Return to Admin", key="btn_return_admin_hub"):
+                st.session_state["current_portal_view"] = "ADMIN"
+                st.rerun()
+        with col_cand_info:
+            curr = st.session_state.get("authenticated_student") or {}
+            c_name = curr.get("full_name") or curr.get("name") or "Candidate"
+            c_id = curr.get("student_id") or curr.get("id") or "N/A"
+            st.markdown(f"**Candidate Examination Portal** — Active: `{c_name}` (`{c_id}`)")
+
+        st.markdown("---")
         st.markdown('<div class="main-header">🎓 Student Dedicated Exam Workspace</div>', unsafe_allow_html=True)
         st.markdown('<div class="sub-header">SkillForge Autonomous Assessment & Multimodal Capstone Submission</div>', unsafe_allow_html=True)
         
@@ -2429,8 +2444,9 @@ def main_app_layout():
                                 if fresh_student:
                                     st.session_state["authenticated_student"] = fresh_student
                                     st.session_state["active_student_view"] = "results" if fresh_student.get("exam_completed") == 1 else "exam"
+                                    st.session_state["current_portal_view"] = "STUDENT_PORTAL"
                                     st.session_state["current_exam"] = None
-                                    st.toast(f"Switched session to {fresh_student.get('full_name') or fresh_student.get('name')} ({stu['student_id']})", icon="👤")
+                                    st.toast(f"✅ Opening Portal for {fresh_student.get('full_name') or fresh_student.get('name')}", icon="🚀")
                                     st.rerun()
                         with col_st4:
                             if st.button("✏️ Edit", key=f"btn_edit_student_{stu['student_id']}", use_container_width=True):
