@@ -341,12 +341,13 @@ def init_complete_db():
         CREATE TABLE IF NOT EXISTS job_applications (
             id TEXT PRIMARY KEY,
             student_id TEXT NOT NULL,
-            student_name TEXT NOT NULL,
+            student_name TEXT DEFAULT '',
             track TEXT DEFAULT '',
             branch_id TEXT DEFAULT 'BR-NANGLOI',
-            job_id TEXT NOT NULL,
-            role_title TEXT NOT NULL,
-            company_name TEXT NOT NULL,
+            job_id TEXT DEFAULT '',
+            role_title TEXT DEFAULT '',
+            company_name TEXT DEFAULT '',
+            apply_url TEXT DEFAULT '',
             match_percentage INTEGER DEFAULT 85,
             status TEXT DEFAULT 'APPLIED',
             interview_date TEXT DEFAULT '',
@@ -357,29 +358,76 @@ def init_complete_db():
         )
     """)
 
-    # Dynamic Column Check for job_applications
-    c.execute("PRAGMA table_info(job_applications)")
-    ja_cols = {r[1] for r in c.fetchall()}
-    for col_name, col_def in [
-        ("student_name", "TEXT DEFAULT ''"),
-        ("track", "TEXT DEFAULT ''"),
-        ("branch_id", "TEXT DEFAULT 'BR-NANGLOI'"),
-        ("match_percentage", "INTEGER DEFAULT 85"),
-        ("status", "TEXT DEFAULT 'APPLIED'"),
-        ("interview_date", "TEXT DEFAULT ''"),
-        ("interview_time", "TEXT DEFAULT ''"),
-        ("interview_link", "TEXT DEFAULT ''"),
-        ("mentor_notes", "TEXT DEFAULT ''"),
-        ("student_notified", "INTEGER DEFAULT 1"),
-        ("mentor_notified", "INTEGER DEFAULT 1"),
-        ("branch_notified", "INTEGER DEFAULT 1"),
-        ("metric_hash", "TEXT DEFAULT ''")
-    ]:
-        if col_name not in ja_cols:
-            try:
-                c.execute(f"ALTER TABLE job_applications ADD COLUMN {col_name} {col_def}")
-            except Exception:
-                pass
+    # 2. Conversational Interview Sessions Table
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS interview_sessions (
+            id TEXT PRIMARY KEY,
+            student_id TEXT NOT NULL,
+            job_role TEXT NOT NULL,
+            current_turn INTEGER DEFAULT 0,
+            conversation_history TEXT DEFAULT '[]',
+            overall_score REAL DEFAULT 0.0,
+            feedback_summary TEXT DEFAULT '',
+            status TEXT DEFAULT 'IN_PROGRESS',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 3. Dynamic Column Migration for All Tables
+    tables_to_check = {
+        "job_applications": {
+            "job_id": "TEXT DEFAULT ''",
+            "student_name": "TEXT DEFAULT ''",
+            "role_title": "TEXT DEFAULT ''",
+            "company_name": "TEXT DEFAULT ''",
+            "apply_url": "TEXT DEFAULT ''",
+            "match_percentage": "INTEGER DEFAULT 85",
+            "status": "TEXT DEFAULT 'APPLIED'",
+            "interview_date": "TEXT DEFAULT ''",
+            "interview_time": "TEXT DEFAULT ''",
+            "interview_link": "TEXT DEFAULT ''",
+            "mentor_notes": "TEXT DEFAULT ''",
+            "student_notified": "INTEGER DEFAULT 1",
+            "mentor_notified": "INTEGER DEFAULT 1",
+            "branch_notified": "INTEGER DEFAULT 1",
+            "metric_hash": "TEXT DEFAULT ''"
+        },
+        "students": {
+            "profile_photo": "TEXT DEFAULT ''",
+            "resume_text": "TEXT DEFAULT ''",
+            "bio_summary": "TEXT DEFAULT ''",
+            "research_projects": "TEXT DEFAULT '[]'",
+            "certifications": "TEXT DEFAULT '[]'",
+            "work_experience": "TEXT DEFAULT '[]'",
+            "parsed_skills": "TEXT DEFAULT '[]'",
+            "github_url": "TEXT DEFAULT ''",
+            "linkedin_url": "TEXT DEFAULT ''",
+            "website_url": "TEXT DEFAULT ''",
+            "twitter_url": "TEXT DEFAULT ''",
+            "portfolio_html": "TEXT DEFAULT ''",
+            "exam_completed": "INTEGER DEFAULT 0"
+        },
+        "interview_sessions": {
+            "current_turn": "INTEGER DEFAULT 0",
+            "conversation_history": "TEXT DEFAULT '[]'",
+            "overall_score": "REAL DEFAULT 0.0",
+            "feedback_summary": "TEXT DEFAULT ''",
+            "status": "TEXT DEFAULT 'IN_PROGRESS'"
+        }
+    }
+
+    for tbl, cols in tables_to_check.items():
+        try:
+            c.execute(f"PRAGMA table_info({tbl})")
+            existing_cols = {r[1] for r in c.fetchall()}
+            for col_name, col_def in cols.items():
+                if col_name not in existing_cols:
+                    try:
+                        c.execute(f"ALTER TABLE {tbl} ADD COLUMN {col_name} {col_def}")
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS agent_notifications (

@@ -89,6 +89,9 @@ try:
         direct_verify_cryptographic_seal,
         agent_enable_auto_apply,
         agent_evaluate_interview_answer,
+        start_or_get_interview_session,
+        evaluate_interview_turn,
+        direct_retake_exam_for_student,
         normalize_dob
     )
 except ImportError:
@@ -125,6 +128,9 @@ except ImportError:
         direct_verify_cryptographic_seal,
         agent_enable_auto_apply,
         agent_evaluate_interview_answer,
+        start_or_get_interview_session,
+        evaluate_interview_turn,
+        direct_retake_exam_for_student,
         normalize_dob
     )
 
@@ -711,13 +717,21 @@ def main_app_layout():
                 </div>
                 """, unsafe_allow_html=True)
                 
-                col_pt1, col_pt2 = st.columns(2)
+                col_pt1, col_pt2, col_retake = st.columns([1, 1, 1])
                 with col_pt1:
                     if st.button("🖨️ Print Transcript / Save PDF", use_container_width=True):
                         st.toast("🖨️ Opening print preview dialog...", icon="📄")
                 with col_pt2:
-                    if st.button("🔗 Copy Public Transcript Verification Link", use_container_width=True):
+                    if st.button("🔗 Copy Verification Link", use_container_width=True):
                         st.toast(f"📋 Verification link copied: https://kaushalsetu.gov.in/verify/{s_id}", icon="🔗")
+                with col_retake:
+                    if st.button("🔄 Re-attempt Assessment", key="btn_retake_exam", help="Re-open MCQ and practical capstone to improve your score", use_container_width=True):
+                        res_retake = direct_retake_exam_for_student(student_data.get("student_id") or student_data.get("id"))
+                        if res_retake.get("status") == "success":
+                            student_data["exam_completed"] = 0
+                            st.session_state["authenticated_student"] = student_data
+                            st.toast("Assessment unlocked for re-examination!", icon="🔓")
+                            st.rerun()
 
                 with st.expander("🖨️ View Printable Official Marksheet Transcript", expanded=False):
                     transcript_html = f"""
@@ -867,42 +881,53 @@ def main_app_layout():
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO
             with tab_prep:
-                st.markdown("### 🎙️ AI Interactive Technical & Behavioral Interview Studio")
-                st.caption("Type your technical response and let the AI Agent evaluate your answer in real time with scoring & model answer comparison.")
+                st.markdown("### 🎙️ AI Conversational Mock Interview Studio")
+                st.caption("Participate in an interactive, turn-by-turn technical round tailored specifically to your target job profile.")
 
-                prep_qs = generate_interview_prep_questions(s_id, s_track)
-                for idx, q_item in enumerate(prep_qs):
-                    with st.expander(f"❓ Q{idx+1} ({q_item['type']}): {q_item['q']}", expanded=(idx == 0)):
-                        st.info(f"💡 **AI Answer Tip:** {q_item['tip']}")
-                        cand_ans = st.text_area(f"Your Technical Response:", key=f"ans_input_{idx}", placeholder="Type your detailed answer here to simulate actual technical interview defense...", height=90)
-                        
-                        col_eval1, col_eval2 = st.columns(2)
-                        with col_eval1:
-                            if st.button(f"🚀 Submit Response for AI Evaluation", key=f"btn_eval_ans_{idx}", type="primary", use_container_width=True):
-                                eval_res = agent_evaluate_interview_answer(s_id, q_item['q'], cand_ans, s_track)
-                                st.session_state[f"eval_res_{idx}"] = eval_res
-                        with col_eval2:
-                            if st.button(f"🔍 Show Model AI Answer", key=f"btn_show_ans_{idx}", use_container_width=True):
-                                st.session_state[f"show_model_{idx}"] = not st.session_state.get(f"show_model_{idx}", False)
+                selected_job_role = st.selectbox("🎯 Target Job Profile for Mock Interview", options=[
+                    "Industrial Automation & Mechatronics Engineer",
+                    "Autonomous Diagnostics & Battery Systems Specialist",
+                    "Full Stack Cloud Platform Engineer",
+                    "Solar SCADA & Inverter Telemetry Engineer"
+                ], key="sel_interview_role")
 
-                        if f"eval_res_{idx}" in st.session_state and st.session_state[f"eval_res_{idx}"]:
-                            ev = st.session_state[f"eval_res_{idx}"]
-                            score_color = "#34d399" if ev['score'] >= 80 else ("#fbbf24" if ev['score'] >= 60 else "#f87171")
-                            st.markdown(f"""
-                            <div style="background: rgba(15,23,42,0.8); border: 1px solid {score_color}; padding: 16px; border-radius: 10px; margin-top: 10px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <h4 style="margin:0; color:{score_color};">🎯 AI Score: {ev['score']} / 100 ({ev['grade']})</h4>
-                                </div>
-                                <p style="color:#e2e8f0; margin:8px 0; font-size:0.9rem;"><b>AI Feedback:</b> {ev['feedback']}</p>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            if ev.get("key_improvements"):
-                                st.caption("💡 Key Areas for Technical Improvement:")
-                                for imp in ev["key_improvements"]:
-                                    st.markdown(f"- {imp}")
+                session_data = start_or_get_interview_session(s_id, selected_job_role)
+                history = session_data.get("conversation_history", [])
 
-                        if st.session_state.get(f"show_model_{idx}"):
-                            st.success(f"🎯 **Model AI Answer:** {q_item['model_answer']}")
+                # Render Conversation Stream
+                for turn_item in history:
+                    with st.chat_message("assistant", avatar="🤖"):
+                        st.markdown(f"**Turn {turn_item.get('turn')}:** {turn_item.get('question')}")
+
+                    if "candidate_answer" in turn_item:
+                        with st.chat_message("user", avatar="👤"):
+                            st.markdown(turn_item.get("candidate_answer"))
+                        st.info(f"📊 **AI Feedback:** {turn_item.get('feedback')} (Score: **{turn_item.get('score')}/10**)")
+
+                # Input Box for Candidate
+                if session_data.get("status") != "COMPLETED":
+                    with st.form("form_interview_reply", clear_on_submit=True):
+                        user_reply = st.text_area("✍️ Your Technical Answer:", placeholder="Describe your methodology, safety protocols, and technical approach...", key="int_reply_box")
+                        if st.form_submit_button("Submit Answer 🎙️", type="primary", use_container_width=True):
+                            if len(user_reply.strip()) < 10:
+                                st.warning("Please provide a more detailed technical response.")
+                            else:
+                                eval_turn = evaluate_interview_turn(session_data.get("id"), user_reply)
+                                if eval_turn.get("status") == "completed":
+                                    st.balloons()
+                                    st.success(f"🎉 Mock Interview Complete! Overall Rating: **{eval_turn.get('overall_score')}%**\n\n{eval_turn.get('summary')}")
+                                st.rerun()
+                else:
+                    st.success(f"🏆 **Interview Completed!** Final Aggregate Rating: **{session_data.get('overall_score')}%**")
+                    if st.button("🔄 Restart New Mock Interview Session", key="btn_restart_interview", type="primary", use_container_width=True):
+                        try:
+                            conn = get_db()
+                            conn.execute("UPDATE interview_sessions SET status = 'ARCHIVED' WHERE id = ?", (session_data.get('id'),))
+                            conn.commit()
+                            conn.close()
+                        except Exception:
+                            pass
+                        st.rerun()
 
             st.stop()
 
