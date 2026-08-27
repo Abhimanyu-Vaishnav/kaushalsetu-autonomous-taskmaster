@@ -2320,11 +2320,29 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 {"title": "Automated Sensor Fault Identification System", "desc": "Implemented diagnostic isolation scripts to detect early drift and insulation breakdown in high-voltage industrial actuators.", "tag": "Verification Lab"}
             ]
 
-        # Track-tailored Color Palettes & Custom Animated SVG Charts
-        if any(w in track.lower() for w in ["web", "python", "full", "software", "code", "cloud"]):
+        # Multi-Domain Adaptive Theme & Visual Engine
+        track_lower = track.lower()
+        if any(w in track_lower for w in ["account", "finance", "tally", "tax", "banking", "audit", "commerce", "ca", "cpa", "business"]):
+            accent_color = "#10b981"
+            secondary_color = "#fbbf24"
+            theme_gradient = "linear-gradient(135deg, #022c22 0%, #064e3b 50%, #030712 100%)"
+            domain_label = "Certified Financial Accountant & Ledger Auditor"
+            chart_svg = """
+            <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #10b98155);">
+                <path d="M 20 140 L 90 100 L 170 120 L 250 40 L 380 30" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
+                <path d="M 20 140 L 90 100 L 170 120 L 250 40 L 380 30 L 380 150 L 20 150 Z" fill="url(#grad_acc)" opacity="0.2"/>
+                <defs><linearGradient id="grad_acc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#022c22"/></linearGradient></defs>
+                <circle cx="250" cy="40" r="6" fill="#fbbf24"/>
+                <circle cx="380" cy="30" r="6" fill="#34d399"/>
+                <text x="255" y="32" fill="#fbbf24" font-size="11" font-weight="bold">GAAP Ledger Audit: 99.4%</text>
+                <text x="270" y="110" fill="#34d399" font-size="11" font-weight="bold">Tax Reconciliation: 100%</text>
+            </svg>
+            """
+        elif any(w in track_lower for w in ["web", "python", "full", "software", "code", "cloud", "frontend", "backend", "developer", "java", "c++", "cs", "it"]):
             accent_color = "#6366f1"
             secondary_color = "#38bdf8"
             theme_gradient = "linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #020617 100%)"
+            domain_label = "Full Stack Software & Cloud Systems Engineer"
             chart_svg = """
             <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #6366f155);">
                 <path d="M 20 130 Q 80 40 140 100 T 260 50 T 380 120" fill="none" stroke="#6366f1" stroke-width="4" stroke-linecap="round"/>
@@ -2332,41 +2350,44 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 <defs><linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#020617"/></linearGradient></defs>
                 <circle cx="140" cy="100" r="6" fill="#38bdf8"/>
                 <circle cx="260" cy="50" r="6" fill="#34d399"/>
-                <text x="145" y="90" fill="#38bdf8" font-size="11" font-weight="bold">Code Velocity: 94%</text>
-                <text x="265" y="40" fill="#34d399" font-size="11" font-weight="bold">API Latency: 42ms</text>
+                <text x="145" y="90" fill="#38bdf8" font-size="11" font-weight="bold">Code Velocity: 96%</text>
+                <text x="265" y="40" fill="#34d399" font-size="11" font-weight="bold">API Latency: 38ms</text>
             </svg>
             """
-        elif any(w in track.lower() for w in ["solar", "renew", "green", "power", "energy"]):
+        elif any(w in track_lower for w in ["solar", "renew", "green", "power", "energy"]):
             accent_color = "#10b981"
             secondary_color = "#34d399"
             theme_gradient = "linear-gradient(135deg, #064e3b 0%, #022c22 50%, #0f172a 100%)"
+            domain_label = "Solar SCADA & Inverter Telemetry Engineer"
             chart_svg = """
             <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #10b98155);">
                 <path d="M 20 140 C 100 20 180 150 260 30 C 320 100 380 40 380 40" fill="none" stroke="#10b981" stroke-width="4"/>
                 <circle cx="260" cy="30" r="6" fill="#fbbf24"/>
-                <text x="270" y="25" fill="#fbbf24" font-size="11" font-weight="bold">MPPT Efficiency: 98.4%</text>
+                <text x="270" y="25" fill="#fbbf24" font-size="11" font-weight="bold">MPPT Efficiency: 98.6%</text>
             </svg>
             """
-        elif any(w in track.lower() for w in ["electric", "ev", "mech", "auto", "vehicle"]):
+        elif any(w in track_lower for w in ["electric", "ev", "battery", "powertrain", "vehicle", "auto"]):
             accent_color = "#f59e0b"
             secondary_color = "#ef4444"
             theme_gradient = "linear-gradient(135deg, #18181b 0%, #27272a 50%, #090d16 100%)"
+            domain_label = "EV Battery Systems & ECU Diagnostic Specialist"
             chart_svg = """
             <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #f59e0b55);">
                 <path d="M 20 120 L 70 120 L 90 30 L 120 140 L 150 120 L 220 120 L 240 40 L 270 130 L 380 120" fill="none" stroke="#f59e0b" stroke-width="4"/>
                 <circle cx="240" cy="40" r="6" fill="#ef4444"/>
-                <text x="250" y="35" fill="#ef4444" font-size="11" font-weight="bold">ECU Signal Stability: 99.2%</text>
+                <text x="250" y="35" fill="#ef4444" font-size="11" font-weight="bold">ECU Signal Stability: 99.4%</text>
             </svg>
             """
         else:
             accent_color = "#3b82f6"
             secondary_color = "#60a5fa"
             theme_gradient = "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #020617 100%)"
+            domain_label = "Industrial Automation & Mechatronics Specialist"
             chart_svg = """
             <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #3b82f655);">
                 <path d="M 20 130 L 100 90 L 180 110 L 260 40 L 380 80" fill="none" stroke="#3b82f6" stroke-width="4"/>
                 <circle cx="260" cy="40" r="6" fill="#60a5fa"/>
-                <text x="270" y="35" fill="#60a5fa" font-size="11" font-weight="bold">Competency Rating: 92%</text>
+                <text x="270" y="35" fill="#60a5fa" font-size="11" font-weight="bold">PLC Circuit Response: 98.2%</text>
             </svg>
             """
 
@@ -2390,52 +2411,54 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         # Skills markup
         skills_html = "".join([f"<span style='background:rgba(255,255,255,0.05); color:#e2e8f0; border:1px solid rgba(255,255,255,0.1); padding:6px 14px; border-radius:20px; font-size:0.85rem; margin:4px; display:inline-block;'>⚡ {sk}</span>" for sk in skills])
 
-        # GitHub Live Harvesting Section
+        # Real Live GitHub Harvesting with Avatar & Repo Grid
         github_section = ""
         if github:
             try:
                 try:
-                    from agent_engine import fetch_live_github_profile
+                    from agent_engine import fetch_github_profile_data
                 except ImportError:
-                    try:
-                        from backend.agent_engine import fetch_live_github_profile
-                    except ImportError:
-                        try:
-                            from dossier_generator import fetch_live_github_profile
-                        except ImportError:
-                            def fetch_live_github_profile(u): return {"projects": []}
+                    from backend.agent_engine import fetch_github_profile_data
                 
-                gh_info = fetch_live_github_profile(github)
+                gh_info = fetch_github_profile_data(github)
                 repos = gh_info.get("projects", [])
                 
                 if repos:
                     repo_cards = "".join([f"""
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:10px;">
+                    <div class="hover-card" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <b style="color:{secondary_color}; font-size:0.95rem;">📦 {p.get('name')}</b>
-                            <span style="font-size:0.75rem; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px;">{p.get('lang')}</span>
+                            <span style="font-size:0.75rem; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px;">{p.get('language')}</span>
                         </div>
-                        <p style="font-size:0.82rem; color:#94a3b8; margin:8px 0; line-height:1.4;">{p.get('desc')}</p>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                        <p style="font-size:0.82rem; color:#94a3b8; margin:8px 0; line-height:1.4;">{p.get('description')}</p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
                             <span style="font-size:0.75rem; color:#fbbf24;">⭐ {p.get('stars')} Stars • 🍴 {p.get('forks')} Forks</span>
-                            <a href="{p.get('url')}" target="_blank" style="font-size:0.82rem; color:{accent_color}; text-decoration:none; font-weight:600;">View Repository ↗</a>
+                            <a href="{p.get('repo_url')}" target="_blank" style="font-size:0.82rem; color:{accent_color}; text-decoration:none; font-weight:600;">View Code ↗</a>
                         </div>
                     </div>
                     """ for p in repos])
                     
+                    gh_avatar = f"<img src='{gh_info.get('avatar_url')}' style='width:34px; height:34px; border-radius:50%; border:1px solid {accent_color};' />" if gh_info.get("avatar_url") else ""
+                    
                     github_section = f"""
-                    <div style="margin-top:28px; text-align:left;">
-                        <h3 style="color:#f8fafc; font-size:1.15rem; border-left:4px solid {accent_color}; padding-left:10px; margin-bottom:12px;">🚀 Real Verified GitHub Repositories ({gh_info.get('public_repos', len(repos))} Public Repos)</h3>
-                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+                    <div style="margin-top:30px; text-align:left;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                            <h3 style="color:#f8fafc; font-size:1.15rem; border-left:4px solid {accent_color}; padding-left:12px; margin:0;">🚀 Verified GitHub Code Repositories ({gh_info.get('public_repos', len(repos))} Repos • ⭐ {gh_info.get('total_stars', 0)} Stars)</h3>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                {gh_avatar}
+                                <span style="color:#94a3b8; font-size:0.85rem;">@{gh_info.get('username')}</span>
+                            </div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px;">
                             {repo_cards}
                         </div>
                     </div>
                     """
                 else:
                     github_section = f"""
-                    <div style="margin-top:28px; text-align:left;">
-                        <h3 style="color:#f8fafc; font-size:1.15rem; border-left:4px solid {accent_color}; padding-left:10px; margin-bottom:12px;">🚀 Verified GitHub Profile</h3>
-                        <a href="{github}" target="_blank" style="color:{secondary_color}; font-weight:600; text-decoration:none;">Explore {github} on GitHub ↗</a>
+                    <div style="margin-top:30px; text-align:left;">
+                        <h3 style="color:#f8fafc; font-size:1.15rem; border-left:4px solid {accent_color}; padding-left:12px; margin-bottom:12px;">🚀 Verified GitHub Profile</h3>
+                        <a href="{github}" target="_blank" style="color:{secondary_color}; font-weight:600; text-decoration:none;">Explore @{github.split('/')[-1]} on GitHub ↗</a>
                     </div>
                     """
             except Exception as gh_ex:

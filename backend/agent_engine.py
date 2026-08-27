@@ -701,34 +701,60 @@ def generate_verified_certificate(candidate_name: str, student_id: str, course_n
 
 # --- GitHub Harvester & Multimodal Resume PDF Parser ---
 
-def fetch_github_profile_data(github_url: str) -> dict:
-    """Extracts public repositories, bio, stars, and languages from GitHub URL."""
+def fetch_github_profile_data(github_input: str) -> dict:
+    """Extracts live public repositories, bio, stars, and languages from GitHub URL or username."""
     import requests
-    if not github_url or "github.com" not in github_url:
-        return {"username": "skillforge-candidate", "projects": []}
+    if not github_input:
+        return {"username": "", "projects": [], "public_repos": 0, "total_stars": 0}
     
-    username = github_url.rstrip("/").split("/")[-1]
+    clean_in = str(github_input).strip().rstrip("/")
+    if "github.com/" in clean_in:
+        username = clean_in.split("github.com/")[-1].split("/")[0].strip()
+    else:
+        username = clean_in.replace("https://", "").replace("http://", "").split("/")[0].strip()
+        
+    if not username or username.startswith("http") or "?" in username:
+        return {"username": "", "projects": [], "public_repos": 0, "total_stars": 0}
+
     try:
-        headers = {"Accept": "application/vnd.github.v3+json", "User-Agent": "SkillForge-Agent"}
-        r = requests.get(f"https://api.github.com/users/{username}/repos?sort=updated&per_page=6", headers=headers, timeout=5)
+        headers = {"Accept": "application/vnd.github.v3+json", "User-Agent": "SkillForge-Autonomous-Agent"}
+        user_info = {}
+        try:
+            u_res = requests.get(f"https://api.github.com/users/{username}", headers=headers, timeout=4)
+            if u_res.status_code == 200:
+                user_info = u_res.json()
+        except Exception:
+            pass
+            
+        r = requests.get(f"https://api.github.com/users/{username}/repos?sort=updated&per_page=15", headers=headers, timeout=5)
         if r.status_code == 200:
             repos = r.json()
             projects = []
+            total_stars = 0
             for repo in repos:
-                if not repo.get("fork"):
+                if isinstance(repo, dict) and not repo.get("fork"):
+                    stars = repo.get("stargazers_count", 0)
+                    total_stars += stars
                     projects.append({
                         "name": repo.get("name"),
-                        "description": repo.get("description") or "Automated production repository with active CI/CD & modular architecture.",
-                        "language": repo.get("language") or "Python",
-                        "stars": repo.get("stargazers_count", 0),
+                        "description": repo.get("description") or f"Public production repository implemented in {repo.get('language') or 'Software/Code'}.",
+                        "language": repo.get("language") or "Code",
+                        "stars": stars,
                         "forks": repo.get("forks_count", 0),
-                        "repo_url": repo.get("html_url"),
-                        "updated_at": repo.get("updated_at")[:10] if repo.get("updated_at") else "2026-08"
+                        "repo_url": repo.get("html_url") or f"https://github.com/{username}/{repo.get('name')}",
+                        "updated_at": repo.get("updated_at")[:10] if repo.get("updated_at") else "2026"
                     })
-            return {"username": username, "projects": projects[:4]}
+            return {
+                "username": username,
+                "avatar_url": user_info.get("avatar_url", ""),
+                "public_repos": user_info.get("public_repos", len(projects)),
+                "total_stars": total_stars,
+                "bio": user_info.get("bio", ""),
+                "projects": projects[:6]
+            }
     except Exception as e:
-        print(f"[GITHUB AGENT] Crawl fallback: {e}")
-    return {"username": username, "projects": []}
+        print(f"[GITHUB LIVE HARVEST ERROR] {e}")
+    return {"username": username, "projects": [], "public_repos": 0, "total_stars": 0}
 
 def parse_pdf_resume_with_gemini(pdf_bytes: bytes, filename: str = "resume.pdf") -> dict:
     """Extracts candidate profile structured JSON from PDF resume bytes using Gemini 3.5 Flash or PyPDF text parser."""
