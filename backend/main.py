@@ -2504,28 +2504,34 @@ import urllib.parse
 
 def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
     """Constructs a 100% guaranteed functional live job search/posting URL across major job portals."""
-    clean_title = re.sub(r'[^\w\s-]', '', str(title or "Technician")).strip()
-    clean_company = re.sub(r'[^\w\s-]', '', str(company or "Industrial Partner")).strip()
-    clean_loc = str(location or "Delhi NCR").strip()
-    
-    q_str = urllib.parse.quote(f"{clean_title} {clean_company}".strip())
-    loc_str = urllib.parse.quote(clean_loc)
-    
+    # Extract primary brand name (e.g. Schneider, Tata, Havells, Siemens, Adani, Addverb, L&T)
+    brand = company.split()[0] if company else ""
+    for key in ["schneider", "tata", "havells", "adani", "siemens", "addverb", "l&t", "larsen"]:
+        if key in company.lower():
+            brand = "L&T" if key in ["l&t", "larsen"] else key.capitalize()
+            break
+
+    # Extract core role terms from title (removing stop words)
+    stop_words = {"and", "&", "trainee", "associate", "junior", "senior", "partner", "network", "system", "systems", "tech", "technician"}
+    title_words = [w for w in title.split() if w.lower() not in stop_words]
+    title_keywords = " ".join(title_words[:2]) if title_words else title
+
+    clean_query = f"{brand} {title_keywords}".strip()
+    encoded_q = urllib.parse.quote(clean_query)
+    clean_loc_str = "Delhi NCR" if ("delhi" in location.lower() or "nangloi" in location.lower() or "manesar" in location.lower() or "gurugram" in location.lower()) else location
+    encoded_loc = urllib.parse.quote(clean_loc_str)
+
     src_lower = str(source).lower()
     if "linkedin" in src_lower:
-        return f"https://www.linkedin.com/jobs/search/?keywords={q_str}&location={loc_str}"
+        return f"https://www.linkedin.com/jobs/search/?keywords={encoded_q}&location={encoded_loc}"
     elif "naukri" in src_lower:
-        return f"https://www.naukri.com/{urllib.parse.quote(clean_title.lower().replace(' ', '-'))}-jobs-in-{urllib.parse.quote(clean_loc.lower().replace(' ', '-'))}"
+        role_slug = title_keywords.lower().replace(' ', '-')
+        loc_slug = clean_loc_str.lower().replace(' ', '-')
+        return f"https://www.naukri.com/{urllib.parse.quote(role_slug)}-jobs-in-{urllib.parse.quote(loc_slug)}"
     elif "indeed" in src_lower:
-        return f"https://in.indeed.com/jobs?q={q_str}&l={loc_str}"
-    elif "ncs" in src_lower or "national career service" in src_lower:
-        return f"https://www.ncs.gov.in/job-seeker/Pages/Search.aspx?kw={q_str}"
-    elif "google" in src_lower:
-        return f"https://www.google.com/search?q={q_str}+jobs+{loc_str}&ibp=htl;jobs"
+        return f"https://in.indeed.com/jobs?q={encoded_q}&l={encoded_loc}"
     else:
-        if raw_url and raw_url.startswith("http") and not raw_url.endswith("/default.aspx"):
-            return raw_url
-        return f"https://www.linkedin.com/jobs/search/?keywords={q_str}&location={loc_str}"
+        return f"https://www.google.com/search?q={encoded_q}+jobs+{encoded_loc}&ibp=htl;jobs"
 
 def live_internet_crawler_search(track: str, skills: list, location: str, query: str = "") -> list:
     """
