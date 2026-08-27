@@ -867,13 +867,13 @@ def main_app_layout():
                                     else:
                                         st.error(apply_res.get("message"))
                         with col_ext:
-                            st.link_button("🌐 View Official Portal", job.get("apply_url"), use_container_width=True)
+                            st.link_button("🌐 Direct Apply (Official Portal)", job.get("apply_url") or "https://www.ncs.gov.in", use_container_width=True)
                         with col_view:
                             if st.button("📋 Requirements & Prep", key=f"req_btn_{jid}", use_container_width=True):
-                                st.info(f"**Experience:** {job.get('exp')} | **Job Type:** {job.get('type')}\n\n**Candidate Advantage:** High practical capstone score matches requirement for {job.get('title')}.")
+                                st.info(f"**Experience:** {job.get('exp')} | **Job Type:** {job.get('type')}\n\n**Candidate Advantage:** High practical capstone score matches requirement for {job.get('title')}.\n\n**Direct Link:** [{job.get('apply_url')}]({job.get('apply_url')})")
 
-                # Pagination Controls
-                col_prev, col_info, col_next = st.columns([1, 2, 1])
+                # Pagination & Load More Controls
+                col_prev, col_info, col_next, col_load_more = st.columns([1, 1.5, 1, 1.5])
                 with col_prev:
                     if st.button("⬅️ Previous", disabled=(st.session_state.job_page <= 1), key="job_prev_btn", use_container_width=True):
                         st.session_state.job_page -= 1
@@ -883,6 +883,11 @@ def main_app_layout():
                 with col_next:
                     if st.button("Next Page ➡️", disabled=(st.session_state.job_page >= total_pages), key="job_next_btn", use_container_width=True):
                         st.session_state.job_page += 1
+                        st.rerun()
+                with col_load_more:
+                    if st.button(f"⚡ Load More Jobs (Page {st.session_state.job_page + 1})", disabled=(st.session_state.job_page >= total_pages), key="job_load_more_btn", type="primary", use_container_width=True):
+                        st.session_state.job_page += 1
+                        st.toast(f"Loading Page {st.session_state.job_page} live vacancies...", icon="🔍")
                         st.rerun()
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO
@@ -2439,7 +2444,13 @@ def main_app_layout():
                             else:
                                 st.markdown('<span class="badge-amber">⏳ PENDING EXAM</span>', unsafe_allow_html=True)
                         with col_st3:
-                            if st.button("🚀 Launch Exam", key=f"launch_exam_stu_{stu['student_id']}", type="primary", use_container_width=True):
+                            exam_link = f"/?page=exam&sid={stu['student_id']}"
+                            st.markdown(f'''
+                            <a href="{exam_link}" target="_blank" style="text-decoration:none;">
+                                <button style="background:linear-gradient(135deg,#2563eb,#1d4ed8); color:white; border:none; border-radius:6px; padding:6px 12px; font-weight:700; cursor:pointer; width:100%; font-size:0.8rem; box-shadow:0 2px 8px rgba(37,99,235,0.3); margin-bottom:4px;">🎓 Launch Exam (New Tab) ↗</button>
+                            </a>
+                            ''', unsafe_allow_html=True)
+                            if st.button("🚀 Switch Workspace", key=f"launch_exam_stu_{stu['student_id']}", use_container_width=True):
                                 fresh_student = direct_get_student_by_id(stu['student_id'])
                                 if fresh_student:
                                     st.session_state["authenticated_student"] = fresh_student
