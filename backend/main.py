@@ -2458,20 +2458,38 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         </div>
         """ for r in research])
 
+        # AI Agent Executive Synthesis Loop (Gemini LLM Reasoning)
+        ai_summary = bio_summary
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        if gemini_key and len(resume) > 20:
+            try:
+                from google import genai
+                client = genai.Client(api_key=gemini_key)
+                prompt = f"""
+                Analyze candidate '{name}', specialization track '{track}', skills '{json.dumps(skills)}', resume snippet: '{resume[:600]}'.
+                Synthesize a punchy 2-sentence executive recruiter summary showcasing practical technical drive, system reliability, and problem-solving impact.
+                Return strictly text without quotes.
+                """
+                resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                if resp and resp.text:
+                    ai_summary = resp.text.strip().replace('"', '')
+            except Exception as ai_ex:
+                print(f"[PORTFOLIO AI REASONING NOTICE] {ai_ex}")
+
         # LinkedIn & Social Credentials Badge
         linkedin_badge_html = ""
         if linkedin:
             li_username = linkedin.split("in/")[-1].strip("/") if "in/" in linkedin else linkedin
             linkedin_badge_html = f"""
-            <div style="background: rgba(0, 119, 181, 0.12); border: 1px solid rgba(0, 119, 181, 0.3); padding: 14px 18px; border-radius: 12px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="background: rgba(0, 119, 181, 0.1); border: 1px solid rgba(0, 119, 181, 0.25); padding: 14px 18px; border-radius: 12px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(10px);">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span style="font-size: 1.4rem;">💼</span>
                     <div>
                         <b style="color: #38bdf8; font-size: 0.92rem;">Verified LinkedIn Candidate Credential</b>
-                        <br><span style="font-size: 0.8rem; color: #94a3b8;">Profile: linkedin.com/in/{li_username}</span>
+                        <br><span style="font-size: 0.8rem; color: #94a3b8;">linkedin.com/in/{li_username}</span>
                     </div>
                 </div>
-                <a href="{linkedin}" target="_blank" style="background: #0077b5; color: #ffffff; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 700;">View Profile ↗</a>
+                <a href="{linkedin}" target="_blank" style="background: #0077b5; color: #ffffff; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 700; transition: all 0.2s ease;">View Profile ↗</a>
             </div>
             """
 
@@ -2501,12 +2519,25 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         <html>
         <head>
             <meta charset="utf-8">
-            <title>{name} - Certified Recruiter-Ready AI Portfolio</title>
+            <title>{name} - AI Synthesized Recruiter-Ready Portfolio</title>
             <style>
                 @keyframes pulseGlow {{
                     0% {{ box-shadow: 0 0 20px {accent_color}33; }}
-                    50% {{ box-shadow: 0 0 35px {accent_color}77; }}
+                    50% {{ box-shadow: 0 0 35px {accent_color}66; }}
                     100% {{ box-shadow: 0 0 20px {accent_color}33; }}
+                }}
+                @keyframes pulseDot {{
+                    0% {{ opacity: 1; transform: scale(1); }}
+                    50% {{ opacity: 0.4; transform: scale(1.2); }}
+                    100% {{ opacity: 1; transform: scale(1); }}
+                }}
+                .hover-card {{
+                    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+                }}
+                .hover-card:hover {{
+                    transform: translateY(-4px);
+                    box-shadow: 0 12px 25px rgba(0,0,0,0.5);
+                    border-color: {accent_color}88 !important;
                 }}
                 @media print {{
                     body {{ background: #ffffff !important; color: #000000 !important; }}
@@ -2523,46 +2554,53 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 }}
             </script>
         </head>
-        <body style="margin: 0; padding: 24px; background: #030712; font-family: 'Segoe UI', system-ui, sans-serif;">
-            <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; max-width: 950px; margin: 0 auto 15px auto; flex-wrap: wrap; gap: 10px;">
-                <div style="color: #94a3b8; font-size: 0.9rem;">
-                    👤 Candidate ID: <code style="color: {secondary_color};">{sid}</code> | Verified Node: <b style="color: #ffffff;">{center}</b>
+        <body style="margin: 0; padding: 24px; background: #070913; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f8fafc;">
+            
+            <!-- FLOATING TOP RECRUITER ACTION TOOLBAR -->
+            <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; max-width: 960px; margin: 0 auto 16px auto; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #34d399; animation: pulseDot 2s infinite ease-in-out;"></span>
+                    <span style="color: #34d399; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.5px;">AVAILABLE FOR OPPORTUNITIES</span>
+                    <span style="color: #475569;">|</span>
+                    <span style="color: #94a3b8; font-size: 0.85rem;">Candidate ID: <code style="color: {secondary_color};">{sid}</code></span>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="copyShareLink()" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">📋 Copy Recruiter Link</button>
-                    <a href="mailto:{email}" style="background: rgba(255,255,255,0.08); color: #ffffff; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.15);">📧 Direct Contact</a>
-                    <button onclick="window.print()" style="background: {accent_color}; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px {accent_color}44;">🖨️ Export PDF CV</button>
+                    <button onclick="copyShareLink()" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4); padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">📋 Share Link</button>
+                    <a href="mailto:{email}" style="background: rgba(255,255,255,0.06); color: #ffffff; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(255,255,255,0.12);">✉️ Contact Candidate</a>
+                    <button onclick="window.print()" style="background: {accent_color}; color: #ffffff; border: none; padding: 8px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 14px {accent_color}44;">🖨️ Export PDF CV</button>
                 </div>
             </div>
 
-            <div class="portfolio-card" style="background: {theme_gradient}; color: #f8fafc; padding: 35px 30px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); animation: pulseGlow 6s infinite ease-in-out; max-width: 950px; margin: 0 auto;">
+            <!-- MAIN GLASSMORPHIC HERO DOSSIER CARD -->
+            <div class="portfolio-card" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); color: #f8fafc; padding: 38px 32px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); animation: pulseGlow 6s infinite ease-in-out; max-width: 960px; margin: 0 auto; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
                 
-                <div style="display: flex; gap: 24px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 24px;">
+                <!-- HERO SECTION -->
+                <div style="display: flex; gap: 28px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 28px;">
                     <div>{avatar_markup}</div>
                     <div style="flex: 1;">
                         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                            <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; color: #ffffff;">{name}</h1>
-                            <span style="font-size: 0.85rem; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 12px; border-radius: 20px; font-weight: 700;">Verified {score}% Aggregate ({grade})</span>
+                            <h1 style="margin: 0; font-size: 2.3rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">{name}</h1>
+                            <span style="font-size: 0.82rem; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 14px; border-radius: 20px; font-weight: 700;">Verified {score}% Aggregate ({grade})</span>
                         </div>
-                        <p style="margin: 6px 0 10px 0; color: {accent_color}; font-weight: 700; font-size: 1.1rem;">{track}</p>
-                        <p style="margin: 0 0 12px 0; color: #cbd5e1; font-size: 0.92rem; line-height: 1.5;">{bio_summary}</p>
+                        <p style="margin: 6px 0 12px 0; color: {accent_color}; font-weight: 700; font-size: 1.15rem;">{track}</p>
+                        <p style="margin: 0 0 14px 0; color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; font-weight: 400;">{ai_summary}</p>
                         {socials_html}
                         {linkedin_badge_html}
                     </div>
                 </div>
 
-                <!-- DEEP CANDIDATE DEMOGRAPHIC GRID -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 25px; background: rgba(0,0,0,0.3); padding: 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); text-align: left;">
-                    <div><span style="color:#94a3b8; font-size:0.8rem;">🎂 Age / DOB</span><br><b style="color:#f8fafc; font-size:0.95rem;">{age_years} Years ({raw_dob})</b></div>
-                    <div><span style="color:#94a3b8; font-size:0.8rem;">👤 Gender Identity</span><br><b style="color:#f8fafc; font-size:0.95rem;">{gender}</b></div>
-                    <div><span style="color:#94a3b8; font-size:0.8rem;">🆔 Student Candidate ID</span><br><code style="color:{secondary_color}; font-size:0.95rem;">{sid}</code></div>
-                    <div><span style="color:#94a3b8; font-size:0.8rem;">🏛️ Assessment Center</span><br><b style="color:#f8fafc; font-size:0.95rem;">{center}</b></div>
+                <!-- STATS & DEMOGRAPHICS BAR -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-top: 28px; background: rgba(0,0,0,0.35); padding: 20px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.05); text-align: left;">
+                    <div><span style="color:#94a3b8; font-size:0.78rem; font-weight:600;">🎂 Age / DOB</span><br><b style="color:#f8fafc; font-size:0.98rem;">{age_years} Yrs ({raw_dob})</b></div>
+                    <div><span style="color:#94a3b8; font-size:0.78rem; font-weight:600;">👤 Gender Identity</span><br><b style="color:#f8fafc; font-size:0.98rem;">{gender}</b></div>
+                    <div><span style="color:#94a3b8; font-size:0.78rem; font-weight:600;">🆔 Student Candidate ID</span><br><code style="color:{secondary_color}; font-size:0.98rem;">{sid}</code></div>
+                    <div><span style="color:#94a3b8; font-size:0.78rem; font-weight:600;">🏛️ Assessment Center</span><br><b style="color:#f8fafc; font-size:0.98rem;">{center}</b></div>
                 </div>
 
-                <!-- DYNAMIC DOMAIN TELEMETRY & WAVEFORM -->
-                <div style="margin-top: 28px; text-align: left;">
-                    <h3 style="color: #f8fafc; font-size: 1.15rem; border-left: 4px solid {accent_color}; padding-left: 10px; margin-bottom: 12px;">📊 Practical Domain Performance Waveform</h3>
-                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                <!-- DYNAMIC DOMAIN TELEMETRY WAVEFORM -->
+                <div style="margin-top: 30px; text-align: left;">
+                    <h3 style="color: #f8fafc; font-size: 1.15rem; border-left: 4px solid {accent_color}; padding-left: 12px; margin-bottom: 14px;">📊 AI Evaluated Competency Telemetry</h3>
+                    <div style="background: rgba(0,0,0,0.35); padding: 18px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.05);">
                         {chart_svg}
                     </div>
                 </div>
@@ -2570,48 +2608,49 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 {experience_html}
 
                 <!-- DETAILED COURSE MODULES BREAKDOWN -->
-                <div style="margin-top: 28px; text-align: left;">
-                    <h3 style="color: #f8fafc; font-size: 1.15rem; border-left: 4px solid {accent_color}; padding-left: 10px; margin-bottom: 15px;">📚 Detailed Course Modules & Certified Competencies</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;">
-                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px;">
-                            <b style="color: {secondary_color}; font-size: 0.9rem;">Module 1: Domain Foundations</b>
-                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 6px 0 0 0;">Regulatory compliance, safety isolations, and domain fundamentals.</p>
+                <div style="margin-top: 30px; text-align: left;">
+                    <h3 style="color: #f8fafc; font-size: 1.15rem; border-left: 4px solid {accent_color}; padding-left: 12px; margin-bottom: 16px;">📚 Certified Curriculum Modules</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;">
+                        <div class="hover-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 16px; border-radius: 12px;">
+                            <b style="color: {secondary_color}; font-size: 0.92rem;">Module 1: Domain Fundamentals</b>
+                            <p style="font-size: 0.82rem; color: #94a3b8; margin: 8px 0 0 0; line-height: 1.4;">Safety standards, protocol isolation, and core domain architecture.</p>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px;">
-                            <b style="color: {secondary_color}; font-size: 0.9rem;">Module 2: Practical Telemetry & Hardware</b>
-                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 6px 0 0 0;">Sensor wiring, signal integrity, and real-time data bus calibration.</p>
+                        <div class="hover-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 16px; border-radius: 12px;">
+                            <b style="color: {secondary_color}; font-size: 0.92rem;">Module 2: Practical Telemetry</b>
+                            <p style="font-size: 0.82rem; color: #94a3b8; margin: 8px 0 0 0; line-height: 1.4;">Hardware integration, signal integrity, and real-time data streaming.</p>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px;">
-                            <b style="color: {secondary_color}; font-size: 0.9rem;">Module 3: Diagnostic Protocols</b>
-                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 6px 0 0 0;">Root-cause troubleshooting, fault-code analysis, and automated cutoff triggers.</p>
+                        <div class="hover-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 16px; border-radius: 12px;">
+                            <b style="color: {secondary_color}; font-size: 0.92rem;">Module 3: Diagnostic Protocols</b>
+                            <p style="font-size: 0.82rem; color: #94a3b8; margin: 8px 0 0 0; line-height: 1.4;">Root-cause troubleshooting, fault isolation, and error mitigation.</p>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px;">
-                            <b style="color: #34d399; font-size: 0.9rem;">Module 4: Capstone Execution</b>
-                            <p style="font-size: 0.8rem; color: #94a3b8; margin: 6px 0 0 0;">Evaluated practical submission (Score: {cap_s}/50) with SHA-256 ledger seal.</p>
+                        <div class="hover-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); padding: 16px; border-radius: 12px;">
+                            <b style="color: #34d399; font-size: 0.92rem;">Module 4: Capstone Evaluation</b>
+                            <p style="font-size: 0.82rem; color: #94a3b8; margin: 8px 0 0 0; line-height: 1.4;">Practical submission score ({cap_s}/50) logged with SHA-256 seal.</p>
                         </div>
                     </div>
                 </div>
 
-                <div style="margin-top: 28px; text-align: left;">
-                    <h3 style="color: #f8fafc; font-size: 1.15rem; border-left: 4px solid {accent_color}; padding-left: 10px; margin-bottom: 12px;">🎯 Verified Competencies & Skills</h3>
+                <div style="margin-top: 30px; text-align: left;">
+                    <h3 style="color: #f8fafc; font-size: 1.15rem; border-left: 4px solid {accent_color}; padding-left: 12px; margin-bottom: 14px;">🎯 Verified Competencies & Tech Stack</h3>
                     <div style="margin-top: 8px;">{skills_html}</div>
                 </div>
 
-                <div style="margin-top: 28px; text-align: left;">
-                    <h3 style="color: #f8fafc; font-size: 1.15rem; border-left: 4px solid #10b981; padding-left: 10px; margin-bottom: 12px;">🔬 Research Projects & Technical Work</h3>
+                <div style="margin-top: 30px; text-align: left;">
+                    <h3 style="color: #f8fafc; font-size: 1.15rem; border-left: 4px solid #10b981; padding-left: 12px; margin-bottom: 14px;">🔬 Research Projects & Industrial Work</h3>
                     {research_html}
                 </div>
 
                 {github_section}
 
-                <div style="margin-top: 35px; padding: 18px; background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <!-- FOOTER AUTHENTICATION DIGEST -->
+                <div style="margin-top: 38px; padding: 20px; background: rgba(0,0,0,0.45); border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <div>
                         <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Cryptographic Provenance Digest</span>
-                        <br><code style="font-size: 0.85rem; color: {secondary_color}; font-weight: 600;">{seal}</code>
+                        <br><code style="font-size: 0.88rem; color: {secondary_color}; font-weight: 600;">{seal}</code>
                     </div>
                     <div style="text-align: right;">
-                        <span style="font-size: 0.75rem; color: #94a3b8;">Issued by Authority: {center}</span>
-                        <br><span style="font-size: 0.75rem; color: #34d399; font-weight: 600;">● Authenticated & Immutable</span>
+                        <span style="font-size: 0.78rem; color: #94a3b8;">Issued by Authority: {center}</span>
+                        <br><span style="font-size: 0.78rem; color: #34d399; font-weight: 600;">● Authenticated & Immutable</span>
                     </div>
                 </div>
             </div>
