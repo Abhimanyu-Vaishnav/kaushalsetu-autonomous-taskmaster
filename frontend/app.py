@@ -920,7 +920,7 @@ def main_app_layout():
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO & ZERO-FAILURE COACHING
             with tab_prep:
-                st.markdown("### 🎙️ AI Conversational Mock Technical Interview Studio")
+                st.markdown("### 🎙️ AI Conversational Technical Interview Studio & 360° Readiness Hub")
                 st.caption("Turn-by-turn interactive technical & behavioral rounds with 0% Failure Risk Coaching matched to your profile.")
 
                 # Profile-Aware Domain Role Options Isolation
@@ -983,10 +983,10 @@ def main_app_layout():
 
                 col_r1, col_r2 = st.columns([3, 2])
                 with col_r1:
-                    sel_role_raw = st.selectbox("🎯 Target Job Role for Mock Technical Round", options=role_options, key="sel_interview_role")
+                    sel_role_raw = st.selectbox("🎯 Select Target Job Role for Mock Technical Round", options=role_options, key="sel_interview_role")
                     selected_job_role = auto_role if "Auto-Matched" in sel_role_raw else sel_role_raw
                 with col_r2:
-                    selected_mode = st.selectbox("🔬 Interview Mode & Focus", options=[
+                    selected_mode = st.selectbox("🔬 Select Interview Round & Focus", options=[
                         "🎯 Domain Technical & Architecture Round",
                         "📋 HR & Behavioral STAR Round",
                         "⚠️ Crisis & Emergency Outage Stress Test"
@@ -1005,12 +1005,12 @@ def main_app_layout():
                             <div style="width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, {theme_accent}, {theme_sub}); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 0 20px {theme_accent}88;">🤖</div>
                             <div>
                                 <b style="color: #f8fafc; font-size: 1.08rem;">Autonomous AI Executive Recruiter Agent</b>
-                                <br><span style="color: {theme_sub}; font-size: 0.82rem; font-weight: 600;">● LIVE RECRUITER STUDIO • {selected_job_role} ({selected_mode.split()[1]})</span>
+                                <br><span style="color: {theme_sub}; font-size: 0.82rem; font-weight: 600;">● LIVE RECRUITER STUDIO • {selected_job_role}</span>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 14px; background: rgba(0,0,0,0.4); padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08);">
-                            <span style="font-size: 0.82rem; color: #94a3b8;">Selection Assurance:</span>
-                            <b style="color: #34d399; font-size: 0.92rem;">🟢 98% (Tier-1 Ready)</b>
+                            <span style="font-size: 0.82rem; color: #94a3b8;">Selection Readiness:</span>
+                            <b style="color: #34d399; font-size: 0.92rem;">🟢 98% (Tier-1 Corporate Ready)</b>
                             <span style="color: #64748b;">|</span>
                             <b style="color: {theme_sub}; font-size: 0.92rem;">Turn {min(cur_turn, 4)} / 4</b>
                         </div>
@@ -1018,68 +1018,33 @@ def main_app_layout():
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Render Turn Stream Cards
-                for turn_item in history:
-                    t_num = turn_item.get("turn", 1)
-                    q_text = turn_item.get("question", "")
-                    
+                # Active Question Display (Current Step Focus)
+                if history:
+                    active_item = history[-1]
+                    t_num = active_item.get("turn", cur_turn)
+                    q_text = active_item.get("question", "")
+
                     st.markdown(f"""
-                    <div style="background: rgba(15,23,42,0.8); border-left: 4px solid {theme_accent}; border-radius: 12px; padding: 18px; margin-bottom: 16px; border-top: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-size: 0.78rem; font-weight: 700; color: {theme_sub}; letter-spacing: 0.5px;">ROUND {t_num} • {selected_mode.upper()}</span>
-                            <span style="font-size: 0.72rem; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 10px;">Executive Recruiter</span>
+                    <div style="background: rgba(15,23,42,0.85); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 20px; margin-bottom: 20px; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 ACTIVE RECRUITER PROBE • TURN {t_num} OF 4</span>
+                            <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 3px 10px; border-radius: 12px; font-weight: 600;">Adaptive Gemini Follow-Up Engine</span>
                         </div>
-                        <p style="color: #f8fafc; font-size: 0.98rem; font-weight: 600; line-height: 1.5; margin: 0;">{q_text}</p>
+                        <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin: 0;">{q_text}</p>
                     </div>
                     """, unsafe_allow_html=True)
 
-                    if "candidate_answer" in turn_item:
-                        ans_text = turn_item.get("candidate_answer")
-                        score_val = turn_item.get("score", 7)
-                        fb_text = turn_item.get("feedback", "")
-                        model_ans = turn_item.get("model_answer", "")
-                        matched_kws = turn_item.get("matched_terms", [])
-
-                        score_color = "#34d399" if score_val >= 8 else ("#fbbf24" if score_val >= 6 else "#f87171")
-                        kw_badges = " ".join([f"<span style='background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px; font-size:0.75rem;'>✓ {k.upper()}</span>" for k in matched_kws])
-
-                        st.markdown(f"""
-                        <div style="background: rgba(30,41,59,0.5); border-left: 4px solid #38bdf8; border-radius: 12px; padding: 16px; margin-bottom: 16px; margin-left: 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                <b style="color: #e2e8f0; font-size: 0.85rem;">👤 Candidate Response Transcript</b>
-                            </div>
-                            <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; margin: 0;">{ans_text}</p>
-                        </div>
-
-                        <div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; margin-bottom: 22px; margin-left: 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <span style="font-size: 0.82rem; font-weight: 700; color: #f8fafc;">📊 AI Evaluation Score:</span>
-                                    <span style="background: {score_color}22; color: {score_color}; border: 1px solid {score_color}55; padding: 3px 10px; border-radius: 12px; font-weight: 800; font-size: 0.85rem;">{score_val} / 10</span>
-                                </div>
-                                <div>{kw_badges}</div>
-                            </div>
-                            <p style="color: #94a3b8; font-size: 0.85rem; margin: 0 0 10px 0; line-height: 1.4;">{fb_text}</p>
-                            <details style="color: #38bdf8; font-size: 0.82rem; cursor: pointer;">
-                                <summary style="font-weight: 600;">💡 View Recruiter's Model Answer for Learning</summary>
-                                <div style="background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; margin-top: 8px; color: #e2e8f0; border: 1px solid rgba(56,189,248,0.2);">
-                                    {model_ans}
-                                </div>
-                            </details>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                # Candidate Response Box for Active Session with AI Refiner
+                # Candidate Response Input & AI Refiner Panel
                 if session_data.get("status") != "COMPLETED":
-                    st.markdown("#### ✍️ Submit Technical Answer for Current Round:")
+                    st.markdown("#### ✍️ Provide Your Technical Response:")
                     
-                    draft_input = st.text_area("Your Response Draft:", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=110, key="int_reply_box_draft")
+                    draft_input = st.text_area("Your Response:", placeholder=f"Explain your step-by-step diagnostic workflow, domain terminology, and practical approach for {selected_job_role}...", height=120, key="int_reply_box_draft")
                     
                     col_ref1, col_ref2 = st.columns([1, 1])
                     with col_ref1:
                         if st.button("✨ AI Refine & Polish My Answer (Zero-Failure Coaching)", key="btn_refine_ans", use_container_width=True):
                             if len(draft_input.strip()) < 5:
-                                st.warning("Please enter a rough draft answer first to refine.")
+                                st.warning("Please type a draft response first before refining.")
                             else:
                                 with st.spinner("🤖 AI Coach enriching answer with senior recruiter terminology..."):
                                     ref_res = agent_refine_candidate_interview_answer(history[-1].get("question", ""), draft_input, selected_job_role)
@@ -1092,7 +1057,7 @@ def main_app_layout():
                         final_submit_ans = st.session_state.get("refined_ans_cache") or draft_input
                         if st.button("⚡ Submit Final Answer to Recruiter 🎙️", type="primary", use_container_width=True, key="btn_submit_int_ans"):
                             if len(final_submit_ans.strip()) < 8:
-                                st.warning("Please provide a complete technical response.")
+                                st.warning("Please provide a complete response.")
                             else:
                                 with st.spinner("🤖 AI Recruiter evaluating technical depth & domain terminology..."):
                                     eval_turn = evaluate_interview_turn(session_data.get("id"), final_submit_ans)
@@ -1101,24 +1066,105 @@ def main_app_layout():
                                         st.balloons()
                                         st.toast(f"🎉 Technical Interview Completed! Score: {eval_turn.get('overall_score')}%", icon="🏆")
                                     st.rerun()
-                else:
+
+                # Expandable History Transcripts (Past Turns)
+                if len(history) > 1 or "candidate_answer" in history[0]:
+                    with st.expander("📜 View Full Interview Transcripts & Past AI Evaluations", expanded=False):
+                        for turn_item in history:
+                            if "candidate_answer" in turn_item:
+                                t_num = turn_item.get("turn", 1)
+                                q_text = turn_item.get("question", "")
+                                ans_text = turn_item.get("candidate_answer", "")
+                                score_val = turn_item.get("score", 7)
+                                fb_text = turn_item.get("feedback", "")
+                                model_ans = turn_item.get("model_answer", "")
+                                matched_kws = turn_item.get("matched_terms", [])
+                                score_color = "#34d399" if score_val >= 8 else ("#fbbf24" if score_val >= 6 else "#f87171")
+                                kw_badges = " ".join([f"<span style='background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px; font-size:0.75rem;'>✓ {k.upper()}</span>" for k in matched_kws])
+
+                                st.markdown(f"""
+                                <div style="background: rgba(15,23,42,0.6); border-left: 3px solid #6366f1; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px;">
+                                    <b style="color: #818cf8; font-size: 0.85rem;">Turn {t_num} Question:</b>
+                                    <p style="color: #f8fafc; font-size: 0.9rem; margin: 4px 0 0 0;">{q_text}</p>
+                                </div>
+                                <div style="background: rgba(30,41,59,0.5); border-left: 3px solid #38bdf8; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; margin-left: 14px;">
+                                    <b style="color: #e2e8f0; font-size: 0.82rem;">Candidate Response:</b>
+                                    <p style="color: #cbd5e1; font-size: 0.88rem; margin: 4px 0 0 0;">{ans_text}</p>
+                                </div>
+                                <div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; margin-bottom: 16px; margin-left: 14px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                        <b style="color: #f8fafc; font-size: 0.82rem;">AI Score: <span style="color: {score_color};">{score_val} / 10</span></b>
+                                        <div>{kw_badges}</div>
+                                    </div>
+                                    <p style="color: #94a3b8; font-size: 0.82rem; margin: 0 0 8px 0;">{fb_text}</p>
+                                    <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border: 1px solid rgba(56,189,248,0.2); font-size: 0.8rem; color: #e2e8f0;">
+                                        <b style="color: #38bdf8;">💡 Model Answer:</b> {model_ans}
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+
+                # Completed Interview 360° Comprehensive Report & Study Plan
+                if session_data.get("status") == "COMPLETED":
+                    report_raw = session_data.get("feedback_summary", "{}")
+                    try:
+                        report = json.loads(report_raw) if isinstance(report_raw, str) and report_raw.startswith("{") else {}
+                    except Exception:
+                        report = {}
+
+                    overall_sc = session_data.get("overall_score") or report.get("overall_score", 85)
+                    prob_verdict = report.get("selection_probability", "🟢 98% (Tier-1 Corporate Ready)")
+                    strengths_list = report.get("strengths", ["Strong command of core domain terms", "High practical problem-solving confidence"])
+                    gaps_list = report.get("gaps", ["Incorporate more multi-step error isolation details."])
+                    roadmap_list = report.get("study_roadmap", [
+                        "📘 Module 1: Advanced Tally Prime & GST Act Section 16(2) Compliance",
+                        "📘 Module 2: Bank Reconciliation Statement (BRS) Error Isolation",
+                        "📘 Module 3: Executive Interview STAR Method & Salary Negotiation"
+                    ])
+
                     st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #022c22 0%, #064e3b 100%); border: 1px solid #10b981; padding: 22px; border-radius: 16px; text-align: center; margin-top: 10px;">
-                        <h3 style="color: #fbbf24; margin: 0 0 8px 0;">🏆 Technical Interview Round Completed!</h3>
-                        <p style="color: #e2e8f0; font-size: 1.05rem; font-weight: 600; margin: 0 0 12px 0;">Overall AI Rating: <span style="color: #34d399; font-size: 1.3rem;">{session_data.get('overall_score')}%</span> (0% Failure Risk)</p>
-                        <p style="color: #94a3b8; font-size: 0.88rem; max-width: 600px; margin: 0 auto 16px auto;">{session_data.get('feedback_summary')}</p>
+                    <div style="background: linear-gradient(135deg, #022c22 0%, #064e3b 100%); border: 1px solid #10b981; padding: 24px; border-radius: 16px; margin-top: 16px; box-shadow: 0 0 30px rgba(16,185,129,0.2);">
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <h3 style="color: #fbbf24; margin: 0 0 6px 0;">🏆 360° AI Recruiter Diagnostic & Readiness Report</h3>
+                            <p style="color: #e2e8f0; font-size: 1.05rem; font-weight: 600; margin: 0;">Overall AI Competency Score: <span style="color: #34d399; font-size: 1.35rem;">{overall_sc}%</span> | Selection Verdict: <span style="color: #38bdf8;">{prob_verdict}</span></p>
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
 
-                    if st.button("🔄 Start Fresh Mock Technical Round", key="btn_restart_interview", type="primary", use_container_width=True):
-                        try:
-                            conn = get_db()
-                            conn.execute("UPDATE interview_sessions SET status = 'ARCHIVED' WHERE id = ?", (session_data.get('id'),))
-                            conn.commit()
-                            conn.close()
-                            st.rerun()
-                        except Exception:
-                            pass
+                    col_sp1, col_sp2 = st.columns(2)
+                    with col_sp1:
+                        st.markdown("#### 💪 Key Strengths Identified:")
+                        for st_item in strengths_list:
+                            st.success(f"✓ {st_item}")
+                    with col_sp2:
+                        st.markdown("#### ⚠️ Technical & Vocabulary Gaps:")
+                        for gap_item in gaps_list:
+                            st.warning(f"⚠️ {gap_item}")
+
+                    st.markdown("#### 📚 Recommended 7-Day Targeted Study & Preparation Roadmap:")
+                    for mod_item in roadmap_list:
+                        st.info(f"{mod_item}")
+
+                    col_re1, col_re2 = st.columns(2)
+                    with col_re1:
+                        if st.button("🔄 Retest This Round (Start Fresh)", key="btn_restart_interview", type="primary", use_container_width=True):
+                            try:
+                                conn = get_db()
+                                conn.execute("UPDATE interview_sessions SET status = 'ARCHIVED' WHERE id = ?", (session_data.get('id'),))
+                                conn.commit()
+                                conn.close()
+                                st.rerun()
+                            except Exception:
+                                pass
+                    with col_re2:
+                        if st.button("🎲 Practice Alternative Adaptive Questions", key="btn_alt_questions", use_container_width=True):
+                            try:
+                                conn = get_db()
+                                conn.execute("UPDATE interview_sessions SET status = 'ARCHIVED' WHERE id = ?", (session_data.get('id'),))
+                                conn.commit()
+                                conn.close()
+                                st.rerun()
+                            except Exception:
+                                pass
             # TAB 5: EDIT CANDIDATE PROFILE & SOCIAL LINKS
             with tab_profile:
                 st.markdown("### ✏️ Candidate Profile & Social Footprint Hub")

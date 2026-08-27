@@ -2273,7 +2273,7 @@ def agent_refine_candidate_interview_answer(question: str, draft_answer: str, jo
     }
 
 def evaluate_interview_turn(session_id: str, student_answer: str):
-    """Evaluates candidate response using domain AI criteria and generates next targeted question."""
+    """Evaluates candidate response using domain AI criteria, generates adaptive follow-up questions, and produces 360° readiness reports."""
     try:
         conn = get_db()
         c = conn.cursor()
@@ -2295,23 +2295,51 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
         ans_clean = str(student_answer or "").strip()
         ans_words = ans_clean.split()
         ans_len = len(ans_words)
+        last_q = history[-1].get("question", "") if history else ""
         
         # Domain Keyword Match Evaluator
         if any(w in role_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
             keywords = ["tally", "gst", "gstr", "itc", "tds", "brs", "ledger", "reconciliation", "journal", "trial balance", "invoice", "debit", "credit", "accrual", "tax"]
             ideal_model = "I open Tally Prime Voucher Entry (F5/F8), verify invoice line items, calculate CGST/SGST/IGST breakdown, cross-check vendor ITC on the GST portal against GSTR-2B, and post adjustment journals for any un-reconciled amounts."
+            study_data = [
+                "📘 Module 1: Advanced Tally Prime Voucher Entry & Shortcut Keys (F5/F8/F9)",
+                "📘 Module 2: GST Act Section 16(2) Input Tax Credit (ITC) & GSTR-2B Matching",
+                "📘 Module 3: Bank Reconciliation Statement (BRS) Error Isolation Techniques",
+                "📘 Module 4: TDS Deduction under Section 194C vs 194J & Quarter Filing"
+            ]
         elif any(w in role_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
             keywords = ["python", "fastapi", "react", "api", "rest", "async", "database", "sql", "docker", "endpoint", "middleware", "jwt", "state", "hook", "json"]
             ideal_model = "I construct asynchronous Pydantic request models in FastAPI, implement dependency injection for database session management, use JWT bearer auth middleware, and handle frontend state using React useEffect hooks."
+            study_data = [
+                "💻 Module 1: Async Python FastAPI Architecture & Pydantic V2 Schemas",
+                "💻 Module 2: PostgreSQL Connection Pooling & Index Optimization",
+                "💻 Module 3: JWT Bearer Authentication & OAuth2 Middleware Flow",
+                "💻 Module 4: Dockerizing Full-Stack Microservices with Multi-stage Builds"
+            ]
         elif any(w in role_lower for w in ["solar", "renew"]):
             keywords = ["solar", "mppt", "inverter", "scada", "telemetry", "grid", "voltage", "string", "power", "modbus", "rs485", "transformer"]
             ideal_model = "I verify MPPT tracker duty cycle, inspect RS-485 Modbus serial registers, check string voltage balance under full irradiance, and log telemetry packets to the SCADA gateway."
+            study_data = [
+                "☀️ Module 1: Solar Inverter MPPT Efficiency & String Voltage Diagnostics",
+                "☀️ Module 2: RS-485 Modbus Protocol & Gateway Telemetry Packet Analysis",
+                "☀️ Module 3: Grid-Tie Anti-Islanding Safety & Transformer Interlocks"
+            ]
         elif any(w in role_lower for w in ["electric", "ev", "battery"]):
             keywords = ["bms", "can-bus", "battery", "cell", "voltage", "ecu", "soc", "thermal", "hvil", "isolation", "harness", "fault"]
             ideal_model = "I connect a CAN-Bus logger to capture 0x18FF ECU frames, measure pack isolation resistance (>500 ohms/volt), verify active passive cell balancing, and monitor thermal sensor thermistors."
+            study_data = [
+                "⚡ Module 1: BMS Passive & Active Cell Balancing Topologies",
+                "⚡ Module 2: CAN-Bus 2.0B Telemetry Frame Decoding & DBC Parsing",
+                "⚡ Module 3: High-Voltage Isolation Safety (HVIL) & Thermal Runaway Protocol"
+            ]
         else:
             keywords = ["plc", "modbus", "ladder", "sensor", "telemetry", "relay", "actuator", "oscilloscope", "calibration", "circuit", "isolation", "safety"]
             ideal_model = "I inspect PLC I/O status LEDs, check 24V DC loop power continuity, verify sensor signal noise on an oscilloscope, and re-tune PID loop proportional gain."
+            study_data = [
+                "⚙️ Module 1: PLC Ladder Logic & Industrial I/O Wiring Standards",
+                "⚙️ Module 2: 24V Sensor Loop Calibration & Oscilloscope Signal Analysis",
+                "⚙️ Module 3: PID Closed-Loop Control Tuning & SCADA Interlocking"
+            ]
 
         matched_kws = [kw for kw in keywords if kw in ans_clean.lower()]
         
@@ -2344,51 +2372,89 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
         if turn >= 4:
             scores = [h.get("score", 7) for h in history if "score" in h]
             avg_rating = round((sum(scores) / max(len(scores), 1)) * 10, 1)
-            summary = f"Candidate demonstrated outstanding domain competency for {job_role}. Technical vocabulary, diagnostic logic, and practical reflexes scored an aggregate {avg_rating}% (0% Failure Risk)."
             
+            all_matched = []
+            for h in history:
+                all_matched.extend(h.get("matched_terms", []))
+            unique_matched = list(set(all_matched))
+            
+            strengths = [f"Strong command of core domain terminology ({', '.join([k.upper() for k in unique_matched[:4]])})"] if unique_matched else ["Structured logical reasoning"]
+            strengths.append("High practical problem-solving confidence")
+
+            gaps = []
+            if avg_rating < 70:
+                gaps.append("Short answer depth: Elaborate further on multi-step error isolation protocols.")
+            if len(unique_matched) < 5:
+                gaps.append("Domain vocabulary gap: Incorporate more industry-standard technical terms into your explanations.")
+            if not gaps:
+                gaps.append("Zero major technical gaps identified. Candidate is ready for Tier-1 corporate placement.")
+
+            summary_report = {
+                "overall_score": avg_rating,
+                "selection_probability": "🟢 98% (Tier-1 Corporate Ready)" if avg_rating >= 75 else ("🟡 75% (Corporate Ready with Minor Review)" if avg_rating >= 60 else "🔴 45% (Needs Targeted Skill Review)"),
+                "strengths": strengths,
+                "gaps": gaps,
+                "study_roadmap": study_data,
+                "history": history
+            }
+
             c.execute("""
                 UPDATE interview_sessions 
                 SET conversation_history = ?, current_turn = ?, overall_score = ?, feedback_summary = ?, status = 'COMPLETED'
                 WHERE id = ?
-            """, (json.dumps(history), turn, avg_rating, summary, session_id))
+            """, (json.dumps(history), turn, avg_rating, json.dumps(summary_report), session_id))
             conn.commit()
             conn.close()
-            return {"status": "completed", "overall_score": avg_rating, "summary": summary, "history": history}
+            return {"status": "completed", "overall_score": avg_rating, "report": summary_report, "history": history}
 
-        # Next Question Domain-Tailored Synthesis
+        # Next Question Adaptive Follow-up Synthesis (Probing Candidate's Last Answer)
         next_turn = turn + 1
-        if any(w in role_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
-            questions_pool = [
-                f"Suppose during a month-end ledger audit in {job_role}, you find a ₹50,000 trial balance mismatch between Cash Book and Passbook. What systematic Bank Reconciliation (BRS) steps do you follow to locate the discrepancy?",
-                f"How do you handle TDS deduction under Section 194J vs 194C, and what process do you follow when a vendor submits a lower-deduction certificate?",
-                f"Imagine a senior manager asks you to expedite a financial report under tight deadlines while tax reconciliation is incomplete. How do you balance speed with 100% GAAP compliance?"
-            ]
-        elif any(w in role_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
-            questions_pool = [
-                f"Suppose your production API in {job_role} experiences sudden high-latency spikes during peak traffic. How do you profile slow database queries and implement caching or indexing?",
-                f"How do you handle JWT token expiration, refresh token rotations, and CORS security headers across microservices?",
-                f"Describe a scenario where a production deployment broke on Docker containers due to environment mismatches. How did you diagnose and resolve it?"
-            ]
-        elif any(w in role_lower for w in ["solar", "renew"]):
-            questions_pool = [
-                f"During a solar plant inspection in {job_role}, the SCADA telemetry reports a sudden 20% drop in inverter MPPT efficiency under full sunlight. How do you isolate string faults?",
-                f"What anti-islanding safety protocols and grid-tie synchronization checks must be verified before re-connecting an inverter node to the main grid?",
-                f"How do you handle RS-485 Modbus serial communication noise over long cable runs in high-voltage sub-stations?"
-            ]
-        elif any(w in role_lower for w in ["electric", "ev", "battery"]):
-            questions_pool = [
-                f"If an EV battery pack in {job_role} reports a high cell-voltage delta (>150mV) during rapid charging, how do you diagnose if it's a BMS thermistor error or a cell degradation fault?",
-                f"What High-Voltage Interlock Loop (HVIL) safety steps do you follow before touching 400V DC powertrain components?",
-                f"How do you configure CAN-Bus frame filtering to prevent bus saturation when telemetry packets exceed 500 kbps?"
-            ]
-        else:
-            questions_pool = [
-                f"When diagnosing an intermittent PLC input voltage drop across a 24V industrial sensor line in {job_role}, what systematic isolation steps do you prioritize?",
-                f"How do you handle telemetry buffer overruns or Modbus CRC checksum failures under high-speed manufacturing conditions?",
-                f"Describe how you balance emergency shop-floor maintenance under tight production deadlines while strictly adhering to electrical safety lockouts."
-            ]
+        next_q = ""
+        
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        if gemini_key and len(ans_clean) > 10:
+            try:
+                from google import genai
+                client = genai.Client(api_key=gemini_key)
+                prompt = f"""
+                You are an expert Senior Technical Recruiter interviewing a candidate for '{job_role}'.
+                Previous Question: '{last_q}'
+                Candidate Answered: '{ans_clean}'
 
-        next_q = questions_pool[(next_turn - 2) % len(questions_pool)]
+                Ask the NEXT realistic technical follow-up question (Turn {next_turn}) that directly probes deeper into what the candidate just said in their answer. Keep it crisp, practical, and highly realistic.
+                Return JSON: {{"next_question": "text"}}
+                """
+                resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                if resp and resp.text:
+                    match = re.search(r'\{.*\}', resp.text, re.DOTALL)
+                    if match:
+                        parsed = json.loads(match.group(0))
+                        next_q = parsed.get("next_question", "")
+            except Exception:
+                pass
+
+        if not next_q:
+            if any(w in role_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
+                questions_pool = [
+                    f"Based on your response regarding GST filing, how do you handle vendor ITC mismatches in GSTR-2B when a supplier files their return under a different GSTIN?",
+                    f"Suppose during a month-end ledger audit in {job_role}, you find a ₹50,000 trial balance mismatch between Cash Book and Passbook. What systematic BRS steps do you follow to locate the discrepancy?",
+                    f"How do you handle TDS deduction under Section 194J vs 194C, and what process do you follow when a vendor submits a lower-deduction certificate?"
+                ]
+            elif any(w in role_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
+                questions_pool = [
+                    f"Following up on your API answer, how do you handle JWT token rotation, CORS security headers, and database transaction rollbacks in FastAPI?",
+                    f"Suppose your production API in {job_role} experiences sudden high-latency spikes during peak traffic. How do you profile slow database queries and implement caching?",
+                    f"Describe a scenario where a production deployment broke on Docker containers due to environment mismatches. How did you diagnose it?"
+                ]
+            else:
+                questions_pool = [
+                    f"Following up on your diagnostic explanation, how do you isolate signal noise vs mechanical sensor failure on an oscilloscope under high-vibration conditions?",
+                    f"When diagnosing an intermittent PLC input voltage drop across a 24V industrial sensor line in {job_role}, what systematic isolation steps do you prioritize?",
+                    f"How do you handle telemetry buffer overruns or Modbus CRC checksum failures under high-speed manufacturing conditions?"
+                ]
+
+            next_q = questions_pool[(next_turn - 2) % len(questions_pool)]
+
         history.append({"role": "interviewer", "question": next_q, "turn": next_turn})
 
         c.execute("""
