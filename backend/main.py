@@ -2174,35 +2174,63 @@ def start_or_get_interview_session(student_id: str, job_role: str = "", mode: st
             conn.close()
             return session
 
-        # New session initialization with domain & mode accurate Question 1
+        # New session initialization with Resume & Profile accurate Question 1
         sess_id = f"INT-{uuid.uuid4().hex[:6].upper()}"
         track_lower = (track + " " + job_role).lower()
+        skills_str = str(candidate.get("parsed_skills") or "")
+        resume_text = str(candidate.get("resume_text") or candidate.get("resume_highlights") or "")
         
-        if mode_clean == "hr_behavioral":
-            if any(w in track_lower for w in ["account", "finance", "tally", "tax", "audit"]):
-                first_q = f"Welcome to the HR & Professional Competency Round for **{job_role}**. Tell me about a time when you identified an accounting discrepancy or tax error caused by a client or colleague. How did you resolve it diplomatically while maintaining 100% compliance?"
-            elif any(w in track_lower for w in ["web", "python", "full", "software"]):
-                first_q = f"Welcome to the HR & Professional Competency Round for **{job_role}**. Describe a situation where project specifications changed 2 days before production deployment. How did you handle technical debt and manage team expectations?"
+        first_q = ""
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        if gemini_key and (skills_str or len(resume_text) > 10):
+            try:
+                from google import genai
+                client = genai.Client(api_key=gemini_key)
+                prompt = f"""
+                You are a Senior Technical Recruiter interviewing a candidate for role '{job_role}'.
+                Candidate Course: '{track}'
+                Candidate Skills: '{skills_str}'
+                Candidate Resume Excerpt: '{resume_text[:400]}'
+                Interview Mode: '{mode_clean}'
+
+                Synthesize a highly realistic, domain-authentic Question #1 for this candidate that specifically references their background, course, or resume projects.
+                Return JSON: {{"question": "text"}}
+                """
+                resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                if resp and resp.text:
+                    match = re.search(r'\{.*\}', resp.text, re.DOTALL)
+                    if match:
+                        parsed = json.loads(match.group(0))
+                        first_q = parsed.get("question", "")
+            except Exception:
+                pass
+
+        if not first_q:
+            if mode_clean == "hr_behavioral":
+                if any(w in track_lower for w in ["account", "finance", "tally", "tax", "audit"]):
+                    first_q = f"Welcome to the HR & Professional Competency Round for **{job_role}**. Tell me about a time when you identified an accounting discrepancy or tax error caused by a client or colleague. How did you resolve it diplomatically while maintaining 100% compliance?"
+                elif any(w in track_lower for w in ["web", "python", "full", "software"]):
+                    first_q = f"Welcome to the HR & Professional Competency Round for **{job_role}**. Describe a situation where project specifications changed 2 days before production deployment. How did you handle technical debt and manage team expectations?"
+                else:
+                    first_q = f"Welcome to the HR & Professional Competency Round for **{job_role}**. Tell me about a time when safety protocols conflicted with urgent shop-floor deadlines. How did you maintain zero-compromise safety?"
+            elif mode_clean == "crisis_stress":
+                if any(w in track_lower for w in ["account", "finance", "tally", "tax", "audit"]):
+                    first_q = f"⚠️ **CRISIS SCENARIO ROUND**: It is 11:30 PM on the final GST filing deadline. The client's Tally ledger shows a ₹2 Lakh un-reconciled cash mismatch, and the portal is timing out. Walk me through your step-by-step emergency protocol."
+                elif any(w in track_lower for w in ["web", "python", "full", "software"]):
+                    first_q = f"⚠️ **CRISIS SCENARIO ROUND**: A critical database deadlock crashed the production FastAPI service during peak traffic, throwing 500 errors. How do you triage the outage, communicate with leadership, and restore uptime?"
+                else:
+                    first_q = f"⚠️ **CRISIS SCENARIO ROUND**: During high-load testing, a primary telemetry sensor array reports erratic thermal spikes (>70°C). Walk me through your emergency isolation and safety shutdown protocol."
             else:
-                first_q = f"Welcome to the HR & Professional Competency Round for **{job_role}**. Tell me about a time when safety protocols conflicted with urgent shop-floor deadlines. How did you maintain zero-compromise safety?"
-        elif mode_clean == "crisis_stress":
-            if any(w in track_lower for w in ["account", "finance", "tally", "tax", "audit"]):
-                first_q = f"⚠️ **CRISIS SCENARIO ROUND**: It is 11:30 PM on the final GST filing deadline. The client's Tally ledger shows a ₹2 Lakh un-reconciled cash mismatch, and the portal is timing out. Walk me through your step-by-step emergency protocol."
-            elif any(w in track_lower for w in ["web", "python", "full", "software"]):
-                first_q = f"⚠️ **CRISIS SCENARIO ROUND**: A critical database deadlock crashed the production FastAPI service during peak traffic, throwing 500 errors. How do you triage the outage, communicate with leadership, and restore uptime?"
-            else:
-                first_q = f"⚠️ **CRISIS SCENARIO ROUND**: During high-load testing, a primary telemetry sensor array reports erratic thermal spikes (>70°C). Walk me through your emergency isolation and safety shutdown protocol."
-        else:
-            if any(w in track_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
-                first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through how you record GSTR-3B monthly returns in Tally Prime, reconcile Input Tax Credit (ITC) with GSTR-2B, and handle any ledger discrepancies."
-            elif any(w in track_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
-                first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through your backend REST API architecture, how you handle database connection pooling, and your approach to JWT authentication middleware."
-            elif any(w in track_lower for w in ["solar", "renew", "green"]):
-                first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, explain how you monitor MPPT inverter efficiency curves, log RS-485 Modbus telemetry, and isolate string voltage drops."
-            elif any(w in track_lower for w in ["electric", "ev", "battery"]):
-                first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through BMS cell balancing algorithms, CAN-Bus 2.0B frame parsing, and how you diagnose high-voltage isolation faults."
-            else:
-                first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through your practical PLC ladder logic setup, sensor calibration workflow, and how you ensured real-time telemetry stability."
+                if any(w in track_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
+                    first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through how you record GSTR-3B monthly returns in Tally Prime, reconcile Input Tax Credit (ITC) with GSTR-2B, and handle any ledger discrepancies."
+                elif any(w in track_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
+                    first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through your backend REST API architecture, how you handle database connection pooling, and your approach to JWT authentication middleware."
+                elif any(w in track_lower for w in ["solar", "renew", "green"]):
+                    first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, explain how you monitor MPPT inverter efficiency curves, log RS-485 Modbus telemetry, and isolate string voltage drops."
+                elif any(w in track_lower for w in ["electric", "ev", "battery"]):
+                    first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through BMS cell balancing algorithms, CAN-Bus 2.0B frame parsing, and how you diagnose high-voltage isolation faults."
+                else:
+                    first_q = f"Welcome! We are evaluating your candidacy for the **{job_role}** position. To start, walk me through your practical PLC ladder logic setup, sensor calibration workflow, and how you ensured real-time telemetry stability."
 
         history = [{"role": "interviewer", "question": first_q, "turn": 1, "mode": mode_clean}]
 
@@ -2215,6 +2243,64 @@ def start_or_get_interview_session(student_id: str, job_role: str = "", mode: st
         return {"id": sess_id, "student_id": sid, "job_role": job_role, "current_turn": 1, "conversation_history": history, "status": "IN_PROGRESS", "mode": mode_clean}
     except Exception as ex:
         return {"id": f"INT-ERR", "student_id": student_id, "job_role": job_role, "current_turn": 1, "conversation_history": [{"role": "interviewer", "question": f"Welcome! Walk me through your experience for {job_role}.", "turn": 1}], "status": "IN_PROGRESS"}
+
+def agent_generate_alternative_question(session_id: str) -> dict:
+    """Generates a fresh alternative question for the current turn in an active interview session."""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM interview_sessions WHERE id = ?", (session_id,))
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            return {"status": "error", "message": "Session not found"}
+
+        session = dict(row)
+        try:
+            history = json.loads(session.get("conversation_history", "[]"))
+        except Exception:
+            history = []
+
+        if not history:
+            conn.close()
+            return {"status": "error", "message": "No history"}
+
+        job_role = session.get("job_role", "Specialist")
+        role_lower = job_role.lower()
+        turn = session.get("current_turn", 1)
+
+        # Generate Alternative Question
+        alt_q = ""
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        if gemini_key:
+            try:
+                from google import genai
+                client = genai.Client(api_key=gemini_key)
+                prompt = f"Generate a completely new, realistic technical interview question (Turn {turn}) for role '{job_role}' focusing on practical shop-floor or office execution. Return JSON: {{\"question\": \"text\"}}"
+                resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                if resp and resp.text:
+                    match = re.search(r'\{.*\}', resp.text, re.DOTALL)
+                    if match:
+                        parsed = json.loads(match.group(0))
+                        alt_q = parsed.get("question", "")
+            except Exception:
+                pass
+
+        if not alt_q:
+            if any(w in role_lower for w in ["account", "finance", "tally", "tax"]):
+                alt_q = f"Alternative Probe (Turn {turn}): Walk me through how you record TCS on sale of goods under Section 206C(1H) in Tally Prime and reconcile it against monthly GST returns."
+            elif any(w in role_lower for w in ["web", "python", "full", "software"]):
+                alt_q = f"Alternative Probe (Turn {turn}): Explain how you implement Redis caching for frequent API queries and handle cache invalidation upon database updates."
+            else:
+                alt_q = f"Alternative Probe (Turn {turn}): Walk me through how you diagnose an intermittent analog sensor noise spike using an oscilloscope and recalibrate the PID controller."
+
+        history[-1]["question"] = alt_q
+        c.execute("UPDATE interview_sessions SET conversation_history = ? WHERE id = ?", (json.dumps(history), session_id))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "question": alt_q, "history": history}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 def agent_refine_candidate_interview_answer(question: str, draft_answer: str, job_role: str = "") -> dict:
     """

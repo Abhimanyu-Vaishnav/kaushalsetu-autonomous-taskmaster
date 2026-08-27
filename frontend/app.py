@@ -90,6 +90,7 @@ try:
         agent_enable_auto_apply,
         agent_evaluate_interview_answer,
         agent_refine_candidate_interview_answer,
+        agent_generate_alternative_question,
         start_or_get_interview_session,
         evaluate_interview_turn,
         direct_retake_exam_for_student,
@@ -131,6 +132,7 @@ except ImportError:
         agent_enable_auto_apply,
         agent_evaluate_interview_answer,
         agent_refine_candidate_interview_answer,
+        agent_generate_alternative_question,
         start_or_get_interview_session,
         evaluate_interview_turn,
         direct_retake_exam_for_student,
@@ -1026,15 +1028,31 @@ def main_app_layout():
                     t_num = active_item.get("turn", cur_turn)
                     q_text = active_item.get("question", "")
 
-                    st.markdown(f"""
-                    <div style="background: rgba(15,23,42,0.85); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 20px; margin-bottom: 20px; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 ACTIVE RECRUITER PROBE • TURN {t_num} OF 4</span>
-                            <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 3px 10px; border-radius: 12px; font-weight: 600;">Adaptive Gemini Follow-Up Engine</span>
+                    col_q1, col_q2 = st.columns([4, 1])
+                    with col_q1:
+                        st.markdown(f"""
+                        <div style="background: rgba(15,23,42,0.85); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 20px; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 ACTIVE RECRUITER PROBE • TURN {t_num} OF 4</span>
+                                <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 3px 10px; border-radius: 12px; font-weight: 600;">Adaptive Gemini Follow-Up Engine</span>
+                            </div>
+                            <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin: 0;">{q_text}</p>
                         </div>
-                        <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin: 0;">{q_text}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
+                    with col_q2:
+                        if st.button("🎲 Swap / Generate Alt Question", key="btn_swap_question", help="Skip current question and generate a new dynamic real-world scenario", use_container_width=True):
+                            with st.spinner("🤖 AI Generating new dynamic probe..."):
+                                agent_generate_alternative_question(session_data.get("id"))
+                                st.rerun()
+                        if st.button("🔄 Restart Interview", key="btn_restart_active_int", help="Clear current session and restart from Question 1", use_container_width=True):
+                            try:
+                                conn = get_db()
+                                conn.execute("UPDATE interview_sessions SET status = 'ARCHIVED' WHERE id = ?", (session_data.get('id'),))
+                                conn.commit()
+                                conn.close()
+                                st.rerun()
+                            except Exception:
+                                pass
 
                 # Candidate Response Input & AI Refiner Panel
                 if session_data.get("status") != "COMPLETED":
