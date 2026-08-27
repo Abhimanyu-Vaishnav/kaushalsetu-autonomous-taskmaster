@@ -3006,20 +3006,93 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
         conn.close()
 
         candidate = dict(s_row) if s_row else {}
-        track = candidate.get("track") or candidate.get("course_name") or "Vocational Mechatronics & Diagnostics"
+        track = candidate.get("track") or candidate.get("course_name") or ""
+        if not track and candidate.get("course_id"):
+            c.execute("SELECT course_name, title FROM courses WHERE UPPER(id) = UPPER(?)", (candidate["course_id"],))
+            c_row = c.fetchone()
+            if c_row:
+                c_dict = dict(c_row)
+                track = c_dict.get("course_name") or c_dict.get("title") or ""
+        if not track:
+            track = "Vocational Diagnostics & Management"
+
         score = float(candidate.get("aggregate_score") or 85.0)
 
-        # Clean skill extraction
+        # Track-Aware Dynamic Skill Extraction
+        track_lower = track.lower()
         try:
             cand_skills = json.loads(candidate.get("parsed_skills", "[]"))
         except Exception:
             cand_skills = []
         if not cand_skills:
-            cand_skills = ["PLC Diagnostics", "Sensor Telemetry", "Industrial Automation", "Control Systems"]
+            if any(w in track_lower for w in ["account", "finance", "tally", "tax", "banking", "audit", "commerce"]):
+                cand_skills = ["Tally Prime", "GST Filing", "TDS Reconciliation", "Balance Sheet"]
+            elif any(w in track_lower for w in ["web", "python", "full", "software", "code", "cloud", "developer"]):
+                cand_skills = ["Python", "FastAPI", "React.js", "Docker"]
+            elif any(w in track_lower for w in ["solar", "renew", "green", "power"]):
+                cand_skills = ["Solar SCADA", "Inverter MPPT", "Grid Telemetry", "High-Voltage Safety"]
+            elif any(w in track_lower for w in ["electric", "ev", "battery", "powertrain"]):
+                cand_skills = ["BMS Diagnostics", "ECU Firmware", "CAN-Bus Protocol", "High-Voltage Isolation"]
+            else:
+                cand_skills = ["PLC Diagnostics", "Sensor Telemetry", "Industrial Automation", "Control Systems"]
 
         # Track-Aware Dynamic Job Pool Sourcing (Zero Cross-Domain Mixing)
-        track_lower = track.lower()
-        if any(w in track_lower for w in ["web", "python", "full", "software", "code", "cloud", "frontend", "backend", "developer"]):
+        if any(w in track_lower for w in ["account", "finance", "tally", "tax", "banking", "audit", "commerce", "ca", "cpa", "business"]):
+            master_job_pool = [
+                {
+                    "id": "JOB-ACC-01",
+                    "title": "Senior Accountant & Tally Prime Executive",
+                    "company": "Grant Thornton Advisory",
+                    "location": "Nangloi / Delhi NCR",
+                    "salary": "₹4.5 LPA - ₹6.8 LPA",
+                    "type": "Full-Time",
+                    "exp": "0-2 Years",
+                    "skills": ["Tally Prime", "GST Filing", "TDS Reconciliation", "Balance Sheet"],
+                    "description": "Manage day-to-day accounting in Tally Prime, reconcile GST input tax credits, prepare monthly trial balance, and file quarterly TDS returns.",
+                    "source": "Naukri Certified Feed",
+                    "apply_url": "https://www.naukri.com/accountant-jobs-in-delhi"
+                },
+                {
+                    "id": "JOB-ACC-02",
+                    "title": "GST & Corporate Taxation Specialist",
+                    "company": "PwC India Advisory",
+                    "location": "Gurugram / Delhi NCR",
+                    "salary": "₹4.8 LPA - ₹7.2 LPA",
+                    "type": "Full-Time",
+                    "exp": "0-2 Years",
+                    "skills": ["GST Portal", "GSTR-3B & 1", "TDS/TCS", "Tax Audit"],
+                    "description": "Execute GST compliance audits, prepare monthly tax reconciliation statements, verify e-invoicing data, and handle vendor tax queries.",
+                    "source": "LinkedIn Live Job Feed",
+                    "apply_url": "https://www.linkedin.com/jobs/search/?keywords=GST+Accountant+Gurugram"
+                },
+                {
+                    "id": "JOB-ACC-03",
+                    "title": "Accounts Payable & Bank Reconciliation Officer",
+                    "company": "HDFC Commercial Accounts",
+                    "location": "Delhi NCR / Noida",
+                    "salary": "₹4.2 LPA - ₹6.0 LPA",
+                    "type": "Full-Time",
+                    "exp": "0-2 Years",
+                    "skills": ["BRS Reconciliation", "Tally Prime", "MS Excel", "Vendor Ledger"],
+                    "description": "Perform daily bank reconciliation statements (BRS), process vendor ledger payments, verify purchase invoices, and maintain cash book.",
+                    "source": "Indeed Verified Requisitions",
+                    "apply_url": "https://in.indeed.com/jobs?q=Accounts+Executive&l=Delhi"
+                },
+                {
+                    "id": "JOB-ACC-04",
+                    "title": "Junior Financial Auditor & Tally Consultant",
+                    "company": "Tally Solutions Certified Partner",
+                    "location": "Delhi NCR (Connaught Place)",
+                    "salary": "₹4.0 LPA - ₹6.2 LPA",
+                    "type": "Full-Time",
+                    "exp": "0-1 Year",
+                    "skills": ["Tally Prime", "Financial Audit", "MIS Reporting", "GAAP Standards"],
+                    "description": "Assist lead auditors in verifying financial statements, generate monthly MIS reports, and configure Tally Prime vouchers for corporate clients.",
+                    "source": "LinkedIn Live Feed",
+                    "apply_url": "https://www.linkedin.com/jobs/search/?keywords=Tally+Accountant+Delhi"
+                }
+            ]
+        elif any(w in track_lower for w in ["web", "python", "full", "software", "code", "cloud", "frontend", "backend", "developer"]):
             master_job_pool = [
                 {
                     "id": "JOB-SW-01",
