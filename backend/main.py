@@ -2909,7 +2909,7 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         socials_html += "</div>"
 
         # Skills markup
-        skills_html = "".join([f"<span style='background:rgba(255,255,255,0.05); color:#e2e8f0; border:1px solid rgba(255,255,255,0.1); padding:6px 14px; border-radius:20px; font-size:0.85rem; margin:4px; display:inline-block;'>⚡ {sk}</span>" for sk in skills])
+        skills_html = "".join([f"<span style='background:rgba(255,255,255,0.05); color:#e2e8f0; border:1px solid rgba(255,255,255,0.1); padding:6px 14px; border-radius:20px; font-size:0.85rem; margin:4px; display:inline-block;'>⚡ {sk}</span>" for sk in tech_skills])
 
         # Real Live GitHub Harvesting with Avatar & Repo Grid
         github_section = ""
@@ -2989,7 +2989,7 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 from google import genai
                 client = genai.Client(api_key=gemini_key)
                 prompt = f"""
-                Analyze candidate '{name}', specialization track '{track}', skills '{json.dumps(skills)}', resume snippet: '{resume[:600]}'.
+                Analyze candidate '{name}', specialization track '{track}', skills '{json.dumps(tech_skills)}', resume snippet: '{resume[:600]}'.
                 Synthesize a punchy 2-sentence executive recruiter summary showcasing practical technical drive, system reliability, and problem-solving impact.
                 Return strictly text without quotes.
                 """
