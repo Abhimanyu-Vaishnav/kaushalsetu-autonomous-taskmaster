@@ -2713,16 +2713,15 @@ def agent_synthesize_resume_dossier(name: str, track: str, resume_raw: str, skil
         except Exception as ex:
             print(f"[RESUME INTELLIGENCE AGENT NOTICE] {ex}")
 
-    # 2. Smart Deterministic Rule-Based Section Segmenter (Local Intelligence Engine)
+    # 2. Smart Deterministic Rule-Based & Multi-Pass Heuristic Scanner (Local Intelligence Engine)
     lines = [l.strip() for l in resume_text.split("\n") if l.strip()]
     
-    # Filter out contact info lines
     contact_patterns = [
-        r'\+?\d{1,3}[\s-]?\d{10}', # Phone
-        r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', # Email
-        r'https?://', # URL
-        r'\b\d{6}\b', # Pincode
-        r'^(delhi|mumbai|bangalore|hyderabad|pune|noida|gurgaon|india|address|phone|email)', # Location header
+        r'\+?\d{1,3}[\s-]?\d{10}',
+        r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
+        r'https?://',
+        r'\b\d{6}\b',
+        r'^(delhi|mumbai|bangalore|hyderabad|pune|noida|gurgaon|india|address|phone|email)',
     ]
     
     bio_lines = []
@@ -2735,26 +2734,25 @@ def agent_synthesize_resume_dossier(name: str, track: str, resume_raw: str, skil
     for line in lines:
         l_lower = line.lower()
         
-        # Detect Section Headers
-        if any(kw in l_lower for kw in ["education", "academic", "qualification", "degree"]):
+        # Section Header Detection
+        if any(kw in l_lower for kw in ["education", "academic", "qualification", "degree", "schooling"]):
             current_section = "education"
             continue
         elif any(kw in l_lower for kw in ["experience", "employment", "work history", "job history"]):
             current_section = "experience"
             continue
-        elif any(kw in l_lower for kw in ["project", "capstone", "key accomplishments"]):
+        elif any(kw in l_lower for kw in ["project", "capstone", "accomplishments"]):
             current_section = "projects"
             continue
-        elif any(kw in l_lower for kw in ["skills", "technologies", "competencies"]):
+        elif any(kw in l_lower for kw in ["skills", "technologies", "competencies", "tools"]):
             current_section = "skills"
             continue
         elif any(kw in l_lower for kw in ["summary", "profile", "about me", "objective"]):
             current_section = "summary"
             continue
             
-        # Check if contact line
         if any(re.search(pat, l_lower) for pat in contact_patterns):
-            continue # Skip placing contact numbers in experience/education!
+            continue # Strip contact lines from work/edu placement
             
         clean_l = line.strip("- •* ")
         if len(clean_l) < 5:
@@ -2763,29 +2761,50 @@ def agent_synthesize_resume_dossier(name: str, track: str, resume_raw: str, skil
         if current_section == "summary":
             bio_lines.append(clean_l)
         elif current_section == "education":
-            # Extract degree & institution
+            yr_match = re.search(r'\b(19|20)\d{2}\b', clean_l)
+            score_match = re.search(r'\b(\d{2}\.?\d?%|\d\.\d\s*cgpa)\b', l_lower)
+            edu_items.append({
+                "degree": clean_l.split("-")[0].split("|")[0].strip(),
+                "institution": clean_l.split("-")[-1].strip() if "-" in clean_l else "Academic Board / University",
+                "year": yr_match.group(0) if yr_match else "Completed",
+                "score": score_match.group(0).upper() if score_match else "Passed with Distinction"
+            })
+        elif current_section in ["experience", "projects"]:
+            parts = [p.strip() for p in clean_l.split("|")]
+            role_title = parts[0] if len(parts) > 0 else f"Specialist ({track_clean})"
+            comp_name = parts[1] if len(parts) > 1 else "Professional Operations"
+            exp_items.append({
+                "role": role_title,
+                "company": comp_name,
+                "duration": "Recent",
+                "details": clean_l
+            })
+        elif current_section == "skills":
+            skills_extracted.extend([s.strip() for s in clean_l.split(",") if len(s.strip()) > 2])
+        else:
+            # Multi-Pass Heuristic Fallback (If no section header encountered)
             if any(deg in l_lower for deg in ["b.tech", "b.e", "b.sc", "b.com", "m.sc", "m.tech", "diploma", "12th", "10th", "degree", "bachelor", "master", "school", "university", "college", "institute"]):
                 yr_match = re.search(r'\b(19|20)\d{2}\b', clean_l)
                 score_match = re.search(r'\b(\d{2}\.?\d?%|\d\.\d\s*cgpa)\b', l_lower)
                 edu_items.append({
                     "degree": clean_l.split("-")[0].split("|")[0].strip(),
-                    "institution": clean_l.split("-")[-1].strip() if "-" in clean_l else "Academic Board / Institution",
+                    "institution": clean_l.split("-")[-1].strip() if "-" in clean_l else "Academic Board / University",
                     "year": yr_match.group(0) if yr_match else "Completed",
                     "score": score_match.group(0).upper() if score_match else "Passed with Distinction"
                 })
-        elif current_section in ["experience", "projects"]:
-            if any(role_kw in l_lower for role_kw in ["developer", "engineer", "teacher", "accountant", "specialist", "intern", "trainer", "lecturer", "assistant", "manager", "lead", "analyst", "technician", "project", "system"]):
+            elif any(role_kw in l_lower for role_kw in ["developer", "engineer", "teacher", "accountant", "specialist", "intern", "trainer", "lecturer", "assistant", "manager", "lead", "analyst", "technician", "consultant"]):
                 parts = [p.strip() for p in clean_l.split("|")]
-                role_title = parts[0] if len(parts) > 0 else f"Specialist ({track_clean})"
-                comp_name = parts[1] if len(parts) > 1 else "Professional Operations"
                 exp_items.append({
-                    "role": role_title,
-                    "company": comp_name,
+                    "role": parts[0],
+                    "company": parts[1] if len(parts) > 1 else "Professional Operations",
                     "duration": "Recent",
                     "details": clean_l
                 })
-        elif current_section == "skills":
-            skills_extracted.extend([s.strip() for s in clean_l.split(",") if len(s.strip()) > 2])
+            elif len(clean_l.split(",")) > 2:
+                skills_extracted.extend([s.strip() for s in clean_l.split(",") if len(s.strip()) > 2])
+            else:
+                if len(bio_lines) < 3:
+                    bio_lines.append(clean_l)
 
     # 3. Fallback Formatter if items missing
     fallback_bio = " ".join(bio_lines[:2]) if bio_lines else f"Certified practitioner specializing in {track_clean} with hands-on domain expertise, technical precision, and practical execution capability."
@@ -2827,7 +2846,7 @@ def agent_synthesize_resume_dossier(name: str, track: str, resume_raw: str, skil
         "work_experience": exp_items,
         "education": edu_items,
         "languages": ["English (Professional)", "Hindi (Native)"],
-        "tech_skills": skills_extracted or skills_raw or [f"{track_clean} Architecture", "Diagnostics", "Quality Assurance"],
+        "tech_skills": list(set(skills_extracted or skills_raw or [f"{track_clean} Architecture", "Diagnostics", "Quality Assurance"])),
         "soft_skills": ["Problem Solving", "Technical Leadership", "System Optimization"]
     }
 
