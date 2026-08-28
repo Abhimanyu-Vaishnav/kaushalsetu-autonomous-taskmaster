@@ -1111,29 +1111,21 @@ def main_app_layout():
                             st.toast("✅ Turn evaluated! Detailed AI Analysis Report generated below.", icon="🧠")
                         st.rerun()
 
-                # Live Real-Time Voice Typing Answer Box Component
+                # Live Real-Time Voice Typing & Native Submission Component
                 if session_data.get("status") != "COMPLETED":
+                    # Live Mic Voice Dictation Sync Bar
                     components.html(f"""
-                    <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.12); padding: 20px; border-radius: 14px; margin-top: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); box-sizing: border-box;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-                            <b style="color: #f8fafc; font-size: 1.02rem;">✍️ Provide Your Response (Live Voice Dictation OR Typing):</b>
-                            <button id="stt_mic_btn" onclick="toggleMicDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 14px rgba(16,185,129,0.4); display: inline-flex; align-items: center; gap: 6px;">
+                    <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); padding: 12px 18px; border-radius: 12px; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <b style="color: #34d399; font-size: 0.9rem;">🎙️ Live Voice Dictation Helper:</b>
+                                <span style="color: #cbd5e1; font-size: 0.82rem; margin-left: 6px;" id="mic_status_txt">Click green mic button & speak — words will type LIVE into the answer box below!</span>
+                            </div>
+                            <button id="stt_mic_btn" onclick="toggleMicDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 14px rgba(16,185,129,0.4);">
                                 🎙️ Start Live Real-Time Voice Typing
                             </button>
                         </div>
-                        <div id="stt_status_msg" style="font-size: 0.82rem; color: #34d399; margin-bottom: 10px; font-weight: 600;">
-                            💡 Click green mic button & start speaking — words will type LIVE into the box below as you talk!
-                        </div>
-                        
-                        <textarea id="speech_live_box" style="width: 100%; height: 135px; background: rgba(30,41,59,0.9); color: #f8fafc; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 14px; font-size: 0.98rem; font-family: inherit; resize: vertical; box-sizing: border-box; line-height: 1.5;" placeholder="Type your answer here OR click green mic button above to speak and watch words type live in real-time..."></textarea>
-                        
-                        <div style="display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap;">
-                            <button id="sub_btn" onclick="submitAnswerToRecruiter()" style="flex: 2; min-width: 220px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 13px; border-radius: 10px; font-weight: 800; font-size: 0.98rem; cursor: pointer; box-shadow: 0 4px 18px rgba(99,102,241,0.4);">
-                                ⚡ Submit Answer & Request AI Evaluation Dossier 🎙️
-                            </button>
-                        </div>
                     </div>
-
                     <script>
                     var dictationRec;
                     var isListening = false;
@@ -1141,8 +1133,7 @@ def main_app_layout():
                     
                     function toggleMicDictation() {{
                         var btn = document.getElementById("stt_mic_btn");
-                        var status = document.getElementById("stt_status_msg");
-                        var box = document.getElementById("speech_live_box");
+                        var status = document.getElementById("mic_status_txt");
                         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                         
                         if (!SpeechRecognition) {{
@@ -1156,13 +1147,19 @@ def main_app_layout():
                             dictationRec.continuous = true;
                             dictationRec.interimResults = true;
                             dictationRec.lang = "en-US";
-                            baseTranscript = box.value ? box.value.trim() + " " : "";
+                            
+                            try {{
+                                var targetArea = window.parent.document.querySelector("textarea");
+                                baseTranscript = targetArea && targetArea.value ? targetArea.value.trim() + " " : "";
+                            }} catch(e) {{
+                                baseTranscript = "";
+                            }}
                             
                             dictationRec.onstart = function() {{
                                 isListening = true;
                                 btn.style.background = "#ef4444";
                                 btn.innerText = "🛑 Stop Voice Dictation";
-                                status.innerText = "🔴 Listening live... Speak now and watch your words type in real-time!";
+                                status.innerText = "🔴 Listening live... Speak now into your mic!";
                                 status.style.color = "#ef4444";
                             }};
                             
@@ -1179,7 +1176,15 @@ def main_app_layout():
                                 if (finalTranscript) {{
                                     baseTranscript += finalTranscript + " ";
                                 }}
-                                box.value = (baseTranscript + interimTranscript).replace(/\\b(\\w+)\\s+\\1\\b/gi, '$1');
+                                var fullText = (baseTranscript + interimTranscript).replace(/\\b(\\w+)\\s+\\1\\b/gi, '$1');
+                                
+                                try {{
+                                    var pArea = window.parent.document.querySelector("textarea");
+                                    if (pArea) {{
+                                        pArea.value = fullText;
+                                        pArea.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                    }}
+                                }} catch(e) {{}}
                             }};
                             
                             dictationRec.onerror = function(event) {{
@@ -1191,7 +1196,7 @@ def main_app_layout():
                                 isListening = false;
                                 btn.style.background = "linear-gradient(135deg, #10b981, #059669)";
                                 btn.innerText = "🎙️ Start Live Real-Time Voice Typing";
-                                status.innerText = "✓ Live voice dictation complete! Click Submit when ready.";
+                                status.innerText = "✓ Live voice dictation complete! Click Submit button below.";
                                 status.style.color = "#34d399";
                             }};
                             
@@ -1200,35 +1205,25 @@ def main_app_layout():
                             if (dictationRec) dictationRec.stop();
                         }}
                     }}
-
-                    function submitAnswerToRecruiter() {{
-                        var box = document.getElementById("speech_live_box");
-                        var text = box ? box.value : "";
-                        if (!text || text.trim().length < 4) {{
-                            alert("Please type or speak an answer before submitting.");
-                            return;
-                        }}
-                        
-                        var status = document.getElementById("stt_status_msg");
-                        if (status) {{
-                            status.innerHTML = "⏳ <b>Submitting Answer...</b> 🤖 AI Executive Coach is analyzing your response & evaluating technical precision...";
-                            status.style.color = "#fbbf24";
-                        }}
-                        var btn = document.getElementById("sub_btn");
-                        if (btn) {{
-                            btn.disabled = true;
-                            btn.innerText = "⏳ Evaluating Response with AI...";
-                            btn.style.opacity = "0.7";
-                        }}
-                        
-                        var valToSubmit = text.trim();
-                        var targetUrl = new URL(window.parent.location.href);
-                        targetUrl.searchParams.set("int_ans_submit", valToSubmit);
-                        targetUrl.searchParams.set("int_sess_id", "{session_data.get('id')}");
-                        window.parent.location.href = targetUrl.href;
-                    }}
                     </script>
-                    """, height=340)
+                    """, height=65)
+
+                    ans_key = f"ans_input_{session_data.get('id')}_{cur_turn}_{len(history)}"
+                    ans_text_val = st.text_area("Your Response / Explanation:", key=ans_key, height=135, placeholder="Type your answer here OR click the green mic button above to speak in real-time...")
+                    
+                    if st.button("⚡ Submit Answer & Request AI Evaluation Dossier 🎙️", type="primary", use_container_width=True, key=f"btn_sub_ans_{cur_turn}"):
+                        user_ans_clean = str(ans_text_val or "").strip()
+                        if len(user_ans_clean) < 4:
+                            st.warning("⚠️ Please type or dictate an answer before submitting.")
+                        else:
+                            with st.spinner("🤖 AI Coach evaluating technical precision & generating dossier..."):
+                                eval_res = evaluate_interview_turn(session_data.get("id"), user_ans_clean)
+                                if eval_res.get("status") == "completed":
+                                    st.balloons()
+                                    st.toast(f"🎉 Technical Interview Round Completed! Score: {eval_res.get('overall_score')}%", icon="🏆")
+                                else:
+                                    st.toast("✅ Turn evaluated! Detailed AI Analysis Report generated below.", icon="🧠")
+                                st.rerun()
 
                 # Expandable History Transcripts & Detailed AI Analysis Dossier
                 if history:
