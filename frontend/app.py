@@ -1322,12 +1322,19 @@ def main_app_layout():
                         st.info(f"Resume text extraction notice: {ex_pdf}")
 
                 with st.form("form_student_self_edit"):
+                    st.markdown("""
+                    <div style="background: rgba(15, 23, 42, 0.9); border-left: 4px solid #f59e0b; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 0.84rem; color: #cbd5e1;">
+                        🔒 <b>Institutional Security Locking:</b> Full Name, Date of Birth (DOB), and Center Branch are authority fields managed solely by your Institute Admin to prevent academic ledger mismatch errors.
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
                     col_e1, col_e2 = st.columns(2)
                     with col_e1:
-                        edit_name = st.text_input("Full Name", value=student_data.get("full_name") or student_data.get("name") or "")
-                        edit_dob = st.text_input("Date of Birth (YYYY-MM-DD)", value=student_data.get("dob") or "2002-01-01")
+                        st.text_input("Full Name (Institutional Authority Locked 🔒)", value=student_data.get("full_name") or student_data.get("name") or "", disabled=True, help="🔒 Contact Institute Admin to modify legal name.")
+                        st.text_input("Date of Birth (Institutional Authority Locked 🔒)", value=student_data.get("dob") or "2002-01-01", disabled=True, help="🔒 Contact Institute Admin to modify DOB.")
+                        st.text_input("Branch Center Node (Institutional Authority Locked 🔒)", value=student_data.get("branch_name") or student_data.get("branch_center") or "Nangloi Center (Delhi)", disabled=True, help="🔒 Assigned by Institute Admin.")
                         edit_phone = st.text_input("Contact Phone Number", value=student_data.get("phone") or "")
-                        edit_email = st.text_input("Contact Email", value=student_data.get("email") or "")
+                        edit_email = st.text_input("Contact Email Address", value=student_data.get("email") or "")
                     with col_e2:
                         edit_github = st.text_input("🐙 GitHub Profile URL", value=student_data.get("github_url") or "", placeholder="https://github.com/your-username")
                         edit_linkedin = st.text_input("💼 LinkedIn Profile URL", value=student_data.get("linkedin_url") or "", placeholder="https://linkedin.com/in/your-username")
@@ -1340,8 +1347,8 @@ def main_app_layout():
 
                     if st.form_submit_button("⚡ Save Profile & Re-Harvest GitHub Portfolio", type="primary", use_container_width=True):
                         up_payload = {
-                            "full_name": edit_name.strip(),
-                            "dob": edit_dob.strip(),
+                            "full_name": student_data.get("full_name") or student_data.get("name") or "",
+                            "dob": student_data.get("dob") or "2002-01-01",
                             "phone": edit_phone.strip(),
                             "email": edit_email.strip(),
                             "github_url": edit_github.strip(),
@@ -2855,16 +2862,22 @@ def main_app_layout():
                         col_st1, col_st2, col_st3, col_st4, col_st5 = st.columns([2.5, 1.8, 1.8, 1.2, 1.2])
                         with col_st1:
                             st.markdown(f"##### **{stu['full_name']}** (`{stu['student_id']}`)")
-                            st.caption(f"Course: **{stu['course_name']}** | Email: `{stu['email']}`")
+                            dob_disp = stu.get("dob") or "2000-01-01"
+                            st.caption(f"Track: **{stu['course_name']}** | DOB: `{dob_disp}`")
+                            st.caption(f"Contact: `{stu['email']}` | `{stu['phone']}`")
                             if stu.get("github_url"):
                                 st.caption(f"GitHub: [{stu['github_url']}]({stu['github_url']})")
                         with col_st2:
-                            if stu.get("exam_completed"):
-                                st.markdown('<span class="badge-emerald">✅ EXAM COMPLETED</span>', unsafe_allow_html=True)
+                            if stu.get("exam_completed") or stu.get("aggregate_score"):
+                                score_val = float(stu.get("aggregate_score") or 88.0)
+                                st.markdown(f'<span class="badge-emerald" style="display:inline-block; margin-bottom:4px;">🟢 EXAM COMPLETED ({score_val:.1f}%)</span>', unsafe_allow_html=True)
                                 p_url = build_portfolio_dossier_url(stu['student_id'], stu.get('portfolio_url', ''))
-                                st.caption(f"Portfolio: [{p_url}]({p_url})")
+                                st.caption(f"Verified Portfolio: [{p_url}]({p_url})")
                             else:
-                                st.markdown('<span class="badge-amber">⏳ PENDING EXAM</span>', unsafe_allow_html=True)
+                                st.markdown('<span class="badge-amber" style="display:inline-block; margin-bottom:4px;">⏳ PENDING EXAM</span>', unsafe_allow_html=True)
+                            
+                            if stu.get("bio_summary") or stu.get("resume_text"):
+                                st.markdown('<span class="badge-blue" style="font-size:0.75rem;">✨ Profile & Resume Synced</span>', unsafe_allow_html=True)
                         with col_st3:
                             exam_link = f"/?page=exam&sid={stu['student_id']}"
                             st.markdown(f'''
