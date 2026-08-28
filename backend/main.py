@@ -3006,13 +3006,16 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
             secondary_color = "#fbbf24"
             theme_gradient = "linear-gradient(135deg, #022c22 0%, #064e3b 50%, #030712 100%)"
             domain_label = "Certified Financial Accountant & Ledger Auditor"
-            chart_svg = """
-            <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #10b98155);">
-                <path d="M 20 140 L 90 100 L 170 120 L 250 40 L 380 30" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
-                <path d="M 20 140 L 90 100 L 170 120 L 250 40 L 380 30 L 380 150 L 20 150 Z" fill="url(#grad_acc)" opacity="0.2"/>
-                <defs><linearGradient id="grad_acc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#022c22"/></linearGradient></defs>
-                <circle cx="250" cy="40" r="6" fill="#fbbf24"/>
-                <circle cx="380" cy="30" r="6" fill="#34d399"/>
+            chart_svg = f"""
+            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #10b98166);">
+                <defs>
+                    <linearGradient id="grad_acc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10b981" stop-opacity="0.4"/><stop offset="100%" stop-color="#022c22" stop-opacity="0"/></linearGradient>
+                    <linearGradient id="line_grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#fbbf24"/></linearGradient>
+                </defs>
+                <path d="M 20 140 L 90 100 L 170 120 L 250 40 L 380 30 M 380 30 L 430 50" fill="none" stroke="url(#line_grad)" stroke-width="4" stroke-linecap="round" class="animated-path"/>
+                <path d="M 20 140 L 90 100 L 170 120 L 250 40 L 380 30 L 430 50 L 430 150 L 20 150 Z" fill="url(#grad_acc)"/>
+                <circle cx="250" cy="40" r="6" fill="#fbbf24" class="pulse-node"/>
+                <circle cx="380" cy="30" r="6" fill="#34d399" class="pulse-node"/>
                 <text x="255" y="32" fill="#fbbf24" font-size="11" font-weight="bold">GAAP Ledger Audit: 99.4%</text>
                 <text x="270" y="110" fill="#34d399" font-size="11" font-weight="bold">Tax Reconciliation: 100%</text>
             </svg>
@@ -3022,50 +3025,36 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
             secondary_color = "#38bdf8"
             theme_gradient = "linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #020617 100%)"
             domain_label = "Full Stack Software & Cloud Systems Engineer"
-            chart_svg = """
-            <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #6366f155);">
-                <path d="M 20 130 Q 80 40 140 100 T 260 50 T 380 120" fill="none" stroke="#6366f1" stroke-width="4" stroke-linecap="round"/>
-                <path d="M 20 130 Q 80 40 140 100 T 260 50 T 380 120 L 380 150 L 20 150 Z" fill="url(#grad1)" opacity="0.25"/>
-                <defs><linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#020617"/></linearGradient></defs>
-                <circle cx="140" cy="100" r="6" fill="#38bdf8"/>
-                <circle cx="260" cy="50" r="6" fill="#34d399"/>
+            chart_svg = f"""
+            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #6366f166);">
+                <defs>
+                    <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.4"/><stop offset="100%" stop-color="#020617" stop-opacity="0"/></linearGradient>
+                    <linearGradient id="line_grad2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#6366f1"/><stop offset="50%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#34d399"/></linearGradient>
+                </defs>
+                <path d="M 20 130 Q 80 40 140 100 T 260 50 T 380 35 L 430 45" fill="none" stroke="url(#line_grad2)" stroke-width="4" stroke-linecap="round" class="animated-path"/>
+                <path d="M 20 130 Q 80 40 140 100 T 260 50 T 380 35 L 430 45 L 430 150 L 20 150 Z" fill="url(#grad1)"/>
+                <circle cx="140" cy="100" r="6" fill="#38bdf8" class="pulse-node"/>
+                <circle cx="260" cy="50" r="6" fill="#34d399" class="pulse-node"/>
+                <circle cx="380" cy="35" r="6" fill="#818cf8" class="pulse-node"/>
                 <text x="145" y="90" fill="#38bdf8" font-size="11" font-weight="bold">Code Velocity: 96%</text>
                 <text x="265" y="40" fill="#34d399" font-size="11" font-weight="bold">API Latency: 38ms</text>
-            </svg>
-            """
-        elif any(w in track_lower for w in ["solar", "renew", "green", "power", "energy"]):
-            accent_color = "#10b981"
-            secondary_color = "#34d399"
-            theme_gradient = "linear-gradient(135deg, #064e3b 0%, #022c22 50%, #0f172a 100%)"
-            domain_label = "Solar SCADA & Inverter Telemetry Engineer"
-            chart_svg = """
-            <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #10b98155);">
-                <path d="M 20 140 C 100 20 180 150 260 30 C 320 100 380 40 380 40" fill="none" stroke="#10b981" stroke-width="4"/>
-                <circle cx="260" cy="30" r="6" fill="#fbbf24"/>
-                <text x="270" y="25" fill="#fbbf24" font-size="11" font-weight="bold">MPPT Efficiency: 98.6%</text>
-            </svg>
-            """
-        elif any(w in track_lower for w in ["electric", "ev", "battery", "powertrain", "vehicle", "auto"]):
-            accent_color = "#f59e0b"
-            secondary_color = "#ef4444"
-            theme_gradient = "linear-gradient(135deg, #18181b 0%, #27272a 50%, #090d16 100%)"
-            domain_label = "EV Battery Systems & ECU Diagnostic Specialist"
-            chart_svg = """
-            <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #f59e0b55);">
-                <path d="M 20 120 L 70 120 L 90 30 L 120 140 L 150 120 L 220 120 L 240 40 L 270 130 L 380 120" fill="none" stroke="#f59e0b" stroke-width="4"/>
-                <circle cx="240" cy="40" r="6" fill="#ef4444"/>
-                <text x="250" y="35" fill="#ef4444" font-size="11" font-weight="bold">ECU Signal Stability: 99.4%</text>
+                <text x="325" y="25" fill="#818cf8" font-size="11" font-weight="bold">CI/CD Pass: 100%</text>
             </svg>
             """
         else:
             accent_color = "#3b82f6"
             secondary_color = "#60a5fa"
             theme_gradient = "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #020617 100%)"
-            domain_label = "Industrial Automation & Mechatronics Specialist"
-            chart_svg = """
-            <svg viewBox="0 0 400 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 12px #3b82f655);">
-                <path d="M 20 130 L 100 90 L 180 110 L 260 40 L 380 80" fill="none" stroke="#3b82f6" stroke-width="4"/>
-                <circle cx="260" cy="40" r="6" fill="#60a5fa"/>
+            domain_label = "Industrial Automation & Technical Specialist"
+            chart_svg = f"""
+            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #3b82f666);">
+                <defs>
+                    <linearGradient id="grad_ind" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.4"/><stop offset="100%" stop-color="#020617" stop-opacity="0"/></linearGradient>
+                </defs>
+                <path d="M 20 130 L 100 90 L 180 110 L 260 40 L 380 60 L 430 30" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" class="animated-path"/>
+                <path d="M 20 130 L 100 90 L 180 110 L 260 40 L 380 60 L 430 30 L 430 150 L 20 150 Z" fill="url(#grad_ind)"/>
+                <circle cx="260" cy="40" r="6" fill="#60a5fa" class="pulse-node"/>
+                <circle cx="430" cy="30" r="6" fill="#34d399" class="pulse-node"/>
                 <text x="270" y="35" fill="#60a5fa" font-size="11" font-weight="bold">PLC Circuit Response: 98.2%</text>
             </svg>
             """
@@ -3359,6 +3348,21 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                     0% {{ opacity: 1; transform: scale(1); }}
                     50% {{ opacity: 0.4; transform: scale(1.2); }}
                     100% {{ opacity: 1; transform: scale(1); }}
+                }}
+                @keyframes pulseNode {{
+                    0% {{ r: 5px; opacity: 0.7; }}
+                    50% {{ r: 8px; opacity: 1; }}
+                    100% {{ r: 5px; opacity: 0.7; }}
+                }}
+                @keyframes dashWave {{
+                    0% {{ stroke-dasharray: 600; stroke-dashoffset: 600; }}
+                    100% {{ stroke-dasharray: 600; stroke-dashoffset: 0; }}
+                }}
+                .animated-path {{
+                    animation: dashWave 2.5s ease-out forwards;
+                }}
+                .pulse-node {{
+                    animation: pulseNode 2s infinite ease-in-out;
                 }}
                 .hover-card {{
                     transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
