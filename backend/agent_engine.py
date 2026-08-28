@@ -731,6 +731,7 @@ def fetch_github_profile_data(github_input: str) -> dict:
             repos = r.json()
             projects = []
             total_stars = 0
+            # 1. First pass: Non-fork repositories
             for repo in repos:
                 if isinstance(repo, dict) and not repo.get("fork"):
                     stars = repo.get("stargazers_count", 0)
@@ -744,6 +745,24 @@ def fetch_github_profile_data(github_input: str) -> dict:
                         "repo_url": repo.get("html_url") or f"https://github.com/{username}/{repo.get('name')}",
                         "updated_at": repo.get("updated_at")[:10] if repo.get("updated_at") else "2026"
                     })
+            # 2. Second pass: Include forked repositories if less than 4 repos
+            if len(projects) < 4:
+                for repo in repos:
+                    if isinstance(repo, dict) and repo.get("fork"):
+                        stars = repo.get("stargazers_count", 0)
+                        total_stars += stars
+                        projects.append({
+                            "name": repo.get("name"),
+                            "description": repo.get("description") or f"Verified open-source contribution repository in {repo.get('language') or 'Code'}.",
+                            "language": repo.get("language") or "Code",
+                            "stars": stars,
+                            "forks": repo.get("forks_count", 0),
+                            "repo_url": repo.get("html_url") or f"https://github.com/{username}/{repo.get('name')}",
+                            "updated_at": repo.get("updated_at")[:10] if repo.get("updated_at") else "2026"
+                        })
+                        if len(projects) >= 6:
+                            break
+
             return {
                 "username": username,
                 "avatar_url": user_info.get("avatar_url", ""),
