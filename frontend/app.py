@@ -2730,7 +2730,14 @@ def main_app_layout():
                         r_phone = st.text_input("Phone Number", placeholder="+91 9876543210", key="reg_cand_phone")
                         
                         courses_db = direct_get_courses()
-                        course_names = [c.get("title") or c.get("course_name") or "Vocational Track" for c in courses_db] if courses_db else ["Full Stack Web Development", "Vocational Diagnostics & Mechatronics"]
+                        raw_course_names = [c.get("title") or c.get("course_name") or "Vocational Track" for c in courses_db] if courses_db else ["Full Stack Web Development", "Vocational Diagnostics & Mechatronics"]
+                        course_names = []
+                        for cn in raw_course_names:
+                            cn_clean = str(cn).strip()
+                            if cn_clean and cn_clean not in course_names:
+                                course_names.append(cn_clean)
+                        if not course_names:
+                            course_names = ["Full Stack Web Development", "Vocational Diagnostics & Mechatronics"]
                         r_track = st.selectbox("Assigned Course Track *", options=course_names, key="reg_cand_track")
                         
                         active_center_name = sel_branch.get("branch_name", "Main Center")
