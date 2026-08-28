@@ -3430,6 +3430,41 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                     <div><span style="color:#94a3b8; font-size:0.78rem; font-weight:600;">🆔 Student Candidate ID</span><br><code style="color:{secondary_color}; font-size:0.98rem;">{sid}</code></div>
                     <div><span style="color:#94a3b8; font-size:0.78rem; font-weight:600;">🏛️ Assessment Center</span><br><b style="color:#f8fafc; font-size:0.98rem;">{center}</b></div>
                 </div>
+                
+                <!-- DYNAMIC DOMAIN TELEMETRY WAVEFORM & ANIMATED GAUGES -->
+                <div style="margin-top: 32px; text-align: left;">
+                    <h3 style="color: #f8fafc; font-size: 1.2rem; border-left: 4px solid {accent_color}; padding-left: 12px; margin-bottom: 16px;">📊 AI Evaluated Competency Telemetry & Metric Gauges</h3>
+                    <div style="background: rgba(0,0,0,0.35); padding: 22px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
+                        {chart_svg}
+                        
+                        <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px;">
+                            <!-- Metric 1: MCQ Competency -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 12px; text-align: center;">
+                                <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">MCQ THEORY SCORE</span>
+                                <div style="font-size: 1.8rem; font-weight: 800; color: #38bdf8; margin: 6px 0;">{mcq_s} <span style="font-size: 0.9rem; color: #64748b;">/ 50</span></div>
+                                <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden;">
+                                    <div style="height: 100%; width: {min(round((mcq_s/50)*100, 1), 100)}%; background: #38bdf8; border-radius: 10px;"></div>
+                                </div>
+                            </div>
+                            <!-- Metric 2: Capstone Execution -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 12px; text-align: center;">
+                                <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">CAPSTONE PRACTICAL SCORE</span>
+                                <div style="font-size: 1.8rem; font-weight: 800; color: #34d399; margin: 6px 0;">{cap_s} <span style="font-size: 0.9rem; color: #64748b;">/ 50</span></div>
+                                <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden;">
+                                    <div style="height: 100%; width: {min(round((cap_s/50)*100, 1), 100)}%; background: #34d399; border-radius: 10px;"></div>
+                                </div>
+                            </div>
+                            <!-- Metric 3: Overall Aggregate -->
+                            <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 12px; text-align: center;">
+                                <span style="font-size: 0.78rem; color: #94a3b8; font-weight: 700; letter-spacing: 0.5px;">VERIFIED AGGREGATE</span>
+                                <div style="font-size: 1.8rem; font-weight: 800; color: #fbbf24; margin: 6px 0;">{score}%</div>
+                                <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden;">
+                                    <div style="height: 100%; width: {score}%; background: #fbbf24; border-radius: 10px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- 1. WORK EXPERIENCE (STANDARD RECRUITER PLACEMENT) -->
                 {experience_html}
