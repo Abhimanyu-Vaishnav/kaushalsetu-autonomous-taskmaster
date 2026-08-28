@@ -1022,51 +1022,55 @@ def main_app_layout():
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Active Question Display (Current Step Focus with Speech TTS Audio Player)
+                # Active Question Display & Action Bar (Current Step Focus with Speech TTS Audio Player)
                 if history:
                     active_item = history[-1]
                     t_num = active_item.get("turn", cur_turn)
                     q_text = active_item.get("question", "")
                     clean_q_speech = re.sub(r'[*_#`\n]', ' ', q_text).replace("'", "\\'").replace('"', '\\"')
 
-                    col_q1, col_q2 = st.columns([4, 1])
-                    with col_q1:
-                        # Render Question Box + TTS Audio Read-Aloud inside components.html for 100% reliability
-                        components.html(f"""
-                        <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(15,23,42,0.95); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 18px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 ACTIVE RECRUITER PROBE • TURN {t_num} OF 10</span>
-                                <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 3px 10px; border-radius: 12px; font-weight: 600;">Adaptive Gemini Follow-Up Engine</span>
-                            </div>
-                            <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin: 0 0 14px 0;">{q_text}</p>
-                            <button id="tts_btn" onclick="playQuestionSpeech('{clean_q_speech}')" style="background: linear-gradient(135deg, {theme_accent}, {theme_sub}); color: #070919; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.85rem; font-weight: 800; cursor: pointer; box-shadow: 0 0 15px {theme_accent}66; display: inline-flex; align-items: center; gap: 6px;">
+                    # Responsive Question Box Component with zero scrollbar overflow
+                    components.html(f"""
+                    <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(15,23,42,0.95); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                            <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 ACTIVE RECRUITER PROBE • TURN {t_num} OF 10</span>
+                            <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 3px 12px; border-radius: 12px; font-weight: 700;">Adaptive Gemini Follow-Up Engine</span>
+                        </div>
+                        <p style="color: #f8fafc; font-size: 1.08rem; font-weight: 600; line-height: 1.6; margin: 0 0 16px 0;">{q_text}</p>
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <button id="tts_btn" onclick="playQuestionSpeech('{clean_q_speech}')" style="background: linear-gradient(135deg, {theme_accent}, {theme_sub}); color: #070919; border: none; padding: 9px 20px; border-radius: 20px; font-size: 0.86rem; font-weight: 800; cursor: pointer; box-shadow: 0 0 15px {theme_accent}55; display: inline-flex; align-items: center; gap: 6px;">
                                 🔊 Listen to Recruiter Question (Voice AI)
                             </button>
-                            <span id="tts_status" style="font-size: 0.8rem; color: #94a3b8; margin-left: 10px;"></span>
+                            <span id="tts_status" style="font-size: 0.82rem; color: #34d399; font-weight: 600;"></span>
                         </div>
-                        <script>
-                        function playQuestionSpeech(txt) {{
-                            var status = document.getElementById("tts_status");
-                            if ('speechSynthesis' in window) {{
-                                window.speechSynthesis.cancel();
-                                var msg = new SpeechSynthesisUtterance(txt);
-                                msg.rate = 0.92;
-                                msg.pitch = 1.0;
-                                msg.onstart = function() {{ status.innerText = "🔊 Speaking question..."; }};
-                                msg.onend = function() {{ status.innerText = ""; }};
-                                window.speechSynthesis.speak(msg);
-                            }} else {{
-                                alert("Browser does not support Speech Synthesis API.");
-                            }}
+                    </div>
+                    <script>
+                    function playQuestionSpeech(txt) {{
+                        var status = document.getElementById("tts_status");
+                        if ('speechSynthesis' in window) {{
+                            window.speechSynthesis.cancel();
+                            var msg = new SpeechSynthesisUtterance(txt);
+                            msg.rate = 0.92;
+                            msg.pitch = 1.0;
+                            msg.onstart = function() {{ status.innerText = "🔊 Speaking question out loud..."; }};
+                            msg.onend = function() {{ status.innerText = ""; }};
+                            window.speechSynthesis.speak(msg);
+                        }} else {{
+                            alert("Browser does not support Speech Synthesis API.");
                         }}
-                        </script>
-                        """, height=160)
-                    with col_q2:
-                        if st.button("🎲 Swap / Generate Alt Question", key="btn_swap_question", help="Skip current question and generate a new dynamic real-world scenario", use_container_width=True):
+                    }}
+                    </script>
+                    """, height=210)
+
+                    # Studio Action Controls (Responsive Row)
+                    col_act1, col_act2 = st.columns([1, 1])
+                    with col_act1:
+                        if st.button("🎲 Swap / Practice Alternative Question", key="btn_swap_question", help="Skip current question and generate a new dynamic real-world scenario", use_container_width=True):
                             with st.spinner("🤖 AI Generating new dynamic probe..."):
                                 agent_generate_alternative_question(session_data.get("id"))
                                 st.rerun()
-                        if st.button("🔄 Restart Interview", key="btn_restart_active_int", help="Clear current session and restart from Question 1", use_container_width=True):
+                    with col_act2:
+                        if st.button("🔄 Restart Technical Interview", key="btn_restart_active_int", help="Clear current session and restart from Question 1", use_container_width=True):
                             try:
                                 conn = get_db()
                                 conn.execute("UPDATE interview_sessions SET status = 'ARCHIVED' WHERE id = ?", (session_data.get('id'),))
@@ -1076,7 +1080,7 @@ def main_app_layout():
                             except Exception:
                                 pass
 
-                # Query parameter sync for voice answer submission
+                # Query parameter sync for voice answer submission & refinement
                 query_params = st.query_params
                 if "int_ans_submit" in query_params:
                     ans_submitted = query_params.get("int_ans_submit")
@@ -1089,23 +1093,29 @@ def main_app_layout():
                             st.toast(f"🎉 Technical Interview Completed! Score: {eval_turn.get('overall_score')}%", icon="🏆")
                         st.rerun()
 
-                # Candidate Response Input & Live Voice Dictation Single Panel
+                # Candidate Response Input & Live Voice Dictation Single Panel (Responsive Height 380)
                 if session_data.get("status") != "COMPLETED":
+                    q_active = history[-1].get("question", "") if history else ""
+                    clean_q_param = re.sub(r'[*_#`\n]', ' ', q_active).replace("'", "\\'").replace('"', '\\"')
+
                     components.html(f"""
-                    <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 12px; margin-top: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                            <b style="color: #f8fafc; font-size: 0.98rem;">✍️ Provide Your Response (Type OR Speak Live):</b>
-                            <button id="stt_mic_btn" onclick="toggleMicDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.82rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 14px rgba(16,185,129,0.4); display: inline-flex; align-items: center; gap: 6px;">
-                                🎙️ Start Live Voice Dictation
-                            </button>
+                    <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.12); padding: 20px; border-radius: 14px; margin-top: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); box-sizing: border-box;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                            <b style="color: #f8fafc; font-size: 1.02rem;">✍️ Provide Your Response (Type OR Speak Live):</b>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="stt_mic_btn" onclick="toggleMicDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 14px rgba(16,185,129,0.4); display: inline-flex; align-items: center; gap: 6px;">
+                                    🎙️ Start Live Voice Dictation
+                                </button>
+                            </div>
                         </div>
-                        <div id="stt_status_msg" style="font-size: 0.8rem; color: #34d399; margin-bottom: 8px; font-weight: 600;">
-                            💡 Click green mic button & speak out loud — spoken words will type live into the box below!
+                        <div id="stt_status_msg" style="font-size: 0.82rem; color: #34d399; margin-bottom: 10px; font-weight: 600;">
+                            💡 Click green mic button & speak out loud — noise-filtered words will type live into the box below!
                         </div>
-                        <textarea id="live_voice_text_box" style="width: 100%; height: 110px; background: rgba(30,41,59,0.85); color: #f8fafc; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 12px; font-size: 0.95rem; font-family: inherit; resize: vertical; box-sizing: border-box;" placeholder="Type your answer here OR click the green mic button above to dictate live by voice..."></textarea>
                         
-                        <div style="display: flex; gap: 10px; margin-top: 12px;">
-                            <button onclick="submitAnswerToRecruiter()" style="width: 100%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 15px rgba(99,102,241,0.4);">
+                        <textarea id="live_voice_text_box" style="width: 100%; height: 130px; background: rgba(30,41,59,0.9); color: #f8fafc; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 14px; font-size: 0.98rem; font-family: inherit; resize: vertical; box-sizing: border-box; line-height: 1.5;" placeholder="Type your answer here OR click the green mic button above to dictate live by voice..."></textarea>
+                        
+                        <div style="display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap;">
+                            <button onclick="submitAnswerToRecruiter()" style="flex: 2; min-width: 220px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 13px; border-radius: 10px; font-weight: 800; font-size: 0.98rem; cursor: pointer; box-shadow: 0 4px 18px rgba(99,102,241,0.4);">
                                 ⚡ Submit Final Answer to Recruiter 🎙️
                             </button>
                         </div>
@@ -1114,6 +1124,7 @@ def main_app_layout():
                     <script>
                     var dictationRec;
                     var isListening = false;
+                    
                     function toggleMicDictation() {{
                         var btn = document.getElementById("stt_mic_btn");
                         var status = document.getElementById("stt_status_msg");
@@ -1143,13 +1154,22 @@ def main_app_layout():
                             dictationRec.onresult = function(event) {{
                                 var finalTranscript = "";
                                 for (var i = 0; i < event.results.length; ++i) {{
-                                    finalTranscript += event.results[i][0].transcript;
+                                    if (event.results[i].isFinal) {{
+                                        var piece = event.results[i][0].transcript.trim();
+                                        if (piece) {{
+                                            finalTranscript += (finalTranscript ? " " : "") + piece;
+                                        }}
+                                    }}
                                 }}
-                                box.value = finalTranscript;
+                                if (finalTranscript) {{
+                                    // Smart Noise & Duplication Filter (Strips double phrases, "um", "uh", "like like")
+                                    var cleaned = finalTranscript.replace(/\\b(\\w+)\\s+\\1\\b/gi, '$1').replace(/\\b(um|uh|ah|er|like like)\\b/gi, '');
+                                    box.value = cleaned;
+                                }}
                             }};
                             
                             dictationRec.onerror = function(event) {{
-                                status.innerText = "Mic Error: " + event.error;
+                                status.innerText = "Mic Notice: " + event.error;
                                 status.style.color = "#f87171";
                             }};
                             
@@ -1157,7 +1177,7 @@ def main_app_layout():
                                 isListening = false;
                                 btn.style.background = "linear-gradient(135deg, #10b981, #059669)";
                                 btn.innerText = "🎙️ Start Live Voice Dictation";
-                                status.innerText = "✓ Dictation saved in text box. Review or edit text above and click Submit!";
+                                status.innerText = "✓ Voice dictation completed & noise filtered. Click Submit when ready!";
                                 status.style.color = "#34d399";
                             }};
                             
@@ -1179,7 +1199,7 @@ def main_app_layout():
                         window.parent.location.href = targetUrl.href;
                     }}
                     </script>
-                    """, height=240)
+                    """, height=350)
 
                 # Expandable History Transcripts (Past Turns)
                 if len(history) > 1 or "candidate_answer" in history[0]:
