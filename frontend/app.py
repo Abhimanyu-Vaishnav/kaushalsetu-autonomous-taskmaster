@@ -1371,7 +1371,8 @@ def main_app_layout():
                             student_data.update(up_payload)
                             st.session_state["authenticated_student"] = student_data
                             generate_dynamic_ai_portfolio(s_id)
-                            st.toast("✅ Candidate Profile & Live GitHub Repositories Updated!", icon="🚀")
+                            st.toast("🎉 Candidate Profile Saved & Dynamic Portfolio Regenerated Live!", icon="🎨")
+                            st.toast("🌐 Your portfolio has been re-synthesized with your latest resume, GitHub repos & credentials!", icon="🚀")
                             st.rerun()
                         else:
                             st.error(res_up.get("message"))
