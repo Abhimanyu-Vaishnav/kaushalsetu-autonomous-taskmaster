@@ -3188,78 +3188,72 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         if twitter: socials_html += f"<a href='{twitter}' target='_blank' style='color:#60a5fa; background:rgba(255,255,255,0.05); padding:6px 14px; border-radius:8px; text-decoration:none; font-size:0.85rem; border:1px solid rgba(255,255,255,0.1);'>🐦 Twitter</a>"
         socials_html += "</div>"
 
-        # Real Live GitHub Harvesting with Avatar & Repo Grid (Minimum 4 Repos + Direct Link Button)
+        # Real Live GitHub Harvesting (ONLY IF GITHUB LINK IS PROVIDED BY USER)
         github_section = ""
-        gh_target = github or f"https://github.com/{name.lower().replace(' ', '')}"
-        try:
+        if github and str(github).strip().startswith("http"):
+            gh_target = str(github).strip()
             try:
-                from agent_engine import fetch_github_profile_data
-            except ImportError:
-                from backend.agent_engine import fetch_github_profile_data
-            
-            gh_info = fetch_github_profile_data(gh_target)
-            repos = list(gh_info.get("projects", []))
-            gh_user = gh_info.get("username") or gh_target.split('/')[-1].strip("/")
-            
-            # Ensure at least 4 repos are displayed
-            default_pool = [
-                {"name": f"kaushalsetu-autonomous-taskmaster", "description": f"Verified production codebase for {track} track with automated CI/CD and telemetry logging.", "language": "Python", "stars": 14, "forks": 5, "repo_url": f"https://github.com/{gh_user}"},
-                {"name": "fullstack-telemetry-engine", "description": "Glassmorphic dynamic portfolio & real-time REST microservices platform.", "language": "TypeScript", "stars": 9, "forks": 3, "repo_url": f"https://github.com/{gh_user}"},
-                {"name": "ai-dossier-synthesizer", "description": "Autonomous NLP resume intelligence parser with multi-pass entity extraction.", "language": "Python", "stars": 7, "forks": 2, "repo_url": f"https://github.com/{gh_user}"},
-                {"name": "responsive-portfolio-template", "description": "Ultra-fast modern recruiter landing page with cryptographic SHA-256 seal verification.", "language": "CSS / HTML", "stars": 11, "forks": 4, "repo_url": f"https://github.com/{gh_user}"}
-            ]
-            
-            for item in default_pool:
-                if len(repos) >= 4:
-                    break
-                if not any(r.get("name") == item["name"] for r in repos):
-                    repos.append(item)
-
-            total_stars_cnt = gh_info.get("total_stars") or sum(r.get("stars", 0) for r in repos)
-            
-            repo_cards = "".join([f"""
-            <div class="hover-card" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px; text-align:left;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <b style="color:{secondary_color}; font-size:0.95rem;">📦 {p.get('name')}</b>
-                    <span style="font-size:0.75rem; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px; font-weight:700;">{p.get('language')}</span>
-                </div>
-                <p style="font-size:0.84rem; color:#94a3b8; margin:8px 0; line-height:1.4;">{p.get('description')}</p>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
-                    <span style="font-size:0.78rem; color:#fbbf24; font-weight:600;">⭐ {p.get('stars')} Stars • 🍴 {p.get('forks')} Forks</span>
-                    <a href="{p.get('repo_url')}" target="_blank" style="font-size:0.82rem; color:{accent_color}; text-decoration:none; font-weight:700;">View Code ↗</a>
-                </div>
-            </div>
-            """ for p in repos[:6]])
-            
-            gh_avatar = f"<img src='{gh_info.get('avatar_url')}' style='width:34px; height:34px; border-radius:50%; border:1px solid {accent_color};' />" if gh_info.get("avatar_url") else ""
-            
-            github_section = f"""
-            <div style="margin-top:34px; text-align:left;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-                    <h3 style="color:#f8fafc; font-size:1.2rem; border-left:4px solid {accent_color}; padding-left:12px; margin:0;">🚀 Verified GitHub Code Repositories ({len(repos)} Repos Shown • ⭐ {total_stars_cnt} Total Stars)</h3>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        {gh_avatar}
-                        <span style="color:#94a3b8; font-size:0.85rem; font-weight:600;">@{gh_user}</span>
+                try:
+                    from agent_engine import fetch_github_profile_data
+                except ImportError:
+                    from backend.agent_engine import fetch_github_profile_data
+                
+                gh_info = fetch_github_profile_data(gh_target)
+                repos = list(gh_info.get("projects", []))
+                gh_user = gh_info.get("username") or gh_target.split('/')[-1].strip("/")
+                total_stars_cnt = gh_info.get("total_stars") or sum(r.get("stars", 0) for r in repos)
+                
+                if repos:
+                    repo_cards = "".join([f"""
+                    <div class="hover-card" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:12px; text-align:left;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <b style="color:{secondary_color}; font-size:0.95rem;">📦 {p.get('name')}</b>
+                            <span style="font-size:0.75rem; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px; font-weight:700;">{p.get('language') or 'Code'}</span>
+                        </div>
+                        <p style="font-size:0.84rem; color:#94a3b8; margin:8px 0; line-height:1.4;">{p.get('description') or 'Verified open-source code repository.'}</p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+                            <span style="font-size:0.78rem; color:#fbbf24; font-weight:600;">⭐ {p.get('stars', 0)} Stars • 🍴 {p.get('forks', 0)} Forks</span>
+                            <a href="{p.get('repo_url') or gh_target}" target="_blank" style="font-size:0.82rem; color:{accent_color}; text-decoration:none; font-weight:700;">View Code ↗</a>
+                        </div>
                     </div>
+                    """ for p in repos[:6]])
+                    
+                    gh_avatar = f"<img src='{gh_info.get('avatar_url')}' style='width:34px; height:34px; border-radius:50%; border:1px solid {accent_color};' />" if gh_info.get("avatar_url") else ""
+                    
+                    github_section = f"""
+                    <div style="margin-top:34px; text-align:left;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                            <h3 style="color:#f8fafc; font-size:1.2rem; border-left:4px solid {accent_color}; padding-left:12px; margin:0;">🚀 Verified GitHub Code Repositories ({len(repos)} Repos • ⭐ {total_stars_cnt} Total Stars)</h3>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                {gh_avatar}
+                                <span style="color:#94a3b8; font-size:0.85rem; font-weight:600;">@{gh_user}</span>
+                            </div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+                            {repo_cards}
+                        </div>
+                        <div style="margin-top: 22px; text-align: center;">
+                            <a href="{gh_target}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); padding: 10px 24px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">
+                                ⚡ View All Repositories on GitHub (@{gh_user}) ↗
+                            </a>
+                        </div>
+                    </div>
+                    """
+                else:
+                    github_section = f"""
+                    <div style="margin-top:32px; text-align:left;">
+                        <h3 style="color:#f8fafc; font-size:1.2rem; border-left:4px solid {accent_color}; padding-left:12px; margin-bottom:12px;">🚀 Verified GitHub Profile</h3>
+                        <a href="{gh_target}" target="_blank" style="color:{secondary_color}; font-weight:600; text-decoration:none;">Explore @{gh_user} on GitHub ↗</a>
+                    </div>
+                    """
+            except Exception as gh_ex:
+                print(f"[GITHUB PORTFOLIO HARVEST NOTICE] {gh_ex}")
+                github_section = f"""
+                <div style="margin-top:32px; text-align:left;">
+                    <h3 style="color:#f8fafc; font-size:1.2rem; border-left:4px solid {accent_color}; padding-left:12px; margin-bottom:12px;">🚀 Verified GitHub Profile</h3>
+                    <a href="{gh_target}" target="_blank" style="color:{secondary_color}; font-weight:600; text-decoration:none;">Explore @{gh_target.split('/')[-1]} on GitHub ↗</a>
                 </div>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-                    {repo_cards}
-                </div>
-                <div style="margin-top: 22px; text-align: center;">
-                    <a href="https://github.com/{gh_user}?tab=repositories" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); padding: 10px 24px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 0.9rem; transition: all 0.2s ease;">
-                        ⚡ View All Repositories on GitHub (@{gh_user}) ↗
-                    </a>
-                </div>
-            </div>
-            """
-        except Exception as gh_ex:
-            print(f"[GITHUB PORTFOLIO HARVEST NOTICE] {gh_ex}")
-            github_section = f"""
-            <div style="margin-top:32px; text-align:left;">
-                <h3 style="color:#f8fafc; font-size:1.2rem; border-left:4px solid {accent_color}; padding-left:12px; margin-bottom:12px;">🚀 Verified GitHub Profile</h3>
-                <a href="{gh_target}" target="_blank" style="color:{secondary_color}; font-weight:600; text-decoration:none;">Explore @{gh_target.split('/')[-1]} on GitHub ↗</a>
-            </div>
-            """
+                """
 
         # Research markup
         research_html = "".join([f"""
