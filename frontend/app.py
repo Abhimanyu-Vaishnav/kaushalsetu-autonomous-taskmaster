@@ -1323,7 +1323,6 @@ def main_app_layout():
                                     reader = PyPDF2.PdfReader(io.BytesIO(b_content))
                                     extracted_resume_text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
                                 except Exception:
-                                    import re
                                     extracted_resume_text = re.sub(r'[^\x20-\x7E\n\r\t]', ' ', b_content.decode('latin1', errors='ignore'))
                         if extracted_resume_text.strip():
                             st.success(f"📄 Resume text auto-extracted ({len(extracted_resume_text)} chars) from '{u_resume_file.name}'!")
