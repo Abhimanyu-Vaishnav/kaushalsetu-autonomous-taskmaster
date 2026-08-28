@@ -4496,11 +4496,31 @@ def agent_apply_job_for_student(student_id: str, job_dict: dict):
         branch_id = student.get("branch_id", "BR-NANGLOI")
         s_name = student.get("full_name") or student.get("student_name") or student.get("name") or "Candidate"
 
+        # Dynamic Column Auto-Migration Guard for existing SQLite tables
+        c.execute("PRAGMA table_info(job_applications)")
+        existing_cols = {r[1] for r in c.fetchall()}
+        cols_to_add = {
+            "track": "TEXT DEFAULT ''",
+            "branch_id": "TEXT DEFAULT 'BR-NANGLOI'",
+            "student_name": "TEXT DEFAULT ''",
+            "job_id": "TEXT DEFAULT ''",
+            "role_title": "TEXT DEFAULT ''",
+            "company_name": "TEXT DEFAULT ''",
+            "match_percentage": "INTEGER DEFAULT 85",
+            "status": "TEXT DEFAULT 'APPLIED'"
+        }
+        for col_name, col_def in cols_to_add.items():
+            if col_name not in existing_cols:
+                try:
+                    c.execute(f"ALTER TABLE job_applications ADD COLUMN {col_name} {col_def}")
+                except Exception:
+                    pass
+
         c.execute("""
             INSERT INTO job_applications 
             (id, student_id, student_name, track, branch_id, job_id, role_title, company_name, match_percentage, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'APPLIED')
-        """, (app_id, sid, s_name, student.get("track"), branch_id, job_dict.get("id", "JOB-01"), role, company, match_pct))
+        """, (app_id, sid, s_name, student.get("course_name") or student.get("track") or "Vocational Track", branch_id, job_dict.get("id", "JOB-01"), role, company, match_pct))
 
         c.execute("""
             INSERT INTO agent_notifications (recipient_type, recipient_id, title, message)

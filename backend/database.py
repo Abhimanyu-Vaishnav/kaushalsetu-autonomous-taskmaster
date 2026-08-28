@@ -376,6 +376,8 @@ def init_complete_db():
     # 3. Dynamic Column Migration for All Tables
     tables_to_check = {
         "job_applications": {
+            "track": "TEXT DEFAULT ''",
+            "branch_id": "TEXT DEFAULT 'BR-NANGLOI'",
             "job_id": "TEXT DEFAULT ''",
             "student_name": "TEXT DEFAULT ''",
             "role_title": "TEXT DEFAULT ''",
