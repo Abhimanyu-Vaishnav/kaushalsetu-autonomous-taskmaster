@@ -2358,8 +2358,94 @@ def agent_refine_candidate_interview_answer(question: str, draft_answer: str, jo
         "target_terms_added": terms
     }
 
+def generate_question_aware_best_answer(question: str, job_role: str = "", style_mode: str = "standard") -> str:
+    """Synthesizes a 100% question-specific 10/10 Senior Recruiter benchmark model answer tailored to the exact topic asked."""
+    q_txt = str(question or "").strip()
+    role = str(job_role or "Technical Specialist").strip()
+    q_lower = q_txt.lower()
+    
+    # 1. Gemini LLM Synthesis
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if gemini_key and len(q_txt) > 5:
+        try:
+            from google import genai
+            client = genai.Client(api_key=gemini_key)
+            prompt = f"""
+            You are a Principal Corporate Technical Examiner interviewing for role '{role}'.
+            Generate a flawless 10/10 Senior Recruiter benchmark model answer to this EXACT question:
+            Question: '{q_txt}'
+            Style: {style_mode} (provide concise, highly technical multi-step explanation).
+            
+            Return JSON with key: "model_answer" (string).
+            """
+            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            if resp and resp.text:
+                match = re.search(r'\{.*\}', resp.text, re.DOTALL)
+                if match:
+                    res_json = json.loads(match.group(0))
+                    if res_json.get("model_answer"):
+                        return str(res_json["model_answer"]).strip()
+        except Exception:
+            pass
+
+    # 2. Topic-Matched Heuristic Synthesis
+    if any(w in q_lower for w in ["latency", "slow", "profil", "cache", "query", "database", "traffic"]):
+        return "To resolve high latency spikes, I profile slow queries using PostgreSQL `EXPLAIN ANALYZE` and log queries exceeding 100ms. I add B-tree composite indexes on foreign keys, implement Redis in-memory caching with a TTL cache-aside strategy for hot API endpoints, and configure connection pooling via AsyncPG to maintain sub-30ms P99 response times."
+    elif any(w in q_lower for w in ["jwt", "token", "cors", "rollback", "transaction", "header", "auth"]):
+        return "I configure JWT access token expiration to 15 minutes with secure HTTP-only refresh token rotation, set strict CORS headers restricting allowed origins, and wrap multi-table database operations inside FastAPI SQLAlchemy async session context managers (`async with session.begin()`), executing automatic rollbacks on any unhandled exception."
+    elif any(w in q_lower for w in ["docker", "container", "microservice", "deploy", "ci/cd", "pipeline", "kubernetes"]):
+        return "I construct multi-stage Dockerfiles leveraging slim base images to minimize container footprint, configure healthcheck probes in docker-compose, set up GitHub Actions CI/CD pipelines with automated pytest testing, and deploy microservices behind an Nginx reverse proxy with TLS termination."
+    elif any(w in q_lower for w in ["tally", "gst", "gstr", "brs", "voucher", "tax", "reconcil", "ledger"]):
+        return "I open Tally Prime Voucher Entry (F5/F8), verify invoice line items, calculate CGST/SGST/IGST breakdown, cross-check vendor Input Tax Credit against GSTR-2B on the GST portal, and post adjustment journals for any un-reconciled Bank Reconciliation Statement (BRS) entries."
+    elif any(w in q_lower for w in ["mppt", "solar", "inverter", "scada", "telemetry", "string", "pv", "grid"]):
+        return "I verify MPPT tracker duty cycle under full solar irradiance, inspect RS-485 Modbus serial telemetry registers, measure string voltage differential across solar PV arrays, and verify grid-tie anti-islanding interlocks on the SCADA gateway."
+    elif any(w in q_lower for w in ["bms", "battery", "ev", "cell", "can-bus", "hvil", "thermal", "ecu"]):
+        return "I connect a CAN-Bus logger to capture 0x18FF ECU frames, measure pack isolation resistance (>500 ohms/volt), verify active/passive cell balancing differentials under 20mV, and monitor thermistor thermal runaway sensors."
+    elif any(w in q_lower for w in ["plc", "ladder", "sensor", "oscilloscope", "actuator", "relay", "pid"]):
+        return "I inspect PLC digital/analog I/O status LEDs, check 24V DC loop power continuity, measure sensor signal noise on a digital storage oscilloscope, and re-tune closed-loop PID proportional-integral gains."
+    else:
+        return f"To address '{q_txt}', I systematically inspect core diagnostic telemetry, execute step-by-step troubleshooting methodology, verify operational baselines using industry-standard tools, and document audit compliance for role '{role}'."
+
+def agent_generate_alternative_model_answer(session_id: str, turn_index: int, style_mode: str = "alternative") -> dict:
+    """Generates an alternative 10/10 model answer for a specific interview question turn."""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM interview_sessions WHERE id = ?", (session_id,))
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            return {"status": "error", "message": "Session not found"}
+
+        session = dict(row)
+        history = json.loads(session.get("conversation_history", "[]"))
+        job_role = session.get("job_role", "Technical Specialist")
+        
+        target_turn = None
+        for item in history:
+            if item.get("turn") == turn_index:
+                target_turn = item
+                break
+        
+        if not target_turn:
+            conn.close()
+            return {"status": "error", "message": f"Turn {turn_index} not found in history"}
+        
+        q_text = target_turn.get("question", "")
+        new_alt_answer = generate_question_aware_best_answer(q_text, job_role, style_mode=style_mode)
+        
+        # Save alt answer in history item
+        target_turn["alt_model_answer"] = new_alt_answer
+        
+        c.execute("UPDATE interview_sessions SET conversation_history = ? WHERE id = ?", (json.dumps(history), session_id))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "alt_model_answer": new_alt_answer, "history": history}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 def evaluate_interview_turn(session_id: str, student_answer: str):
-    """Evaluates candidate response using domain AI criteria, generates adaptive follow-up questions, and produces 360° readiness reports."""
+    """Evaluates candidate response using strict domain AI criteria, detects question echoes/gibberish, and generates question-aware model answers."""
     try:
         conn = get_db()
         c = conn.cursor()
@@ -2383,10 +2469,12 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
         ans_len = len(ans_words)
         last_q = history[-1].get("question", "") if history else ""
         
+        # 1. Generate Question-Specific 10/10 Model Answer
+        ideal_model = generate_question_aware_best_answer(last_q, job_role)
+        
         # Domain Keyword Match Evaluator
         if any(w in role_lower for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
             keywords = ["tally", "gst", "gstr", "itc", "tds", "brs", "ledger", "reconciliation", "journal", "trial balance", "invoice", "debit", "credit", "accrual", "tax"]
-            ideal_model = "I open Tally Prime Voucher Entry (F5/F8), verify invoice line items, calculate CGST/SGST/IGST breakdown, cross-check vendor ITC on the GST portal against GSTR-2B, and post adjustment journals for any un-reconciled amounts."
             study_data = [
                 "📘 Module 1: Advanced Tally Prime Voucher Entry & Shortcut Keys (F5/F8/F9)",
                 "📘 Module 2: GST Act Section 16(2) Input Tax Credit (ITC) & GSTR-2B Matching",
@@ -2394,8 +2482,7 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
                 "📘 Module 4: TDS Deduction under Section 194C vs 194J & Quarter Filing"
             ]
         elif any(w in role_lower for w in ["web", "python", "full", "software", "code", "cloud"]):
-            keywords = ["python", "fastapi", "react", "api", "rest", "async", "database", "sql", "docker", "endpoint", "middleware", "jwt", "state", "hook", "json"]
-            ideal_model = "I construct asynchronous Pydantic request models in FastAPI, implement dependency injection for database session management, use JWT bearer auth middleware, and handle frontend state using React useEffect hooks."
+            keywords = ["python", "fastapi", "react", "api", "rest", "async", "database", "sql", "docker", "endpoint", "middleware", "jwt", "state", "hook", "json", "query", "cache", "latency", "index", "cors", "rollback", "explain", "redis"]
             study_data = [
                 "💻 Module 1: Async Python FastAPI Architecture & Pydantic V2 Schemas",
                 "💻 Module 2: PostgreSQL Connection Pooling & Index Optimization",
@@ -2404,7 +2491,6 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
             ]
         elif any(w in role_lower for w in ["solar", "renew"]):
             keywords = ["solar", "mppt", "inverter", "scada", "telemetry", "grid", "voltage", "string", "power", "modbus", "rs485", "transformer"]
-            ideal_model = "I verify MPPT tracker duty cycle, inspect RS-485 Modbus serial registers, check string voltage balance under full irradiance, and log telemetry packets to the SCADA gateway."
             study_data = [
                 "☀️ Module 1: Solar Inverter MPPT Efficiency & String Voltage Diagnostics",
                 "☀️ Module 2: RS-485 Modbus Protocol & Gateway Telemetry Packet Analysis",
@@ -2412,7 +2498,6 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
             ]
         elif any(w in role_lower for w in ["electric", "ev", "battery"]):
             keywords = ["bms", "can-bus", "battery", "cell", "voltage", "ecu", "soc", "thermal", "hvil", "isolation", "harness", "fault"]
-            ideal_model = "I connect a CAN-Bus logger to capture 0x18FF ECU frames, measure pack isolation resistance (>500 ohms/volt), verify active passive cell balancing, and monitor thermal sensor thermistors."
             study_data = [
                 "⚡ Module 1: BMS Passive & Active Cell Balancing Topologies",
                 "⚡ Module 2: CAN-Bus 2.0B Telemetry Frame Decoding & DBC Parsing",
@@ -2420,7 +2505,6 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
             ]
         else:
             keywords = ["plc", "modbus", "ladder", "sensor", "telemetry", "relay", "actuator", "oscilloscope", "calibration", "circuit", "isolation", "safety"]
-            ideal_model = "I inspect PLC I/O status LEDs, check 24V DC loop power continuity, verify sensor signal noise on an oscilloscope, and re-tune PID loop proportional gain."
             study_data = [
                 "⚙️ Module 1: PLC Ladder Logic & Industrial I/O Wiring Standards",
                 "⚙️ Module 2: 24V Sensor Loop Calibration & Oscilloscope Signal Analysis",
@@ -2430,10 +2514,19 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
         matched_kws = [kw for kw in keywords if kw in ans_clean.lower()]
         previous_answers = [h.get("candidate_answer", "").strip().lower() for h in history[:-1] if "candidate_answer" in h]
 
-        # 1. Repetitive Answer Penalty Check
+        # 2. Question Copying / Echo Detection Logic
+        q_words_all = set(re.findall(r'\w+', last_q.lower())) - {"what", "how", "you", "the", "and", "for", "with", "this", "your", "that", "step", "walk", "tell", "about", "suppose", "when"}
+        ans_words_all = set(re.findall(r'\w+', ans_clean.lower()))
+        overlap_words = q_words_all.intersection(ans_words_all)
+        overlap_ratio = len(overlap_words) / max(len(q_words_all), 1)
+        
+        is_question_echo = (overlap_ratio >= 0.55 and ans_len <= len(q_words_all) + 6) or (ans_clean.lower() in last_q.lower() or last_q.lower() in ans_clean.lower())
+        is_gibberish = (ans_len < 4) or (len(matched_kws) == 0 and len(ans_words_all - q_words_all) < 3)
+
+        # 3. Repetitive Answer Check
         is_repetitive = False
         for prev_ans in previous_answers:
-            if len(prev_ans) > 10 and (ans_clean.lower() in prev_ans or prev_ans in ans_clean.lower() or ans_clean.lower() == prev_ans):
+            if len(prev_ans) > 8 and (ans_clean.lower() in prev_ans or prev_ans in ans_clean.lower() or ans_clean.lower() == prev_ans):
                 is_repetitive = True
                 break
 
@@ -2441,16 +2534,23 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
         feedback = ""
         improvements = []
 
-        if is_repetitive:
+        if is_question_echo:
+            turn_score = 2
+            feedback = "🔴 Question Copying Detected! You repeated the question text rather than explaining a step-by-step technical solution."
+            improvements = ["Do not repeat the question text in your answer", "Explain hands-on practical steps to solve the question topic"]
+        elif is_repetitive:
             turn_score = 3
-            feedback = "⚠️ Repetitive response detected! You submitted the same generic answer as a previous round without addressing the specific question asked."
-            improvements = ["Address the exact question asked", "Do not reuse canned or generic answers"]
-            ideal_model = f"A specific response for '{last_q}' should directly explain step-by-step resolution rather than repeating previous answers."
+            feedback = "⚠️ Repetitive answer detected! You submitted the same response as a previous round without addressing this specific question."
+            improvements = ["Address the exact question topic", "Do not reuse canned or generic answers"]
+        elif is_gibberish:
+            turn_score = 3
+            feedback = "⚠️ Irrelevant or incomplete response! Your answer lacked core technical methodology and domain terminology required for this question."
+            improvements = ["Directly address the question topic", "Include step-by-step domain technical workflow"]
         else:
-            # 2. Strict Gemini LLM Real Recruiter Evaluator
+            # 4. Strict Gemini LLM Real Recruiter Evaluator
             gemini_key = os.environ.get("GEMINI_API_KEY")
             llm_eval = None
-            if gemini_key and len(ans_clean) >= 5:
+            if gemini_key and ans_len >= 5:
                 try:
                     from google import genai
                     client = genai.Client(api_key=gemini_key)
@@ -2483,15 +2583,14 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
                 if llm_eval.get("model_answer"):
                     ideal_model = str(llm_eval.get("model_answer"))
             else:
-                # 3. Fallback Semantic Relevance Check against Last Question
-                q_words = set(re.findall(r'\w+', last_q.lower())) - {"what", "how", "you", "the", "and", "for", "with", "this", "your", "that", "step", "walk", "tell", "about"}
-                ans_q_matches = [w for w in q_words if w in ans_clean.lower()]
+                # 5. Semantic Relevance Check against Last Question
+                ans_q_matches = [w for w in q_words_all if w in ans_clean.lower()]
                 
-                if ans_len >= 20 and len(matched_kws) >= 2 and len(ans_q_matches) >= 1:
-                    turn_score = 9 if ans_len >= 35 else 8
-                    feedback = f"🌟 Strong, relevant response! You directly addressed the question and demonstrated domain terminology ({', '.join([k.upper() for k in matched_kws[:3]])})."
+                if ans_len >= 18 and len(matched_kws) >= 2 and len(ans_q_matches) >= 1:
+                    turn_score = 9 if ans_len >= 30 else 8
+                    feedback = f"🌟 Strong, relevant response! You directly addressed the question and demonstrated technical terminology ({', '.join([k.upper() for k in matched_kws[:3]])})."
                     improvements = ["Maintain structured explanation style", "Mention specific compliance standards"]
-                elif ans_len >= 12 and (len(matched_kws) >= 1 or len(ans_q_matches) >= 1):
+                elif ans_len >= 10 and (len(matched_kws) >= 1 or len(ans_q_matches) >= 1):
                     turn_score = 6
                     feedback = "👍 Moderately relevant answer, but lacks specific technical depth or exact steps asked in the question."
                     improvements = ["Provide a step-by-step troubleshooting breakdown", "Include specific domain terminology"]

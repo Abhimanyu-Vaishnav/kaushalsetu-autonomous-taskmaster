@@ -1242,6 +1242,13 @@ def main_app_layout():
                             score_color = "#34d399" if score_val >= 8 else ("#fbbf24" if score_val >= 6 else "#f87171")
                             kw_badges = " ".join([f"<span style='background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:700;'>✓ {k.upper()}</span>" for k in matched_kws])
                             
+                            alt_model_ans = turn_item.get("alt_model_answer", "")
+                            alt_card_html = f"""
+<div style="margin-top: 10px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.3); padding: 14px; border-radius: 10px;">
+<b style="color: #a5b4fc; font-size: 0.9rem;">✨ Alternative 10/10 Exemplar Answer (Architectural Deep-Dive):</b>
+<p style="color: #f8fafc; font-size: 0.92rem; margin: 6px 0 0 0; line-height: 1.6; font-style: italic;">"{alt_model_ans}"</p>
+</div>""" if alt_model_ans else ""
+
                             with st.expander(f"📌 Turn {t_num} AI Analysis Report — Rating: {score_val}/10", expanded=(t_num == len(answered_turns))):
                                 dossier_card_html = f"""<div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 14px; margin-bottom: 10px;">
 <div style="background: rgba(99,102,241,0.1); border-left: 4px solid #6366f1; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px;">
@@ -1260,11 +1267,18 @@ def main_app_layout():
 <p style="color: #cbd5e1; font-size: 0.9rem; margin: 0; line-height: 1.5;"><b>🎯 AI Feedback & Breakdown:</b> {fb_text}</p>
 </div>
 <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); padding: 16px; border-radius: 10px;">
-<b style="color: #34d399; font-size: 0.92rem;">💡 Exemplar Best Response (Recruiter Benchmark):</b>
+<b style="color: #34d399; font-size: 0.92rem;">💡 Question-Specific Exemplar Best Response (Recruiter Benchmark):</b>
 <p style="color: #f8fafc; font-size: 0.92rem; margin: 6px 0 0 0; line-height: 1.6; font-style: italic;">"{model_ans}"</p>
 </div>
+{alt_card_html}
 </div>"""
                                 st.markdown(dossier_card_html, unsafe_allow_html=True)
+                                
+                                if st.button(f"✨ Synthesize Alternative 10/10 Model Answer (Turn {t_num})", key=f"btn_alt_ans_{t_num}"):
+                                    with st.spinner("🤖 AI Synthesizing alternative 10/10 model answer..."):
+                                        agent_generate_alternative_model_answer(session_data.get("id"), t_num)
+                                        st.toast(f"✅ Alternative 10/10 model answer generated for Turn {t_num}!", icon="💡")
+                                        st.rerun()
 
                 # Completed Interview 360° Comprehensive Report & Study Plan
                 if session_data.get("status") == "COMPLETED":
