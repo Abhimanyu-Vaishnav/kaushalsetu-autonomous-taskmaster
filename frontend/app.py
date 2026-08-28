@@ -665,6 +665,23 @@ def main_app_layout():
             s_track = student_data.get("course_name") or student_data.get("track") or "Vocational Diagnostics & Mechatronics"
             s_branch = student_data.get("branch_name") or student_data.get("branch_center") or "Nangloi Center (Delhi)"
 
+            # Top-Level AI Interview Turn Submission Interceptor
+            query_params = st.query_params
+            if "int_ans_submit" in query_params:
+                ans_submitted = query_params.get("int_ans_submit")
+                sess_id_param = query_params.get("int_sess_id") or s_id
+                st.query_params.pop("int_ans_submit", None)
+                st.query_params.pop("int_sess_id", None)
+                if ans_submitted:
+                    with st.spinner("🤖 AI Recruiter evaluating technical precision & generating dossier..."):
+                        eval_turn = evaluate_interview_turn(sess_id_param, ans_submitted)
+                        if eval_turn.get("status") == "completed":
+                            st.balloons()
+                            st.toast(f"🎉 Technical Interview Completed! Score: {eval_turn.get('overall_score')}%", icon="🏆")
+                        else:
+                            st.toast("✅ Turn evaluated! Detailed AI Analysis Report generated below.", icon="🧠")
+                    st.rerun()
+
             # --- TOP PROFILE CUSTOMIZATION & MEDIA UPLOAD BAR ---
             with st.expander("👤 Customize Candidate Profile, Photo & Social Portfolio Links", expanded=False):
                 col_pf1, col_pf2 = st.columns([1, 2])
@@ -1111,7 +1128,7 @@ def main_app_layout():
                         <textarea id="speech_live_box" style="width: 100%; height: 135px; background: rgba(30,41,59,0.9); color: #f8fafc; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 14px; font-size: 0.98rem; font-family: inherit; resize: vertical; box-sizing: border-box; line-height: 1.5;" placeholder="Type your answer here OR click green mic button above to speak and watch words type live in real-time..."></textarea>
                         
                         <div style="display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap;">
-                            <button onclick="submitAnswerToRecruiter()" style="flex: 2; min-width: 220px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 13px; border-radius: 10px; font-weight: 800; font-size: 0.98rem; cursor: pointer; box-shadow: 0 4px 18px rgba(99,102,241,0.4);">
+                            <button id="sub_btn" onclick="submitAnswerToRecruiter()" style="flex: 2; min-width: 220px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 13px; border-radius: 10px; font-weight: 800; font-size: 0.98rem; cursor: pointer; box-shadow: 0 4px 18px rgba(99,102,241,0.4);">
                                 ⚡ Submit Answer & Request AI Evaluation Dossier 🎙️
                             </button>
                         </div>
@@ -1191,6 +1208,19 @@ def main_app_layout():
                             alert("Please type or speak an answer before submitting.");
                             return;
                         }}
+                        
+                        var status = document.getElementById("stt_status_msg");
+                        if (status) {{
+                            status.innerHTML = "⏳ <b>Submitting Answer...</b> 🤖 AI Executive Coach is analyzing your response & evaluating technical precision...";
+                            status.style.color = "#fbbf24";
+                        }}
+                        var btn = document.getElementById("sub_btn");
+                        if (btn) {{
+                            btn.disabled = true;
+                            btn.innerText = "⏳ Evaluating Response with AI...";
+                            btn.style.opacity = "0.7";
+                        }}
+                        
                         var valToSubmit = text.trim();
                         var targetUrl = new URL(window.parent.location.href);
                         targetUrl.searchParams.set("int_ans_submit", valToSubmit);
