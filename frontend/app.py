@@ -1001,45 +1001,47 @@ def main_app_layout():
                 history = session_data.get("conversation_history", [])
                 cur_turn = session_data.get("current_turn", 1)
 
-                # Studio Live Animated Equalizer Banner
+                # Studio Smart AI Assistant Coach Banner
                 st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #070919 0%, #0f172a 100%); border: 1px solid {theme_accent}44; padding: 18px 22px; border-radius: 14px; margin-bottom: 20px; box-shadow: 0 0 25px {theme_accent}22;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                        <div style="display: flex; align-items: center; gap: 14px;">
-                            <div style="width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, {theme_accent}, {theme_sub}); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 0 20px {theme_accent}88;">🤖</div>
+                <div style="background: linear-gradient(135deg, #070919 0%, #0f172a 100%); border: 1px solid {theme_accent}44; padding: 20px 24px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 0 25px {theme_accent}22;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, {theme_accent}, {theme_sub}); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 0 22px {theme_accent}88;">🧠</div>
                             <div>
-                                <b style="color: #f8fafc; font-size: 1.08rem;">Autonomous AI Executive Recruiter Agent</b>
-                                <br><span style="color: {theme_sub}; font-size: 0.82rem; font-weight: 600;">● LIVE RECRUITER STUDIO • {selected_job_role}</span>
+                                <b style="color: #f8fafc; font-size: 1.15rem;">Executive AI Technical Interview Assistant & Coach</b>
+                                <br><span style="color: {theme_sub}; font-size: 0.85rem; font-weight: 600;">● REAL-TIME RECRUITER COACHING • {selected_job_role}</span>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 14px; background: rgba(0,0,0,0.4); padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08);">
-                            <span style="font-size: 0.82rem; color: #94a3b8;">Selection Readiness:</span>
-                            <b style="color: #34d399; font-size: 0.92rem;">🟢 98% (Tier-1 Corporate Ready)</b>
+                            <span style="font-size: 0.82rem; color: #94a3b8;">Interview Readiness:</span>
+                            <b style="color: #34d399; font-size: 0.92rem;">🟢 Tier-1 Corporate Ready</b>
                             <span style="color: #64748b;">|</span>
-                            <b style="color: {theme_sub}; font-size: 0.92rem;">Turn {min(cur_turn, 10)} / 10</b>
+                            <b style="color: {theme_sub}; font-size: 0.92rem;">Question {min(cur_turn, 10)} of 10</b>
                         </div>
+                    </div>
+                    <div style="margin-top: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); padding: 10px 16px; border-radius: 10px; font-size: 0.86rem; color: #cbd5e1; display: flex; align-items: center; gap: 8px;">
+                        <span>💡 <b>AI Coach Guidance:</b> Type your technical answer OR click the green mic button to dictate live. After submission, I will analyze your precision, generate a detailed evaluation report, and show you the optimal 10/10 exemplar response!</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Active Question Display & Action Bar (Current Step Focus with Speech TTS Audio Player)
+                # Active Question Display & Speech TTS Audio Player
                 if history:
                     active_item = history[-1]
                     t_num = active_item.get("turn", cur_turn)
                     q_text = active_item.get("question", "")
                     clean_q_speech = re.sub(r'[*_#`\n]', ' ', q_text).replace("'", "\\'").replace('"', '\\"')
 
-                    # Responsive Question Box Component with zero scrollbar overflow
                     components.html(f"""
                     <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(15,23,42,0.95); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-                            <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 ACTIVE RECRUITER PROBE • TURN {t_num} OF 10</span>
+                            <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 RECRUITER PROBE • QUESTION {t_num} OF 10</span>
                             <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 3px 12px; border-radius: 12px; font-weight: 700;">Adaptive Gemini Follow-Up Engine</span>
                         </div>
                         <p style="color: #f8fafc; font-size: 1.08rem; font-weight: 600; line-height: 1.6; margin: 0 0 16px 0;">{q_text}</p>
                         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                             <button id="tts_btn" onclick="playQuestionSpeech('{clean_q_speech}')" style="background: linear-gradient(135deg, {theme_accent}, {theme_sub}); color: #070919; border: none; padding: 9px 20px; border-radius: 20px; font-size: 0.86rem; font-weight: 800; cursor: pointer; box-shadow: 0 0 15px {theme_accent}55; display: inline-flex; align-items: center; gap: 6px;">
-                                🔊 Listen to Recruiter Question (Voice AI)
+                                🔊 Listen to Question (AI Voice)
                             </button>
                             <span id="tts_status" style="font-size: 0.82rem; color: #34d399; font-weight: 600;"></span>
                         </div>
@@ -1055,22 +1057,19 @@ def main_app_layout():
                             msg.onstart = function() {{ status.innerText = "🔊 Speaking question out loud..."; }};
                             msg.onend = function() {{ status.innerText = ""; }};
                             window.speechSynthesis.speak(msg);
-                        }} else {{
-                            alert("Browser does not support Speech Synthesis API.");
                         }}
                     }}
                     </script>
-                    """, height=210)
+                    """, height=210, key=f"q_box_{session_data.get('id')}_{t_num}")
 
-                    # Studio Action Controls (Responsive Row)
                     col_act1, col_act2 = st.columns([1, 1])
                     with col_act1:
-                        if st.button("🎲 Swap / Practice Alternative Question", key="btn_swap_question", help="Skip current question and generate a new dynamic real-world scenario", use_container_width=True):
-                            with st.spinner("🤖 AI Generating new dynamic probe..."):
+                        if st.button("🎲 Practice Alternative Question", key=f"btn_swap_{t_num}", help="Skip current question and generate a new scenario", use_container_width=True):
+                            with st.spinner("🤖 AI Coach generating alternative question..."):
                                 agent_generate_alternative_question(session_data.get("id"))
                                 st.rerun()
                     with col_act2:
-                        if st.button("🔄 Restart Technical Interview", key="btn_restart_active_int", help="Clear current session and restart from Question 1", use_container_width=True):
+                        if st.button("🔄 Restart Interview Session", key=f"btn_restart_{t_num}", help="Restart from Question 1", use_container_width=True):
                             try:
                                 conn = get_db()
                                 conn.execute("UPDATE interview_sessions SET status = 'ARCHIVED' WHERE id = ?", (session_data.get('id'),))
@@ -1080,7 +1079,6 @@ def main_app_layout():
                             except Exception:
                                 pass
 
-                # Query parameter sync for voice answer submission & refinement
                 query_params = st.query_params
                 if "int_ans_submit" in query_params:
                     ans_submitted = query_params.get("int_ans_submit")
@@ -1093,11 +1091,8 @@ def main_app_layout():
                             st.toast(f"🎉 Technical Interview Completed! Score: {eval_turn.get('overall_score')}%", icon="🏆")
                         st.rerun()
 
-                # Candidate Response Input & Live Voice Dictation Single Panel (Responsive Height 380)
+                # Candidate Response Box Component with Guaranteed Auto-Clear Textbox Logic
                 if session_data.get("status") != "COMPLETED":
-                    q_active = history[-1].get("question", "") if history else ""
-                    clean_q_param = re.sub(r'[*_#`\n]', ' ', q_active).replace("'", "\\'").replace('"', '\\"')
-
                     components.html(f"""
                     <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.12); padding: 20px; border-radius: 14px; margin-top: 10px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); box-sizing: border-box;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
@@ -1109,19 +1104,25 @@ def main_app_layout():
                             </div>
                         </div>
                         <div id="stt_status_msg" style="font-size: 0.82rem; color: #34d399; margin-bottom: 10px; font-weight: 600;">
-                            💡 Click green mic button & speak out loud — noise-filtered words will type live into the box below!
+                            💡 Type your response or speak into your mic — noise-filtered words will appear live in the box below!
                         </div>
                         
                         <textarea id="live_voice_text_box" style="width: 100%; height: 130px; background: rgba(30,41,59,0.9); color: #f8fafc; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 14px; font-size: 0.98rem; font-family: inherit; resize: vertical; box-sizing: border-box; line-height: 1.5;" placeholder="Type your answer here OR click the green mic button above to dictate live by voice..."></textarea>
                         
                         <div style="display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap;">
                             <button onclick="submitAnswerToRecruiter()" style="flex: 2; min-width: 220px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: none; padding: 13px; border-radius: 10px; font-weight: 800; font-size: 0.98rem; cursor: pointer; box-shadow: 0 4px 18px rgba(99,102,241,0.4);">
-                                ⚡ Submit Final Answer to Recruiter 🎙️
+                                ⚡ Submit Answer & Request AI Evaluation Dossier 🎙️
                             </button>
                         </div>
                     </div>
 
                     <script>
+                    // Auto-Clear Textbox on Question Load
+                    (function() {{
+                        var box = document.getElementById("live_voice_text_box");
+                        if (box) box.value = "";
+                    }})();
+
                     var dictationRec;
                     var isListening = false;
                     
@@ -1162,7 +1163,6 @@ def main_app_layout():
                                     }}
                                 }}
                                 if (finalTranscript) {{
-                                    // Smart Noise & Duplication Filter (Strips double phrases, "um", "uh", "like like")
                                     var cleaned = finalTranscript.replace(/\\b(\\w+)\\s+\\1\\b/gi, '$1').replace(/\\b(um|uh|ah|er|like like)\\b/gi, '');
                                     box.value = cleaned;
                                 }}
@@ -1177,7 +1177,7 @@ def main_app_layout():
                                 isListening = false;
                                 btn.style.background = "linear-gradient(135deg, #10b981, #059669)";
                                 btn.innerText = "🎙️ Start Live Voice Dictation";
-                                status.innerText = "✓ Voice dictation completed & noise filtered. Click Submit when ready!";
+                                status.innerText = "✓ Voice dictation completed. Click Submit when ready!";
                                 status.style.color = "#34d399";
                             }};
                             
@@ -1189,50 +1189,67 @@ def main_app_layout():
 
                     function submitAnswerToRecruiter() {{
                         var text = document.getElementById("live_voice_text_box").value;
-                        if (!text || text.trim().length < 5) {{
+                        if (!text || text.trim().length < 4) {{
                             alert("Please type or speak an answer before submitting.");
                             return;
                         }}
+                        var valToSubmit = text.trim();
+                        document.getElementById("live_voice_text_box").value = "";
+                        
                         var targetUrl = new URL(window.parent.location.href);
-                        targetUrl.searchParams.set("int_ans_submit", text.trim());
+                        targetUrl.searchParams.set("int_ans_submit", valToSubmit);
                         targetUrl.searchParams.set("int_sess_id", "{session_data.get('id')}");
                         window.parent.location.href = targetUrl.href;
                     }}
                     </script>
-                    """, height=350)
+                    """, height=350, key=f"ans_box_frame_{session_data.get('id')}_{cur_turn}_{len(history)}")
 
-                # Expandable History Transcripts (Past Turns)
-                if len(history) > 1 or "candidate_answer" in history[0]:
-                    with st.expander("📜 View Full Interview Transcripts & Past AI Evaluations", expanded=False):
-                        for turn_item in history:
-                            if "candidate_answer" in turn_item:
-                                t_num = turn_item.get("turn", 1)
-                                q_text = turn_item.get("question", "")
-                                ans_text = turn_item.get("candidate_answer", "")
-                                score_val = turn_item.get("score", 7)
-                                fb_text = turn_item.get("feedback", "")
-                                model_ans = turn_item.get("model_answer", "")
-                                matched_kws = turn_item.get("matched_terms", [])
-                                score_color = "#34d399" if score_val >= 8 else ("#fbbf24" if score_val >= 6 else "#f87171")
-                                kw_badges = " ".join([f"<span style='background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px; font-size:0.75rem;'>✓ {k.upper()}</span>" for k in matched_kws])
-
+                # Expandable History Transcripts & Detailed AI Analysis Dossier
+                if history:
+                    answered_turns = [t for t in history if "candidate_answer" in t]
+                    if answered_turns:
+                        st.markdown(f"### 📊 Detailed AI Evaluation Dossier ({len(answered_turns)} Turns Analyzed)")
+                        for turn_item in reversed(answered_turns):
+                            t_num = turn_item.get("turn", 1)
+                            q_text = turn_item.get("question", "")
+                            ans_text = turn_item.get("candidate_answer", "")
+                            score_val = turn_item.get("score", 8)
+                            fb_text = turn_item.get("feedback", "Good technical precision.")
+                            model_ans = turn_item.get("model_answer", "")
+                            matched_kws = turn_item.get("matched_terms", [])
+                            
+                            score_color = "#34d399" if score_val >= 8 else ("#fbbf24" if score_val >= 6 else "#f87171")
+                            kw_badges = " ".join([f"<span style='background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 10px; border-radius:12px; font-size:0.78rem; font-weight:700;'>✓ {k.upper()}</span>" for k in matched_kws])
+                            
+                            with st.expander(f"📌 Turn {t_num} AI Analysis Report — Rating: {score_val}/10", expanded=(t_num == len(answered_turns))):
                                 st.markdown(f"""
-                                <div style="background: rgba(15,23,42,0.6); border-left: 3px solid #6366f1; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px;">
-                                    <b style="color: #818cf8; font-size: 0.85rem;">Turn {t_num} Question:</b>
-                                    <p style="color: #f8fafc; font-size: 0.9rem; margin: 4px 0 0 0;">{q_text}</p>
-                                </div>
-                                <div style="background: rgba(30,41,59,0.5); border-left: 3px solid #38bdf8; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; margin-left: 14px;">
-                                    <b style="color: #e2e8f0; font-size: 0.82rem;">Candidate Response:</b>
-                                    <p style="color: #cbd5e1; font-size: 0.88rem; margin: 4px 0 0 0;">{ans_text}</p>
-                                </div>
-                                <div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 10px; margin-bottom: 16px; margin-left: 14px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                        <b style="color: #f8fafc; font-size: 0.82rem;">AI Score: <span style="color: {score_color};">{score_val} / 10</span></b>
-                                        <div>{kw_badges}</div>
+                                <div style="background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 14px; margin-bottom: 10px;">
+                                    
+                                    <!-- Question Box -->
+                                    <div style="background: rgba(99,102,241,0.1); border-left: 4px solid #6366f1; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px;">
+                                        <b style="color: #a5b4fc; font-size: 0.88rem;">❓ Recruiter Question (Turn {t_num}):</b>
+                                        <p style="color: #f8fafc; font-size: 0.98rem; font-weight: 600; margin: 4px 0 0 0;">{q_text}</p>
                                     </div>
-                                    <p style="color: #94a3b8; font-size: 0.82rem; margin: 0 0 8px 0;">{fb_text}</p>
-                                    <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border: 1px solid rgba(56,189,248,0.2); font-size: 0.8rem; color: #e2e8f0;">
-                                        <b style="color: #38bdf8;">💡 Model Answer:</b> {model_ans}
+                                    
+                                    <!-- Candidate Answer -->
+                                    <div style="background: rgba(30,41,59,0.7); border-left: 4px solid #38bdf8; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px;">
+                                        <b style="color: #38bdf8; font-size: 0.88rem;">👤 Your Submitted Response:</b>
+                                        <p style="color: #e2e8f0; font-size: 0.94rem; margin: 4px 0 0 0; line-height: 1.5;">{ans_text}</p>
+                                    </div>
+                                    
+                                    <!-- AI Rating & Feedback -->
+                                    <div style="background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 10px; margin-bottom: 14px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                                            <b style="color: #ffffff; font-size: 0.95rem;">⭐ AI Evaluation Score: <span style="color: {score_color}; font-size: 1.1rem;">{score_val} / 10</span></b>
+                                            <div>{kw_badges}</div>
+                                        </div>
+                                        <p style="color: #cbd5e1; font-size: 0.9rem; margin: 0; line-height: 1.5;"><b>🎯 AI Feedback & Breakdown:</b> {fb_text}</p>
+                                    </div>
+                                    
+                                    <!-- Optimal Model Answer ("Best Response Kya Hoga") -->
+                                    <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); padding: 16px; border-radius: 10px;">
+                                        <b style="color: #34d399; font-size: 0.92rem;">💡 Exemplar Best Response (Recruiter Benchmark):</b>
+                                        <p style="color: #f8fafc; font-size: 0.92rem; margin: 6px 0 0 0; line-height: 1.6; font-style: italic;">"{model_ans}"</p>
                                     </div>
                                 </div>
                                 """, unsafe_allow_html=True)
