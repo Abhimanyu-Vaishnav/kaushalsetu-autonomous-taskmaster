@@ -1060,7 +1060,7 @@ def main_app_layout():
                         }}
                     }}
                     </script>
-                    """, height=210, key=f"q_box_{session_data.get('id')}_{t_num}")
+                    """, height=210)
 
                     col_act1, col_act2 = st.columns([1, 1])
                     with col_act1:
@@ -1202,7 +1202,7 @@ def main_app_layout():
                         window.parent.location.href = targetUrl.href;
                     }}
                     </script>
-                    """, height=350, key=f"ans_box_frame_{session_data.get('id')}_{cur_turn}_{len(history)}")
+                    """, height=350)
 
                 # Expandable History Transcripts & Detailed AI Analysis Dossier
                 if history:
