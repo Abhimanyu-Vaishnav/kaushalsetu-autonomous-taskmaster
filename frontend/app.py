@@ -360,6 +360,47 @@ st.markdown("""
         box-shadow: 0 0 14px rgba(59, 130, 246, 0.35) !important;
     }
 
+    /* Professional MCQ Options Design (PC & Mobile Optimized) */
+    .mcq-radio-container div[data-testid="stRadio"] > div {
+        gap: 10px !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    .mcq-radio-container div[data-testid="stRadio"] label {
+        background: rgba(15, 23, 42, 0.95) !important;
+        border: 1px solid rgba(59, 130, 246, 0.35) !important;
+        border-radius: 10px !important;
+        padding: 12px 18px !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease-in-out !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+        cursor: pointer !important;
+        width: 100% !important;
+    }
+
+    .mcq-radio-container div[data-testid="stRadio"] label:hover {
+        background: #1e293b !important;
+        border-color: #3b82f6 !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        transform: translateX(4px);
+        box-shadow: 0 0 16px rgba(59, 130, 246, 0.35) !important;
+    }
+
+    .mcq-radio-container div[data-testid="stRadio"] label:has(input:checked),
+    .mcq-radio-container div[data-testid="stRadio"] label[data-checked="true"] {
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.4) 0%, rgba(59, 130, 246, 0.25) 100%) !important;
+        border: 2px solid #3b82f6 !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        box-shadow: 0 0 18px rgba(59, 130, 246, 0.45) !important;
+    }
+
     /* Container Optimization for All Devices */
     .main .block-container {
         padding-top: 1.5rem !important;
@@ -849,11 +890,11 @@ def main_app_layout():
 
         # --- LIVE AGENT EXECUTION TRACE (SIDEBAR WIDGET) ---
         with st.expander("⚡ Live Agent Thought Stream", expanded=True):
-            st.caption("Real-time autonomous agent activity trace (Latest 2 Operations)")
+            st.caption("Real-time autonomous agent activity trace (Latest 4 Operations)")
             try:
                 conn_sb = get_db()
                 c_sb = conn_sb.cursor()
-                c_sb.execute("SELECT * FROM agent_activity_logs ORDER BY rowid DESC LIMIT 2")
+                c_sb.execute("SELECT * FROM agent_activity_logs ORDER BY rowid DESC LIMIT 4")
                 recent_logs = [dict(r) for r in c_sb.fetchall()]
                 conn_sb.close()
             except Exception:
@@ -2036,10 +2077,17 @@ def main_app_layout():
             st.progress(prog_val, text=f"Question {cur_idx + 1} of {len(mcqs)}")
             
             q_item = mcqs[cur_idx]
-            st.markdown(f"#### Q{cur_idx + 1}: {q_item['question']}")
+            st.markdown(f"""
+            <div style="background: rgba(15,23,42,0.95); border-left: 5px solid #3b82f6; border-radius: 12px; padding: 18px 20px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+                <div style="font-size: 0.8rem; font-weight: 800; color: #38bdf8; letter-spacing: 1px; margin-bottom: 6px;">🎯 MULTIMODAL THEORY QUESTION {cur_idx + 1} OF {len(mcqs)}</div>
+                <h3 style="color: #f8fafc; font-size: 1.1rem; font-weight: 700; margin: 0; line-height: 1.5;">{q_item['question']}</h3>
+            </div>
+            """, unsafe_allow_html=True)
             
             saved_ans = st.session_state.get("mcq_answers_dict", {}).get(cur_idx, None)
-            sel_ans = st.radio("Select Correct Option:", q_item["options"], index=saved_ans if saved_ans is not None else 0, key=f"q_radio_{cur_idx}")
+            st.markdown('<div class="mcq-radio-container">', unsafe_allow_html=True)
+            sel_ans = st.radio("Select Correct Option:", q_item["options"], index=saved_ans if saved_ans is not None else 0, key=f"q_radio_{cur_idx}", label_visibility="collapsed")
+            st.markdown('</div>', unsafe_allow_html=True)
             
             col_nb1, col_nb2 = st.columns(2)
             with col_nb1:

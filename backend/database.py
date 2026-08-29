@@ -560,6 +560,7 @@ def init_db():
             phone TEXT DEFAULT '',
             city TEXT DEFAULT '',
             bio TEXT DEFAULT '',
+            bio_summary TEXT DEFAULT '',
             github_url TEXT DEFAULT '',
             linkedin_url TEXT DEFAULT '',
             website_url TEXT DEFAULT '',

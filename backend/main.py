@@ -2155,6 +2155,15 @@ def direct_student_login(student_id: str, dob_input: str):
             return {"authenticated": False, "message": "Date of Birth required for authentication."}
 
         if stored_dob == input_dob:
+            try:
+                log_agent_activity(
+                    action="STUDENT_LOGIN",
+                    entity_type="student",
+                    entity_id=sid,
+                    details=f"Candidate {s.get('full_name')} ({sid}) logged into assessment workspace."
+                )
+            except Exception:
+                pass
             return {"authenticated": True, "student": s, "data": s}
         else:
             return {"authenticated": False, "message": f"Incorrect Date of Birth for candidate {sid}."}
@@ -2180,11 +2189,27 @@ def direct_update_student(student_id: str = "", payload: dict = None, updates: d
             conn.close()
             return {"status": "error", "message": f"Candidate ID '{sid}' not found."}
 
+        # Ensure all allowed fields exist as columns in SQLite students table
+        c.execute("PRAGMA table_info(students)")
+        existing_cols = {r[1] for r in c.fetchall()}
+
         allowed_fields = [
-            "full_name", "student_name", "dob", "bio_summary", "resume_text",
+            "full_name", "student_name", "dob", "bio_summary", "bio", "resume_text",
             "github_url", "linkedin_url", "website_url", "twitter_url",
             "email", "phone", "gender", "parsed_skills", "research_projects", "profile_photo", "course_name"
         ]
+
+        for f_name in allowed_fields:
+            if f_name not in existing_cols:
+                try:
+                    c.execute(f"ALTER TABLE students ADD COLUMN {f_name} TEXT DEFAULT ''")
+                    conn.commit()
+                except Exception:
+                    pass
+
+        # Sync bio_summary and bio if bio_summary provided
+        if "bio_summary" in up_dict and "bio" not in up_dict:
+            up_dict["bio"] = up_dict["bio_summary"]
 
         set_clauses = []
         params = []
@@ -2204,6 +2229,18 @@ def direct_update_student(student_id: str = "", payload: dict = None, updates: d
 
         conn.close()
 
+        # Log Activity Step for Audit Ledger & Live Agent Thought Stream
+        try:
+            cand_name = up_dict.get("full_name") or up_dict.get("student_name") or sid
+            log_agent_activity(
+                action="PROFILE_UPDATED",
+                entity_type="student",
+                entity_id=sid,
+                details=f"Candidate {cand_name} ({sid}) updated bio, resume, and social profile links live."
+            )
+        except Exception:
+            pass
+
         # Regenerate portfolio with fresh data & live harvested GitHub repos
         try:
             generate_dynamic_ai_portfolio(sid)
@@ -2222,8 +2259,33 @@ def direct_get_students():
         rows = [dict(r) for r in c.fetchall()]
         conn.close()
         return rows
-    except Exception:
+    except Exception as e:
+        print(f"Fetch students error: {e}")
         return []
+
+def direct_retake_exam_for_student(student_id: str):
+    """Resets exam_completed status for student to allow re-examination."""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        sid = str(student_id or "").strip()
+        c.execute("UPDATE students SET exam_completed = 0, retest_approved = 1 WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (sid, sid))
+        conn.commit()
+        conn.close()
+
+        try:
+            log_agent_activity(
+                action="ASSESSMENT_UNLOCKED",
+                entity_type="student",
+                entity_id=sid,
+                details=f"Unlocked candidate {sid} assessment for re-examination & score improvement."
+            )
+        except Exception:
+            pass
+
+        return {"status": "success", "message": "Exam unlocked for re-take"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 def direct_delete_student(s_id: str):
     try:
@@ -4340,6 +4402,16 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
 
         paginated_jobs = ranked[start_idx:end_idx]
         total_pages = max(1, (total_jobs + psize - 1) // psize)
+
+        try:
+            log_agent_activity(
+                action="JOB_FEED_CRAWLED",
+                entity_type="student",
+                entity_id=sid,
+                details=f"Grounded AI Engine scanned {total_jobs} vacancies for '{track}' in '{location}' (Page {page_idx}/{total_pages})."
+            )
+        except Exception:
+            pass
 
         return {
             "jobs": paginated_jobs,
