@@ -4588,13 +4588,127 @@ def generate_interview_prep_questions(student_id: str, job_title: str):
 def agentic_synthesize_course(raw_input: str, branch_id: str = "BR-NANGLOI"):
     """
     Intelligent Agentic Handler: Takes raw or misspelled topic inputs
-    (e.g., 'excel', 'tally', 'elctric vehicl') and autonomously produces a complete,
-    standardized industry curriculum matching THAT EXACT TOPIC without hardcoded static suffixes.
+    (e.g., 'Bachelor of Pharmacy', 'video editing', 'humanities', 'elctric vehicl') and autonomously
+    produces a complete, standardized industry curriculum matching THAT EXACT TOPIC via Gemini 2.5 AI.
     """
     clean_text = raw_input.strip() if raw_input else "Industrial Mechatronics & Automation"
     lower_inp = clean_text.lower()
-    
-    if re.search(r"\bexcel\b|spreadsheet|financial model", lower_inp):
+
+    # 1. PRIMARY ENGINE: Gemini 2.5 AI Autonomous Curriculum Synthesizer
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if gemini_key:
+        try:
+            from google import genai
+            client = genai.Client(api_key=gemini_key)
+            prompt = f"""
+            You are a senior curriculum engineer and subject matter expert for vocational and university education.
+            Synthesize a complete, job-ready course curriculum tailored SPECIFICALLY for the topic/subject: '{clean_text}'.
+
+            Return strictly a JSON object with:
+            - "title": Professional official course title (e.g., "Bachelor of Pharmacy (B.Pharm) & Industrial Pharmaceutics", "Creative Video Editing & VFX Motion Design")
+            - "topic": Comprehensive 2-sentence description of the core practical curriculum and industry standards
+            - "skills": List of 4-6 authentic, real-world technical skills or tools (e.g., ["Pharmacology", "HPLC Testing", "Dosage Form Tech", "GMP Compliance"])
+            - "modules": List of 4 detailed, topic-specific module title strings (e.g., ["Module 1: Human Anatomy & General Pharmacology", "Module 2: Medicinal Chemistry & Drug Synthesis", "Module 3: Pharmaceutics & Dosage Form Technology", "Module 4: Quality Assurance, HPLC Testing & Clinical Trials"])
+            - "capstone": Detailed practical capstone project task description relevant to this course
+            - "mcqs": List of 3 authentic, domain-specific multiple choice questions. Each object must have:
+                - "question": clear technical/conceptual question
+                - "options": list of 4 choices e.g. ["A) ...", "B) ...", "C) ...", "D) ..."]
+                - "correct_answer": full text string matching the correct choice
+            """
+            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            if resp and resp.text:
+                match = re.search(r'\{.*\}', resp.text, re.DOTALL)
+                if match:
+                    ai_data = json.loads(match.group(0))
+                    if isinstance(ai_data, dict) and "title" in ai_data and ai_data.get("mcqs"):
+                        title = ai_data.get("title", clean_text)
+                        topic = ai_data.get("topic", f"Practical curriculum for {title}")
+                        skills = ai_data.get("skills", [clean_text])
+                        capstone = ai_data.get("capstone", f"Execute practical capstone project for {title}.")
+                        raw_mods = ai_data.get("modules", [])
+                        modules = [{"title": str(m), "duration": "2.5 Weeks"} for m in raw_mods]
+                        mcqs = ai_data.get("mcqs", [])
+
+                        return {
+                            "title": title,
+                            "course_name": title,
+                            "topic": topic,
+                            "skills": skills,
+                            "capstone": capstone,
+                            "practical_task": capstone,
+                            "modules": modules,
+                            "mcqs": mcqs,
+                            "synthesized_by": "Gemini 2.5 Flash Agent"
+                        }
+        except Exception as ex:
+            print(f"[COURSE SYNTHESIZER LLM NOTICE] {ex}")
+
+    # 2. SECONDARY ENGINE: Expanded Multi-Domain Industry Curriculum Synthesizer
+    if re.search(r"pharma|pharmacy|drug|medic|doctor|nurs|clinic|health", lower_inp):
+        standard_title = "Bachelor of Pharmacy (B.Pharm) & Clinical Pharmaceutics"
+        topic = "Pharmacology, medicinal chemistry, HPLC quality control, pharmacokinetics, and dosage form technology."
+        skills = ["Pharmacology", "Medicinal Chemistry", "HPLC Quality Control", "Dosage Form Tech", "GMP Compliance"]
+        capstone = "Perform HPLC purity analysis of active pharmaceutical ingredients (APIs) and document GVP compliance."
+        m1, m2, m3, m4 = "Module 1: Human Anatomy & General Pharmacology", "Module 2: Medicinal Chemistry & Organic Drug Synthesis", "Module 3: Pharmaceutics & Dosage Form Technology", "Module 4: Quality Assurance, HPLC Testing & Clinical Trials Capstone"
+        q1 = "Which enzyme family is primarily responsible for Phase I hepatic drug oxidation?"
+        q1_opts = ["A) Cytochrome P450 (CYP450)", "B) DNA Polymerase", "C) Amylase", "D) Reverse Transcriptase"]
+        q1_ans = "A) Cytochrome P450 (CYP450)"
+        q2 = "High-Performance Liquid Chromatography (HPLC) in pharmaceutical analysis is used for:"
+        q2_opts = ["A) Measuring tablet weight", "B) Quantifying Active Pharmaceutical Ingredient (API) purity", "C) Package sealing", "D) Sterilizing glass vials"]
+        q2_ans = "B) Quantifying Active Pharmaceutical Ingredient (API) purity"
+        q3 = "What is the primary mechanism of action of Beta-lactam antibiotics like Penicillin?"
+        q3_opts = ["A) Inhibiting bacterial cell wall peptidoglycan synthesis", "B) Blocking RNA transcription", "C) Dissolving human red blood cells", "D) Neutralizing stomach acid"]
+        q3_ans = "A) Inhibiting bacterial cell wall peptidoglycan synthesis"
+
+    elif re.search(r"video|edit|film|media|motion|animat|vfx|adobe|premiere", lower_inp):
+        standard_title = "Creative Video Editing, VFX & Motion Graphics Masterclass"
+        topic = "Non-linear video editing, 4K timeline color grading, keyframe animation, multi-track audio mixing, and VFX compositing."
+        skills = ["Adobe Premiere Pro", "After Effects", "DaVinci Resolve", "Color Grading (LUTs)", "Audio Mixing"]
+        capstone = "Produce a 60-second commercial reel with dynamic keyframe graphics, LUT color grade, and multi-channel sound design."
+        m1, m2, m3, m4 = "Module 1: Non-Linear Editing & Timeline Assembly", "Module 2: Keyframe Motion Graphics & After Effects VFX", "Module 3: Color Grading & Lumetri Scopes", "Module 4: Multi-Track Audio Master & 4K Export Capstone"
+        q1 = "In DaVinci Resolve and Premiere Pro, LUT stands for:"
+        q1_opts = ["A) Linear Utility Text", "B) Look-Up Table (Color Grading Data)", "C) Layer Unification Tool", "D) Latency Upgrade Tracker"]
+        q1_ans = "B) Look-Up Table (Color Grading Data)"
+        q2 = "What frame rate is standard for cinema film projection?"
+        q2_opts = ["A) 24 fps", "B) 60 fps", "C) 120 fps", "D) 12 fps"]
+        q2_ans = "A) 24 fps"
+        q3 = "Which video codec is widely used for high-efficiency web streaming delivery?"
+        q3_opts = ["A) ProRes 4444", "B) H.264 / MP4", "C) Uncompressed AVI", "D) TIFF Sequence"]
+        q3_ans = "B) H.264 / MP4"
+
+    elif re.search(r"humanities|arts|history|sociology|literature|policy|social|psychology", lower_inp):
+        standard_title = "Humanities, Social Policy & Qualitative Research Studies"
+        topic = "Qualitative research methodologies, public policy synthesis, socio-economic analysis, and academic writing."
+        skills = ["Qualitative Research", "Public Policy Analysis", "Socio-Economic Modeling", "Academic Citation", "Ethics Review"]
+        capstone = "Draft a comprehensive policy whitepaper analyzing urban community development and socio-economic indicators."
+        m1, m2, m3, m4 = "Module 1: Epistemology & Social Research Methods", "Module 2: Comparative Literature & Historical Analysis", "Module 3: Public Policy Synthesis & Community Dynamics", "Module 4: Fieldwork Methodology & Policy Whitepaper Capstone"
+        q1 = "Qualitative research methodology primarily focuses on:"
+        q1_opts = ["A) Numerical statistical regression", "B) Understanding underlying human experiences, meanings, and social contexts", "C) Binary computer logic", "D) Measuring physical weight"]
+        q1_ans = "B) Understanding underlying human experiences, meanings, and social contexts"
+        q2 = "What is the primary function of an Institutional Review Board (IRB) in humanities and social research?"
+        q2_opts = ["A) Auditing financial tax filings", "B) Safeguarding ethical standards and human subject protection", "C) Printing textbooks", "D) Grading attendance"]
+        q2_ans = "B) Safeguarding ethical standards and human subject protection"
+        q3 = "In policy analysis, 'stakeholder mapping' is used to:"
+        q3_opts = ["A) Draw geographic country maps", "B) Identify individuals and groups affected by or influencing policy outcomes", "C) Calculate interest rates", "D) Test software code"]
+        q3_ans = "B) Identify individuals and groups affected by or influencing policy outcomes"
+
+    elif re.search(r"cyber|security|hack|network|pentr|firewall", lower_inp):
+        standard_title = "Cybersecurity & Offensive Penetration Testing"
+        topic = "Ethical hacking, network packet inspection, vulnerability exploitation, firewalls, and incident response."
+        skills = ["Ethical Hacking", "Wireshark Packet Analysis", "Metasploit", "Network Defense", "SIEM Monitoring"]
+        capstone = "Execute a simulated ethical penetration test on an isolated network lab and submit a vulnerability remediation report."
+        m1, m2, m3, m4 = "Module 1: Networking Protocols & Port Scanning", "Module 2: Vulnerability Assessment & Exploitation Frameworks", "Module 3: Web Application Security & OWASP Top 10", "Module 4: Network Defense, SIEM & Penetration Audit Capstone"
+        q1 = "In web application security, SQL Injection (SQLi) occurs when:"
+        q1_opts = ["A) Untrusted user input is directly concatenated into SQL queries", "B) Server runs out of RAM", "C) Router cable disconnects", "D) Password is too short"]
+        q1_ans = "A) Untrusted user input is directly concatenated into SQL queries"
+        q2 = "Which tool is industry-standard for capturing and analyzing live network packet traffic?"
+        q2_opts = ["A) Photoshop", "B) Wireshark", "C) Excel", "D) Tally"]
+        q2_ans = "B) Wireshark"
+        q3 = "What is the primary goal of a Zero-Trust Network Architecture?"
+        q3_opts = ["A) Trust all internal network devices by default", "B) Continuously verify every user and device regardless of location", "C) Disable all passwords", "D) Allow open Wi-Fi"]
+        q3_ans = "B) Continuously verify every user and device regardless of location"
+
+    elif re.search(r"\bexcel\b|spreadsheet|financial model", lower_inp):
         standard_title = "Advanced Microsoft Excel & Financial Analytics"
         topic = "Master XLOOKUP, PivotTables, Power Query, dynamic arrays, VBA macros, and financial dashboard modeling."
         skills = ["Advanced Excel", "XLOOKUP & Formulas", "PivotTables", "Power Query", "Financial Modeling"]
@@ -4609,6 +4723,7 @@ def agentic_synthesize_course(raw_input: str, branch_id: str = "BR-NANGLOI"):
         q3 = "What is the primary benefit of using Excel Data Models over traditional PivotTables?"
         q3_opts = ["A) Faster font formatting", "B) Creating relationships between multiple tables without VLOOKUP", "C) Hiding gridlines", "D) Auto-saving files"]
         q3_ans = "B) Creating relationships between multiple tables without VLOOKUP"
+
     elif re.search(r"\btally\b|gst|accounting|bookkeeping", lower_inp):
         standard_title = "Tally Prime & Corporate GST Accounting"
         topic = "Double-entry bookkeeping, GST return filing (GSTR-1/3B), e-way bills, inventory tracking, and payroll."
@@ -4624,83 +4739,24 @@ def agentic_synthesize_course(raw_input: str, branch_id: str = "BR-NANGLOI"):
         q3 = "What type of account is Bank Account under golden rules of accounting?"
         q3_opts = ["A) Nominal Account", "B) Personal Account", "C) Real Account", "D) Temporary Account"]
         q3_ans = "B) Personal Account"
-    elif re.search(r"electric|ev|vehic|battery", lower_inp):
-        standard_title = "Electric Vehicle Powertrain & Battery Diagnostics"
-        topic = "High-voltage battery safety, BMS telemetry, regenerative braking controllers, and diagnostic fault-codes."
-        skills = ["EV Diagnostics", "BMS Calibration", "High-Voltage Isolation", "CAN-Bus Telemetry"]
-        capstone = "Design a fail-safe battery thermal runaway cutoff and diagnostic alert circuit using CAN telemetry."
-        m1, m2, m3, m4 = "Module 1: High Voltage Safety & Isolation Protocols", "Module 2: Lithium Battery Chemistry & BMS Architecture", "Module 3: Motor Controllers & CAN-Bus Telemetry", "Module 4: Diagnostic Fault-Code Analysis & Capstone"
-        q1 = "What is the primary purpose of a Battery Management System (BMS) in an Electric Vehicle?"
-        q1_opts = ["A) Control cabin AC", "B) Cell balancing, thermal protection, and SoC calculation", "C) Regulate wiper speed", "D) Increase tire pressure"]
-        q1_ans = "B) Cell balancing, thermal protection, and SoC calculation"
-        q2 = "High-voltage isolation testing in EVs ensures:"
-        q2_opts = ["A) Radio signal strength", "B) Zero electrical leakage between high-voltage bus and chassis ground", "C) Faster charging speeds", "D) Low brake wear"]
-        q2_ans = "B) Zero electrical leakage between high-voltage bus and chassis ground"
-        q3 = "Which communication protocol is industry-standard for EV internal telemetry data exchange?"
-        q3_opts = ["A) HTTP/1.1", "B) CAN Bus (Controller Area Network)", "C) Bluetooth 4.0", "D) SPI"]
-        q3_ans = "B) CAN Bus (Controller Area Network)"
-    elif re.search(r"solar|renew|green|energy", lower_inp):
-        standard_title = "Solar Photovoltaic Systems & Micro-Grid Automation"
-        topic = "Inverter MPPT optimization, off-grid telemetry monitoring, and commercial rooftop grid-tie compliance."
-        skills = ["Solar Inverter Setup", "MPPT Algorithms", "Micro-Grid Sync", "SCADA Telemetry"]
-        capstone = "Architect an automated remote telemetry bridge syncing rooftop solar inverters with central utility SCADA."
-        m1, m2, m3, m4 = "Module 1: Solar PV Physics & Panel String Sizing", "Module 2: Inverters, MPPT Charge Controllers & Storage", "Module 3: Net-Metering & SCADA Telemetry Monitoring", "Module 4: Grid-Tie Commissioning & Remote Audit Capstone"
-        q1 = "MPPT technology in solar inverters maximizes energy yield by:"
-        q1_opts = ["A) Turning panels towards wind", "B) Dynamically adjusting electrical operating point along IV curve", "C) Cooling inverter coils", "D) Increasing battery voltage"]
-        q1_ans = "B) Dynamically adjusting electrical operating point along IV curve"
-        q2 = "Grid-tie solar inverters must automatically shut down during grid outages to prevent:"
-        q2_opts = ["A) Battery explosion", "B) Islanding (energizing dead lines and endangering utility workers)", "C) Overheating panels", "D) Meter damage"]
-        q2_ans = "B) Islanding (energizing dead lines and endangering utility workers)"
-        q3 = "What instrument measures solar irradiance levels on PV plant sites?"
-        q3_opts = ["A) Multimeter", "B) Pyranometer", "C) Oscilloscope", "D) Hydrometer"]
-        q3_ans = "B) Pyranometer"
-    elif re.search(r"python|web|full|stack|soft|dev", lower_inp):
-        standard_title = "Full Stack Cloud Platform Engineering & APIs"
-        topic = "High-throughput REST architectures, database clustering, asynchronous job queues, and cloud deployment."
-        skills = ["React / Next.js", "Python / FastAPI", "SQL Optimization", "Docker / Cloud Run"]
-        capstone = "Build and deploy an automated distributed task-dispatch system with SHA-256 audit trail validation."
-        m1, m2, m3, m4 = "Module 1: Modern JavaScript & Frontend Components", "Module 2: Python Backend Architecture & REST APIs", "Module 3: Relational SQL & Async Background Tasks", "Module 4: Cloud Container Deployment & Audit Capstone"
-        q1 = "In modern REST APIs, HTTP 201 Created status code indicates:"
-        q1_opts = ["A) Bad request payload", "B) Resource successfully created on server", "C) Internal server crash", "D) Unauthorized token"]
-        q1_ans = "B) Resource successfully created on server"
-        q2 = "Which database index structure optimizes range queries on numeric timestamp columns?"
-        q2_opts = ["A) B-Tree Index", "B) Full-Text Search Index", "C) Hash Index", "D) Foreign Key"]
-        q2_ans = "A) B-Tree Index"
-        q3 = "Docker containers differ from traditional virtual machines because:"
-        q3_opts = ["A) They require dedicated OS kernels", "B) They share the host OS kernel for lightweight isolation", "C) They cannot run Python", "D) They consume more RAM"]
-        q3_ans = "B) They share the host OS kernel for lightweight isolation"
-    elif re.search(r"digital|market|seo|social", lower_inp):
-        standard_title = "Digital Marketing & Performance Growth Strategy"
-        topic = "SEO strategy, Meta & Google Ads performance analytics, conversion funnels, and content automation."
-        skills = ["Google Ads", "SEO Optimization", "Meta Campaign Manager", "Google Analytics 4", "Copywriting"]
-        capstone = "Develop an end-to-end multi-channel acquisition campaign with target CAC and ROAS optimization."
-        m1, m2, m3, m4 = "Module 1: Search Engine Optimization & Keyword Research", "Module 2: Paid Search (Google Ads) & Bidding Strategies", "Module 3: Social Media Ads (Meta) & Audience Targeting", "Module 4: GA4 Funnel Analytics & Campaign ROAS Capstone"
-        q1 = "In digital advertising, ROAS stands for:"
-        q1_opts = ["A) Return on Ad Spend", "B) Rate of Automated Sales", "C) Regional Online Ad System", "D) Re-Order Annual Schedule"]
-        q1_ans = "A) Return on Ad Spend"
-        q2 = "Which metric measures the percentage of website visitors who leave after viewing only one page?"
-        q2_opts = ["A) Click-Through Rate", "B) Bounce Rate", "C) Conversion Rate", "D) Impressions"]
-        q2_ans = "B) Bounce Rate"
-        q3 = "Google Analytics 4 (GA4) uses which data model to track user interactions?"
-        q3_opts = ["A) Session-based model", "B) Event-based data model", "C) Pageview-only model", "D) Cookie-only model"]
-        q3_ans = "B) Event-based data model"
+
     else:
         title_words = [w.capitalize() for w in clean_text.split()]
         formatted_name = " ".join(title_words)
-        standard_title = f"{formatted_name} Mastery & Certification"
-        topic = f"Comprehensive practical training, industry standards, and diagnostic execution for {formatted_name}."
-        skills = [f"{formatted_name} Operations", "System Diagnostics", "Quality Assurance", "Practical Execution"]
-        capstone = f"Execute a comprehensive real-world capstone project demonstrating practical mastery in {formatted_name}."
-        m1, m2, m3, m4 = f"Module 1: Fundamentals & Core Principles of {formatted_name}", f"Module 2: Applied Techniques & Industry Workflows", f"Module 3: Diagnostics, Troubleshooting & Quality Control", f"Module 4: Real-World Execution & Capstone Verification"
-        q1 = f"What is the foundational requirement when initiating a project in {formatted_name}?"
-        q1_opts = ["A) Adhering to safety and quality protocols", "B) Bypassing initial checks", "C) Working without guidelines", "D) Ignoring input data"]
-        q1_ans = "A) Adhering to safety and quality protocols"
-        q2 = f"How is quality assurance verified in modern {formatted_name} practices?"
-        q2_opts = ["A) By random guessing", "B) Through standardized measurement and benchmark verification", "C) Skipping inspections", "D) Using outdated manuals"]
-        q2_ans = "B) Through standardized measurement and benchmark verification"
-        q3 = f"When encountering an operational anomaly in {formatted_name}, what is the first step?"
-        q3_opts = ["A) Panic and abandon work", "B) Isolate the root cause and execute safe diagnostic recovery", "C) Force maximum power", "D) Delete all logs"]
-        q3_ans = "B) Isolate the root cause and execute safe diagnostic recovery"
+        standard_title = f"{formatted_name} Professional Practice & Certification"
+        topic = f"Advanced theoretical foundations, practical methodologies, and specialized skills in {formatted_name}."
+        skills = [f"{formatted_name} Methodologies", "Domain Research & Analysis", "Technical Execution", "Quality Standard Verification"]
+        capstone = f"Design and execute a specialized practical capstone project demonstrating mastery in {formatted_name}."
+        m1, m2, m3, m4 = f"Module 1: Foundations & Core Theoretical Frameworks of {formatted_name}", f"Module 2: Advanced Techniques & Practical Workflows", f"Module 3: Field Applications, Quality Standards & Compliance", f"Module 4: Comprehensive Execution & Industry Capstone"
+        q1 = f"What is a primary objective when executing a specialized workflow in {formatted_name}?"
+        q1_opts = ["A) Ensuring adherence to established domain standards and quality protocols", "B) Randomly modifying core variables", "C) Ignoring domain guidelines", "D) Bypassing documentation"]
+        q1_ans = "A) Ensuring adherence to established domain standards and quality protocols"
+        q2 = f"In modern {formatted_name} practice, quality assurance is best validated through:"
+        q2_opts = ["A) Unverified assumptions", "B) Standardized empirical assessment and metric evaluation", "C) Omitting diagnostic steps", "D) Deleting records"]
+        q2_ans = "B) Standardized empirical assessment and metric evaluation"
+        q3 = f"What is the recommended protocol when encountering unexpected operational anomalies in {formatted_name}?"
+        q3_opts = ["A) Stop and conduct systematic root-cause analysis", "B) Ignore the anomaly and proceed", "C) Overwrite historical logs", "D) Terminate system access"]
+        q3_ans = "A) Stop and conduct systematic root-cause analysis"
 
     mcqs = [
         {"question": q1, "options": q1_opts, "correct_answer": q1_ans},
@@ -4709,10 +4765,10 @@ def agentic_synthesize_course(raw_input: str, branch_id: str = "BR-NANGLOI"):
     ]
 
     modules = [
-        {"title": m1, "duration": "2 Weeks"},
+        {"title": m1, "duration": "2.5 Weeks"},
         {"title": m2, "duration": "3 Weeks"},
         {"title": m3, "duration": "3 Weeks"},
-        {"title": m4, "duration": "2 Weeks"}
+        {"title": m4, "duration": "2.5 Weeks"}
     ]
 
     return {
@@ -4721,8 +4777,10 @@ def agentic_synthesize_course(raw_input: str, branch_id: str = "BR-NANGLOI"):
         "topic": topic,
         "skills": skills,
         "capstone": capstone,
+        "practical_task": capstone,
         "modules": modules,
-        "mcqs": mcqs
+        "mcqs": mcqs,
+        "synthesized_by": "Synthesizer Engine"
     }
 
 # 2. Autonomous Job Application & Dispatch Handler
