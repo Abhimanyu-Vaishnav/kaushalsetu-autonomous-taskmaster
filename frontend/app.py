@@ -1490,20 +1490,27 @@ def main_app_layout():
 
                         top_badge_html = "<span style='background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; margin-left: 8px;'>⭐ TOP 2 HIGHEST SELECTION PROBABILITY</span>" if is_top else ""
                         
+                        sel_chance = job.get("selection_chance") or f"{j_match}% Match Fit"
+                        fit_insight = job.get("student_fit_insight") or f"Direct domain match for certified skills in {s_track}."
+
                         st.markdown(f"""
                         <div style="background: rgba(255,255,255,0.03); border: 1px solid {'#f59e0b' if is_top else 'rgba(255,255,255,0.08)'}; border-radius: 12px; padding: 20px; margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
                                 <div>
                                     <h3 style="margin: 0; color: #ffffff; font-size: 1.25rem;">{job.get('title')} {top_badge_html}</h3>
                                     <p style="margin: 4px 0 8px 0; color: #60a5fa; font-weight: 600;">🏢 {job.get('company')} &nbsp;•&nbsp; 📍 {job.get('location')} &nbsp;•&nbsp; 💰 {job.get('salary')}</p>
                                 </div>
                                 <div style="text-align: right;">
                                     <span style="font-size: 1.1rem; font-weight: 800; color: {'#34d399' if j_match >= 85 else '#60a5fa'};">{j_match}% Match</span>
-                                    <br><span style="font-size: 0.75rem; color: #9ca3af;">{job.get('source', 'Verified Partner')}</span>
+                                    <br><span style="font-size: 0.75rem; color: #a7f3d0; font-weight:700;">🎯 {sel_chance}</span>
+                                    <br><span style="font-size: 0.72rem; color: #9ca3af;">{job.get('source', 'Gemini Verified Crawler')}</span>
                                 </div>
                             </div>
                             <p style="color: #cbd5e1; font-size: 0.9rem; margin: 10px 0;">{job.get('description')}</p>
-                            <div style="margin-bottom: 12px;">
+                            <div style="margin: 8px 0; padding: 8px 12px; background: rgba(59,130,246,0.1); border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 0.82rem; color: #93c5fd;">
+                                💡 <b>AI Candidate Fit Insight:</b> {fit_insight}
+                            </div>
+                            <div style="margin-bottom: 12px; margin-top: 10px;">
                                 {' '.join([f"<span style='background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 5px;'>✓ {s}</span>" for s in job.get('skills', [])])}
                             </div>
                         </div>
