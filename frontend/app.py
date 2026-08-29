@@ -197,7 +197,7 @@ def build_portfolio_dossier_url(student_id: str, existing_url: str = "") -> str:
 
 st.set_page_config(
     page_title="KaushalSetu | Autonomous Vocational Taskmaster",
-    page_icon="🌉",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -247,55 +247,270 @@ if query_params.get("view") == "portfolio" and ("sid" in query_params or "id" in
             st.error(f"Failed to load portfolio: {e}")
             st.stop()
 
-# Custom CSS for Modern UI & Visual Architecture Reset (Sanitized & Fully Responsive)
+# Universal Cyber-Agent Responsive CSS Engine
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
+    /* Global Root Variables */
+    :root {
+        --bg-dark: #070a13;
+        --card-bg: rgba(15, 23, 42, 0.75);
+        --card-border: rgba(59, 130, 246, 0.2);
+        --accent-blue: #3b82f6;
+        --accent-emerald: #10b981;
+        --accent-purple: #8b5cf6;
+        --accent-amber: #f59e0b;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+    }
+
+    /* Base Body & Typography */
     html, body, [class*="css"] {
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        background-color: #0B0F19;
-        color: #F9FAFB;
-        box-sizing: border-box;
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+        background-color: var(--bg-dark) !important;
+        color: var(--text-main) !important;
+        box-sizing: border-box !important;
     }
 
-    .stApp {
-        background-color: #0B0F19;
+    code, pre {
+        font-family: 'JetBrains Mono', monospace !important;
     }
 
-    /* Fluid Dynamic Typography */
-    h1, h2, h3, h4, h5, h6 {
-        color: #F9FAFB !important;
+    /* Streamlit Selectbox List Dropdown - Crisp White Text & Clean Dark Container */
+    div[data-testid="stSelectbox"] label, .stSelectbox label {
+        color: #f8fafc !important;
         font-weight: 700 !important;
-        letter-spacing: -0.02em;
+        font-size: 0.92rem !important;
     }
 
-    .main-header {
-        font-size: clamp(1.4rem, 4vw, 2.2rem);
-        font-weight: 800;
-        color: #F9FAFB;
-        letter-spacing: -0.025em;
-        line-height: 1.25 !important;
-        padding-top: 4px !important;
-        margin-bottom: 0.3rem;
-        overflow: visible !important;
-    }
-    .sub-header {
-        color: #9CA3AF;
-        font-size: clamp(0.85rem, 2vw, 1.05rem);
-        line-height: 1.45 !important;
-        margin-bottom: 1.2rem;
+    div[data-baseweb="select"] {
+        background-color: #0f172a !important;
+        border: 1px solid rgba(59, 130, 246, 0.45) !important;
+        border-radius: 10px !important;
     }
 
-    /* Glassmorphic Modern Card Containers */
-    .modern-card, div[data-testid="stExpander"], div[data-testid="stMetricValue"] {
-        background: rgba(17, 24, 39, 0.8) !important;
+    div[data-baseweb="select"] > div {
+        background-color: transparent !important;
+        border: none !important;
+    }
+
+    /* Force ALL text inside selectbox container to be CRISP BRIGHT WHITE */
+    div[data-baseweb="select"] * {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    /* Dropdown Options Popup Menu */
+    div[data-baseweb="popover"], div[data-baseweb="menu"], [data-baseweb="popover"] [data-baseweb="menu"] {
+        background-color: #0f172a !important;
+        border: 1px solid #3b82f6 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8) !important;
+        z-index: 999999 !important;
+    }
+
+    div[data-baseweb="popover"] li, div[data-baseweb="menu"] li, div[data-baseweb="popover"] li *, div[data-baseweb="menu"] li * {
+        color: #ffffff !important;
+        background-color: #0f172a !important;
+        font-size: 0.9rem !important;
+    }
+
+    div[data-baseweb="popover"] li:hover, div[data-baseweb="menu"] li:hover {
+        background-color: #1e293b !important;
+        color: #60a5fa !important;
+    }
+
+    /* Cyber Glassmorphic Segmented Option Cards (st.radio) */
+    div[data-testid="stRadio"] > div {
+        gap: 6px !important;
+        background: rgba(15, 23, 42, 0.6) !important;
+        padding: 6px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(59, 130, 246, 0.25) !important;
+    }
+
+    div[data-testid="stRadio"] label {
+        background: rgba(30, 41, 59, 0.6) !important;
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding: 10px 14px !important;
+        border-radius: 8px !important;
+        color: #cbd5e1 !important;
+        font-weight: 600 !important;
+        font-size: 0.86rem !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+        margin: 2px 0 !important;
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    div[data-testid="stRadio"] label:hover {
+        border-color: #3b82f6 !important;
+        color: #ffffff !important;
+        background: rgba(59, 130, 246, 0.2) !important;
+    }
+
+    div[data-testid="stRadio"] label:has(input:checked),
+    div[data-testid="stRadio"] label[data-checked="true"] {
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.45) 0%, rgba(59, 130, 246, 0.25) 100%) !important;
+        border-color: #3b82f6 !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 14px rgba(59, 130, 246, 0.35) !important;
+    }
+
+    /* Container Optimization for All Devices */
+    .main .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 3rem !important;
+        padding-left: clamp(0.75rem, 3vw, 2.5rem) !important;
+        padding-right: clamp(0.75rem, 3vw, 2.5rem) !important;
+        max-width: 100% !important;
+    }
+
+    /* Cyber Agent Glassmorphic Cards */
+    .agent-card, .modern-card, div[data-testid="stExpander"], div[data-testid="stMetricValue"], div[data-testid="stVerticalBlock"] > div[style*="background"] {
+        background: var(--card-bg) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid var(--card-border) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        max-width: 100% !important;
+    }
+
+    .agent-card:hover, .modern-card:hover {
+        border-color: rgba(59, 130, 246, 0.45) !important;
+        box-shadow: 0 12px 40px 0 rgba(59, 130, 246, 0.15) !important;
+        transform: translateY(-2px);
+    }
+
+    /* Mission Control Autonomous Header Box */
+    .mission-header {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
+        border: 1px solid rgba(59, 130, 246, 0.35) !important;
         border-radius: 14px !important;
-        padding: clamp(12px, 3vw, 22px);
-        margin-bottom: 16px;
-        backdrop-filter: blur(10px) !important;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        padding: 18px 22px !important;
+        margin-bottom: 20px !important;
+        position: relative;
+        overflow: hidden;
+        max-width: 100% !important;
+    }
+
+    .mission-header::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, #3b82f6, #10b981, #8b5cf6);
+    }
+
+    /* Modern Responsive Interactive Buttons */
+    .stButton > button, button {
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        padding: 0.55rem 1.1rem !important;
+        transition: all 0.25s ease-in-out !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        touch-action: manipulation;
+        max-width: 100% !important;
+    }
+
+    .stButton > button:hover, button:hover {
+        transform: scale(1.015);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.35) !important;
+    }
+
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+        border: none !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+    }
+
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6) !important;
+    }
+
+    /* Sleek Agentic Tabs - Force Wrap & Hide BaseWeb Overflow Arrows */
+    .stTabs {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 6px !important;
+        background: rgba(15, 23, 42, 0.85) !important;
+        padding: 6px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        display: flex !important;
+        flex-wrap: wrap !important; /* Force flex wrap so NO tab ever gets hidden */
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px !important;
+        color: var(--text-muted) !important;
+        font-weight: 600 !important;
+        padding: 8px 14px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background: rgba(30, 41, 59, 0.5) !important;
+        transition: all 0.2s ease !important;
+        flex: 1 1 auto !important;
+        text-align: center !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        min-height: 42px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.45) 0%, rgba(59, 130, 246, 0.25) 100%) !important;
+        color: #60a5fa !important;
+        border: 1px solid #3b82f6 !important;
+        box-shadow: 0 0 14px rgba(59, 130, 246, 0.35) !important;
+    }
+
+    /* Force hide all BaseWeb pagination arrows & overflow buttons */
+    .stTabs [data-baseweb="tab-list"] > button,
+    .stTabs [data-baseweb="tab-highlight"] + button,
+    .stTabs button[aria-label*="tab"],
+    .stTabs button[aria-label*="Tab"],
+    .stTabs button[aria-label="Previous tab"],
+    .stTabs button[aria-label="Next tab"],
+    .stTabs [data-baseweb="tab-list"] svg {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0px !important;
+        height: 0px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    /* Live Telemetry Pulse Dot */
+    @keyframes pulse-green {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        background-color: #10b981;
+        border-radius: 50%;
+        display: inline-block;
+        animation: pulse-green 2s infinite;
+        margin-right: 6px;
     }
 
     /* Status Badges */
@@ -340,71 +555,56 @@ st.markdown("""
         display: inline-block;
     }
 
-    /* Touch Target Sizing & Responsive Buttons */
-    .stButton > button, button {
-        min-height: 42px !important;
+    /* Streamlit Header & Sidebar Toggle Control Optimization */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        color: #f8fafc !important;
+        z-index: 99999 !important;
+    }
+
+    /* Style and ensure Sidebar Collapse/Expand Toggle Button is ALWAYS Visible & Clickable */
+    [data-testid="collapsedControl"], button[data-testid="stSidebarCollapseButton"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 100000 !important;
+        background: rgba(15, 23, 42, 0.9) !important;
+        border: 1px solid rgba(59, 130, 246, 0.4) !important;
         border-radius: 8px !important;
-        font-weight: 600 !important;
+        color: #38bdf8 !important;
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.3) !important;
         transition: all 0.2s ease-in-out !important;
-        touch-action: manipulation;
     }
 
-    /* Responsive Inputs & Textareas */
-    input, select, textarea {
-        font-size: 0.95rem !important;
-        border-radius: 8px !important;
+    [data-testid="collapsedControl"]:hover, button[data-testid="stSidebarCollapseButton"]:hover {
+        background: rgba(30, 41, 59, 1) !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 18px rgba(59, 130, 246, 0.6) !important;
+        transform: scale(1.05);
     }
 
-    /* Container Reset & Padding */
-    header[data-testid="stHeader"], div[data-testid="stHeader"] {
-        display: none !important;
-        height: 0px !important;
-        visibility: hidden !important;
+    /* Universal Responsive Media & Tables */
+    img, svg, video, iframe {
+        max-width: 100% !important;
+        height: auto;
     }
-    .block-container {
-        padding-top: clamp(1.5rem, 4vw, 3rem) !important;
-        padding-bottom: 2.5rem !important;
-        padding-left: clamp(0.75rem, 3vw, 2rem) !important;
-        padding-right: clamp(0.75rem, 3vw, 2rem) !important;
+
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    div:has(> table) {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
         max-width: 100% !important;
     }
 
-    /* Multi-Device Media Breakpoints */
-    @media (max-width: 1024px) {
-        .block-container {
-            max-width: 100% !important;
-        }
+    div[data-testid="stDialog"], div[role="dialog"] {
+        max-width: 95vw !important;
+        width: 100% !important;
     }
 
-    @media (max-width: 768px) {
-        div[data-testid="stHorizontalBlock"] {
-            flex-direction: column !important;
-            gap: 0.75rem !important;
-        }
-        div[data-testid="column"] {
-            width: 100% !important;
-            min-width: 100% !important;
-            margin-bottom: 0.5rem !important;
-        }
-        .stButton > button {
-            width: 100% !important;
-            min-height: 46px !important;
-        }
-        .main-header { font-size: 1.5rem !important; }
-        .sub-header { font-size: 0.88rem !important; }
-    }
-
-    @media (max-width: 480px) {
-        .block-container {
-            padding-left: 0.5rem !important;
-            padding-right: 0.5rem !important;
-        }
-        div[data-testid="stMetric"] {
-            padding: 8px !important;
-        }
-    }
-
-    /* Clean UI Clutter Removal */
     div[data-testid="stVerticalBlock"] > div:empty,
     div[data-testid="stVerticalBlockBorderWrapper"]:has(> div:empty) {
         display: none !important;
@@ -413,8 +613,134 @@ st.markdown("""
         padding: 0px !important;
     }
     #MainMenu, footer { visibility: hidden; display: none !important; }
+
+    /* ========================================================================= */
+    /* 📱 UNIVERSAL MULTI-DEVICE BREAKPOINTS (Mobile & Tablet Optimization)     */
+    /* ========================================================================= */
+
+    @media (max-width: 768px) {
+        /* Mobile Specific Selectbox Text Optimization - Hide Arrow & Allocate 100% Width to Text Container */
+        div[data-baseweb="select"] > div > div:last-child,
+        div[data-baseweb="select"] svg,
+        div[data-baseweb="select"] [data-icon="chevron-down"] {
+            display: none !important;
+            width: 0px !important;
+            max-width: 0px !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        div[data-baseweb="select"] > div > div:first-child,
+        div[data-baseweb="select"] div[class*="ValueContainer"],
+        div[data-baseweb="select"] div[class*="singleValue"] {
+            width: 100% !important;
+            max-width: 100% !important;
+            flex: 1 1 100% !important;
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow: visible !important;
+            font-size: 0.86rem !important;
+            line-height: 1.3 !important;
+        }
+
+        div[data-baseweb="select"] > div {
+            padding: 6px 10px !important;
+            min-height: 48px !important;
+            height: auto !important;
+        }
+
+        /* Force multi-column Streamlit blocks to stack cleanly on mobile without clipping */
+        [data-testid="column"], div[data-testid="stHorizontalBlock"] > div {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+            margin-bottom: 12px !important;
+        }
+
+        /* Fully Responsive Wrapped Mobile Tabs Bar - 100% Visible & Tap-Friendly */
+        .stTabs [data-baseweb="tab-list"] {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 6px !important;
+            padding: 6px !important;
+            overflow: visible !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            background: rgba(15, 23, 42, 0.95) !important;
+            border-radius: 12px !important;
+            border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+            padding: 10px 14px !important;
+            font-size: 0.88rem !important;
+            font-weight: 700 !important;
+            text-align: left !important;
+            justify-content: flex-start !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            background: rgba(30, 41, 59, 0.6) !important;
+            color: #f8fafc !important;
+            line-height: 1.3 !important;
+        }
+
+        .stTabs [aria-selected="true"] {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.7) 0%, rgba(59, 130, 246, 0.5) 100%) !important;
+            color: #ffffff !important;
+            border-color: #60a5fa !important;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.4) !important;
+        }
+
+        /* Strictly Hide all BaseWeb pagination arrows & overflow buttons */
+        .stTabs [data-baseweb="tab-list"] > button,
+        .stTabs [data-baseweb="tab-highlight"] + button,
+        .stTabs button[aria-label*="tab"],
+        .stTabs button[aria-label*="Tab"],
+        .stTabs button[aria-label="Previous tab"],
+        .stTabs button[aria-label="Next tab"],
+        .stTabs [data-baseweb="tab-list"] svg {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0px !important;
+            height: 0px !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* Typography scaling for mobile screens */
+        h1 { font-size: 1.5rem !important; line-height: 1.25 !important; }
+        h2 { font-size: 1.3rem !important; line-height: 1.25 !important; }
+        h3 { font-size: 1.1rem !important; line-height: 1.3 !important; }
+        h4 { font-size: 0.98rem !important; }
+
+        /* Touch-friendly full width buttons on phones */
+        .stButton > button, button {
+            width: 100% !important;
+            min-height: 44px !important;
+            padding: 0.65rem 1rem !important;
+            font-size: 0.92rem !important;
+        }
+
+        /* Mission Control Header Scaling */
+        .mission-header {
+            padding: 14px 16px !important;
+        }
+
+        .mission-header h1 {
+            font-size: 1.4rem !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
+
 
 def main_app_layout():
     # --- MODAL DIALOG FOR FEATURE GUIDE & AGENT ROLES & FAQ ---
@@ -787,15 +1113,15 @@ def main_app_layout():
                     grade_str, grade_clr, grade_bg = "F (Needs Remediation)", "#f87171", "#7f1d1d"
 
                 card_html = f"""
-                <div style="padding: 24px; border-radius: 16px; background: #0b1329; border: 2px solid #6366f1; font-family: Arial, sans-serif; color: #ffffff;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(99,102,241,0.3); padding-bottom: 16px;">
+                <div style="padding: 24px; border-radius: 16px; background: #0b1329; border: 2px solid #6366f1; font-family: Arial, sans-serif; color: #ffffff; max-width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(99,102,241,0.3); padding-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                         <div>
                             <div style="font-size: 0.75rem; color: #818cf8; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;">GOVERNMENT RECOGNIZED CERTIFICATION AUTHORITY</div>
                             <h2 style="color: #ffffff; margin: 4px 0 0 0; font-size: 1.6rem; font-weight: 800;">🏛️ SkillForge Autonomous Taskmaster</h2>
                             <span style="color: #94a3b8; font-size: 0.85rem;">National Vocational Skills Evaluation & Audit Certification Board</span>
                         </div>
                         <div style="text-align: right;">
-                            <span style="background: {grade_bg}; color: {grade_clr}; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 800; border: 1px solid {grade_clr};">
+                            <span style="background: {grade_bg}; color: {grade_clr}; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 800; border: 1px solid {grade_clr}; display: inline-block;">
                                 GRADE: {grade_str}
                             </span>
                             <div style="font-size:0.7rem; color:#94a3b8; margin-top:4px;">ISO 9001:2026 Certified Audit</div>
@@ -858,7 +1184,7 @@ def main_app_layout():
                         </div>
                     </div>
 
-                    <div style="margin-top: 18px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden;">
+                    <div style="margin-top: 18px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch;">
                         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.82rem; color: #cbd5e1;">
                             <thead style="background: rgba(15,23,42,0.9); color: #818cf8; font-size: 0.75rem; text-transform: uppercase;">
                                 <tr>
@@ -1254,42 +1580,58 @@ def main_app_layout():
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Active Question Display & Speech TTS Audio Player
+                # Active Question Display & Interactive Audio Speech Component with Equalizer
                 if history:
                     active_item = history[-1]
                     t_num = active_item.get("turn", cur_turn)
                     q_text = active_item.get("question", "")
                     clean_q_speech = re.sub(r'[*_#`\n]', ' ', q_text).replace("'", "\\'").replace('"', '\\"')
 
-                    components.html(f"""
-                    <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(15,23,42,0.95); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); box-sizing: border-box;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-                            <span style="font-size: 0.82rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px;">🎯 RECRUITER PROBE • QUESTION {t_num} OF 10</span>
-                            <span style="font-size: 0.75rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 3px 12px; border-radius: 12px; font-weight: 700;">Adaptive Gemini Follow-Up Engine</span>
+                    # Native Dynamic Question Header & Corner Audio TTS Toggle
+                    col_q_head, col_q_audio = st.columns([3.5, 1])
+                    with col_q_head:
+                        st.markdown(f"""
+                        <div style="font-size: 0.84rem; font-weight: 800; color: {theme_sub}; letter-spacing: 0.8px; margin-top: 6px;">
+                            🎯 RECRUITER PROBE • QUESTION {t_num} OF 10
+                            &nbsp;<span style="font-size: 0.72rem; color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); padding: 2px 8px; border-radius: 10px; font-weight: 700;">Adaptive Gemini Engine</span>
                         </div>
-                        <p style="color: #f8fafc; font-size: 1.08rem; font-weight: 600; line-height: 1.6; margin: 0 0 16px 0;">{q_text}</p>
-                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                            <button id="tts_btn" onclick="playQuestionSpeech('{clean_q_speech}')" style="background: linear-gradient(135deg, {theme_accent}, {theme_sub}); color: #070919; border: none; padding: 9px 20px; border-radius: 20px; font-size: 0.86rem; font-weight: 800; cursor: pointer; box-shadow: 0 0 15px {theme_accent}55; display: inline-flex; align-items: center; gap: 6px;">
-                                🔊 Listen to Question (AI Voice)
-                            </button>
-                            <span id="tts_status" style="font-size: 0.82rem; color: #34d399; font-weight: 600;"></span>
-                        </div>
-                    </div>
-                    <script>
-                    function playQuestionSpeech(txt) {{
-                        var status = document.getElementById("tts_status");
-                        if ('speechSynthesis' in window) {{
-                            window.speechSynthesis.cancel();
-                            var msg = new SpeechSynthesisUtterance(txt);
-                            msg.rate = 0.92;
-                            msg.pitch = 1.0;
-                            msg.onstart = function() {{ status.innerText = "🔊 Speaking question out loud..."; }};
-                            msg.onend = function() {{ status.innerText = ""; }};
-                            window.speechSynthesis.speak(msg);
+                        """, unsafe_allow_html=True)
+                    with col_q_audio:
+                        components.html(f"""
+                        <button id="tts_btn" onclick="toggleAudioSpeech('{clean_q_speech}')" style="background: linear-gradient(135deg, {theme_accent}, {theme_sub}); color: #070919; border: none; padding: 7px 16px; border-radius: 16px; font-size: 0.82rem; font-weight: 800; cursor: pointer; width: 100%; box-shadow: 0 0 12px {theme_accent}55; font-family: system-ui, sans-serif;">
+                            🔊 Listen
+                        </button>
+                        <script>
+                        var isSpeaking = false;
+                        function toggleAudioSpeech(text) {{
+                            var btn = document.getElementById("tts_btn");
+                            var synth = window.speechSynthesis || (window.parent && window.parent.window ? window.parent.window.speechSynthesis : null);
+                            if (!synth) return;
+                            if (!isSpeaking) {{
+                                synth.cancel();
+                                var msg = new SpeechSynthesisUtterance(text);
+                                msg.rate = 0.92;
+                                msg.onstart = function() {{ isSpeaking = true; btn.innerText = "🛑 Stop"; btn.style.background = "#ef4444"; btn.style.color = "#ffffff"; }};
+                                msg.onend = function() {{ isSpeaking = false; btn.innerText = "🔊 Listen"; btn.style.background = "linear-gradient(135deg, {theme_accent}, {theme_sub})"; btn.style.color = "#070919"; }};
+                                msg.onerror = function() {{ isSpeaking = false; btn.innerText = "🔊 Listen"; btn.style.background = "linear-gradient(135deg, {theme_accent}, {theme_sub})"; btn.style.color = "#070919"; }};
+                                synth.speak(msg);
+                            }} else {{
+                                synth.cancel();
+                                isSpeaking = false;
+                                btn.innerText = "🔊 Listen";
+                                btn.style.background = "linear-gradient(135deg, {theme_accent}, {theme_sub})";
+                                btn.style.color = "#070919";
+                            }}
                         }}
-                    }}
-                    </script>
-                    """, height=210)
+                        </script>
+                        """, height=42)
+
+                    # Dynamic Auto-Expanding Question Body (Zero Empty Gap on PC, Auto-Expands on Mobile)
+                    st.markdown(f"""
+                    <div style="background: rgba(15,23,42,0.95); border-left: 5px solid {theme_accent}; border-radius: 14px; padding: 18px 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 14px; margin-top: 4px;">
+                        <p style="color: #f8fafc; font-size: 1.05rem; font-weight: 600; line-height: 1.6; margin: 0;">{q_text}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
 
                     col_act1, col_act2 = st.columns([1, 1])
                     with col_act1:
@@ -1325,15 +1667,42 @@ def main_app_layout():
 
                 # Live Real-Time Voice Typing & Native Submission Component
                 if session_data.get("status") != "COMPLETED":
-                    # Live Mic Voice Dictation Sync Bar
+                    # Live Mic Voice Dictation Sync Bar with Pulsing Visualizer Animation
                     components.html(f"""
+                    <style>
+                    @keyframes mic-glow-pulse {{
+                        0% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }}
+                        50% {{ box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }}
+                        100% {{ box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }}
+                    }}
+                    @keyframes wave-mic {{
+                        0%, 100% {{ height: 4px; opacity: 0.4; }}
+                        50% {{ height: 16px; opacity: 1; }}
+                    }}
+                    .mic-wave-bar {{
+                        width: 3px;
+                        background: #ef4444;
+                        border-radius: 2px;
+                        display: inline-block;
+                        animation: wave-mic 0.8s ease-in-out infinite;
+                    }}
+                    .mic-wave-bar:nth-child(2) {{ animation-delay: 0.15s; background: #f59e0b; }}
+                    .mic-wave-bar:nth-child(3) {{ animation-delay: 0.3s; background: #ef4444; }}
+                    </style>
                     <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); padding: 12px 18px; border-radius: 12px; margin-bottom: 8px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <b style="color: #34d399; font-size: 0.9rem;">🎙️ Live Voice Dictation Helper:</b>
-                                <span style="color: #cbd5e1; font-size: 0.82rem; margin-left: 6px;" id="mic_status_txt">Click green mic button & speak — words will type LIVE into the answer box below!</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div id="mic_pulse_anim" style="display: none; align-items: center; gap: 3px; height: 16px; margin-right: 4px;">
+                                    <span class="mic-wave-bar"></span>
+                                    <span class="mic-wave-bar"></span>
+                                    <span class="mic-wave-bar"></span>
+                                </div>
+                                <div>
+                                    <b style="color: #34d399; font-size: 0.9rem;">🎙️ Live Voice Dictation Helper:</b>
+                                    <span style="color: #cbd5e1; font-size: 0.82rem; margin-left: 6px;" id="mic_status_txt">Click green mic button & speak — words dictate LIVE into answer box below!</span>
+                                </div>
                             </div>
-                            <button id="stt_mic_btn" onclick="toggleMicDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 14px rgba(16,185,129,0.4);">
+                            <button id="stt_mic_btn" onclick="toggleMicDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 14px rgba(16,185,129,0.4); transition: all 0.25s ease;">
                                 🎙️ Start Live Real-Time Voice Typing
                             </button>
                         </div>
@@ -1346,6 +1715,7 @@ def main_app_layout():
                     function toggleMicDictation() {{
                         var btn = document.getElementById("stt_mic_btn");
                         var status = document.getElementById("mic_status_txt");
+                        var micAnim = document.getElementById("mic_pulse_anim");
                         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                         
                         if (!SpeechRecognition) {{
@@ -1370,9 +1740,11 @@ def main_app_layout():
                             dictationRec.onstart = function() {{
                                 isListening = true;
                                 btn.style.background = "#ef4444";
+                                btn.style.animation = "mic-glow-pulse 1.5s infinite";
                                 btn.innerText = "🛑 Stop Voice Dictation";
                                 status.innerText = "🔴 Listening live... Speak now into your mic!";
                                 status.style.color = "#ef4444";
+                                micAnim.style.display = "inline-flex";
                             }};
                             
                             dictationRec.onresult = function(event) {{
@@ -1407,9 +1779,11 @@ def main_app_layout():
                             dictationRec.onend = function() {{
                                 isListening = false;
                                 btn.style.background = "linear-gradient(135deg, #10b981, #059669)";
+                                btn.style.animation = "none";
                                 btn.innerText = "🎙️ Start Live Real-Time Voice Typing";
                                 status.innerText = "✓ Live voice dictation complete! Click Submit button below.";
                                 status.style.color = "#34d399";
+                                micAnim.style.display = "none";
                             }};
                             
                             dictationRec.start();
@@ -1418,7 +1792,7 @@ def main_app_layout():
                         }}
                     }}
                     </script>
-                    """, height=65)
+                    """, height=130)
 
                     ans_key = f"ans_input_{session_data.get('id')}_{cur_turn}_{len(history)}"
                     ans_text_val = st.text_area("Your Response / Explanation:", key=ans_key, height=135, placeholder="Type your answer here OR click the green mic button above to speak in real-time...")
@@ -1794,7 +2168,7 @@ def main_app_layout():
             s_tab1, s_tab2, s_tab3, s_tab4 = st.tabs([
                 "👤 Profile & Resume",
                 "📜 Official Marksheet",
-                "🌐 Domain Portfolio",
+                "🌐 Dynamic Portfolio",
                 "💼 Live Web Job Hub"
             ])
             
@@ -2717,6 +3091,26 @@ def main_app_layout():
                         st.rerun()
                     else:
                         st.error(res.get("message"))
+
+        # --- MODERN CYBER-AGENT HEADER WITH LIVE TELEMETRY ---
+        st.markdown("""
+        <div class="mission-header">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span class="live-dot"></span>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #34d399; letter-spacing: 1px; text-transform: uppercase;">Autonomous Multi-Tenant Agent System Active</span>
+                    </div>
+                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">⚡ KaushalSetu Taskmaster</h1>
+                    <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 0.88rem;">AI-Driven Vocational Curriculum Synthesis • Multimodal Assessment • SHA-256 Ledger Seals • Autonomous Career Outbox</p>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <span style="background: rgba(59, 130, 246, 0.12); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;">⚡ Gemma Screener</span>
+                    <span style="background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600;">🔒 SHA-256 Verified</span>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         # --- SLEEK UNIFIED AUTONOMOUS MISSION CONTROL STRIP ---
         st.markdown("""
