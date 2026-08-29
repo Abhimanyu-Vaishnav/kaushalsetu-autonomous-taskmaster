@@ -57,6 +57,7 @@ except ImportError:
 try:
     from backend.main import (
         direct_get_agent_logs,
+        direct_delete_agent_log,
         direct_clear_all_agent_logs,
         direct_create_student,
         direct_update_student,
@@ -100,6 +101,7 @@ try:
 except ImportError:
     from main import (
         direct_get_agent_logs,
+        direct_delete_agent_log,
         direct_clear_all_agent_logs,
         direct_create_student,
         direct_update_student,
