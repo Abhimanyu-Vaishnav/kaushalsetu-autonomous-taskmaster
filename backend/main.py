@@ -3274,7 +3274,7 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 {"title": "Automated Sensor Fault Identification System", "desc": "Implemented diagnostic isolation scripts to detect early drift and insulation breakdown in high-voltage industrial actuators.", "tag": "Verification Lab"}
             ]
 
-        # Multi-Domain Adaptive Theme & Visual Engine
+        # Multi-Domain Adaptive Theme & Visual Engine (5 Distinct Visual Layout Themes)
         track_lower = track.lower()
         if any(w in track_lower for w in ["account", "finance", "tally", "tax", "banking", "audit", "commerce", "ca", "cpa", "business"]):
             accent_color = "#10b981"
@@ -3314,6 +3314,38 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 <text x="145" y="90" fill="#38bdf8" font-size="11" font-weight="bold">Code Velocity: 96%</text>
                 <text x="265" y="40" fill="#34d399" font-size="11" font-weight="bold">API Latency: 38ms</text>
                 <text x="325" y="25" fill="#818cf8" font-size="11" font-weight="bold">CI/CD Pass: 100%</text>
+            </svg>
+            """
+        elif any(w in track_lower for w in ["solar", "renew", "green", "power", "energy"]):
+            accent_color = "#059669"
+            secondary_color = "#34d399"
+            theme_gradient = "linear-gradient(135deg, #022c22 0%, #064e3b 50%, #020617 100%)"
+            domain_label = "Solar SCADA & Inverter Telemetry Engineer"
+            chart_svg = f"""
+            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #05966966);">
+                <defs>
+                    <linearGradient id="grad_sol" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#059669" stop-opacity="0.4"/><stop offset="100%" stop-color="#020617" stop-opacity="0"/></linearGradient>
+                </defs>
+                <path d="M 20 120 L 110 60 L 200 90 L 290 30 L 390 40 L 430 20" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" class="animated-path"/>
+                <path d="M 20 120 L 110 60 L 200 90 L 290 30 L 390 40 L 430 20 L 430 150 L 20 150 Z" fill="url(#grad_sol)"/>
+                <circle cx="290" cy="30" r="6" fill="#fbbf24" class="pulse-node"/>
+                <text x="295" y="25" fill="#fbbf24" font-size="11" font-weight="bold">MPPT Efficiency: 99.1%</text>
+            </svg>
+            """
+        elif any(w in track_lower for w in ["electric", "ev", "battery", "powertrain", "automotive"]):
+            accent_color = "#f59e0b"
+            secondary_color = "#ef4444"
+            theme_gradient = "linear-gradient(135deg, #451a03 0%, #78350f 50%, #0f172a 100%)"
+            domain_label = "EV Battery Systems & ECU Diagnostic Specialist"
+            chart_svg = f"""
+            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #f59e0b66);">
+                <defs>
+                    <linearGradient id="grad_ev" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.4"/><stop offset="100%" stop-color="#0f172a" stop-opacity="0"/></linearGradient>
+                </defs>
+                <path d="M 20 130 L 90 70 L 180 110 L 270 40 L 360 80 L 430 25" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" class="animated-path"/>
+                <path d="M 20 130 L 90 70 L 180 110 L 270 40 L 360 80 L 430 25 L 430 150 L 20 150 Z" fill="url(#grad_ev)"/>
+                <circle cx="270" cy="40" r="6" fill="#ef4444" class="pulse-node"/>
+                <text x="275" y="35" fill="#ef4444" font-size="11" font-weight="bold">CAN-Bus Sync: 99.8%</text>
             </svg>
             """
         else:
