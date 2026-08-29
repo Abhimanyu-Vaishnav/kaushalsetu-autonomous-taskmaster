@@ -361,45 +361,64 @@ st.markdown("""
         box-shadow: 0 0 14px rgba(59, 130, 246, 0.35) !important;
     }
 
-    /* Professional MCQ Options Design (PC & Mobile Optimized) */
+    /* Breathtaking MCQ Options & Layout Styling (Full Width & Glassmorphism) */
+    .mcq-radio-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 16px 0 !important;
+    }
+
+    .mcq-radio-container div[data-testid="stRadio"] {
+        width: 100% !important;
+    }
+
+    .mcq-radio-container div[data-testid="stRadio"] > div[role="radiogroup"],
     .mcq-radio-container div[data-testid="stRadio"] > div {
-        gap: 10px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 12px !important;
         background: transparent !important;
         border: none !important;
         padding: 0 !important;
     }
 
     .mcq-radio-container div[data-testid="stRadio"] label {
-        background: rgba(15, 23, 42, 0.95) !important;
-        border: 1px solid rgba(59, 130, 246, 0.35) !important;
-        border-radius: 10px !important;
-        padding: 12px 18px !important;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-        font-size: 0.95rem !important;
-        font-weight: 600 !important;
-        transition: all 0.2s ease-in-out !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
-        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
         width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        background: rgba(15, 23, 42, 0.85) !important;
+        border: 1px solid rgba(59, 130, 246, 0.3) !important;
+        border-radius: 12px !important;
+        padding: 16px 20px !important;
+        color: #f8fafc !important;
+        -webkit-text-fill-color: #f8fafc !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        line-height: 1.5 !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+        cursor: pointer !important;
     }
 
     .mcq-radio-container div[data-testid="stRadio"] label:hover {
-        background: #1e293b !important;
+        background: rgba(30, 41, 59, 0.95) !important;
         border-color: #3b82f6 !important;
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
-        transform: translateX(4px);
-        box-shadow: 0 0 16px rgba(59, 130, 246, 0.35) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3) !important;
     }
 
     .mcq-radio-container div[data-testid="stRadio"] label:has(input:checked),
     .mcq-radio-container div[data-testid="stRadio"] label[data-checked="true"] {
-        background: linear-gradient(135deg, rgba(37, 99, 235, 0.4) 0%, rgba(59, 130, 246, 0.25) 100%) !important;
-        border: 2px solid #3b82f6 !important;
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.35) 0%, rgba(14, 165, 233, 0.25) 100%) !important;
+        border: 2px solid #38bdf8 !important;
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
-        box-shadow: 0 0 18px rgba(59, 130, 246, 0.45) !important;
+        box-shadow: 0 0 24px rgba(56, 189, 248, 0.4) !important;
     }
 
     /* Container Optimization for All Devices */
