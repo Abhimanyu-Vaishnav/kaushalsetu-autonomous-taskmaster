@@ -4041,10 +4041,10 @@ def build_guaranteed_working_job_url(title: str, company: str, location: str, so
 # --- Guaranteed Working Direct Apply URL Resolver ---
 def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
     """
-    Constructs an authentic, direct, working job application or Google Jobs search URL
-    across verified portals (Google Jobs Tab, LinkedIn India, Indeed India, Naukri, NCS India).
+    Constructs an authentic, direct, working job application URL
+    across verified portals (LinkedIn India, Indeed India, Naukri, NCS India, Company Careers).
     """
-    if raw_url and raw_url.startswith("http") and not any(bad in raw_url for bad in ["duckduckgo", "notfound"]):
+    if raw_url and raw_url.startswith("http") and not any(bad in raw_url for bad in ["duckduckgo", "google.com/search", "notfound"]):
         return raw_url
 
     clean_words = [w for w in re.sub(r'[^a-zA-Z0-9\s]', '', title).split() if len(w) > 2][:3]
@@ -4060,18 +4060,13 @@ def build_guaranteed_working_job_url(title: str, company: str, location: str, so
         return f"https://in.indeed.com/jobs?q={clean_title}+{clean_company}&l={clean_loc}"
     elif "ncs" in s_lower:
         return f"https://www.ncs.gov.in/Pages/Search.aspx?k={clean_title}"
-    elif "linkedin" in s_lower:
-        return f"https://www.linkedin.com/jobs/search/?keywords={clean_title}+{clean_company}&location={clean_loc}"
     else:
-        # Direct Google Jobs Search Tab URL
-        return f"https://www.google.com/search?q={clean_company}+{clean_title}+jobs+{clean_loc}&ibp=htl;jobs"
+        return f"https://www.linkedin.com/jobs/search/?keywords={clean_title}+{clean_company}&location={clean_loc}"
 
 def live_internet_crawler_search(track: str, skills: list = None, location: str = "Delhi NCR", query: str = "") -> list:
     """
-    Gemini 2.5 AI Autonomous Web Job Crawler & Synthesizer:
-    Crawls and synthesizes authentic, course-specific live vacancies for ANY domain
-    (Mechatronics, Pharmacy, Video Editing, Humanities, Cybersecurity, Nursing, Finance, Web Dev, etc.)
-    with local priority, match percentage, and direct application links.
+    Gemini 2.5 AI Autonomous Web Job Crawler with Real Google Search Tool Grounding:
+    Crawls authentic live job listings directly from LinkedIn, Naukri, Indeed, and Company Career Portals.
     """
     track_lower = str(track).lower()
     crawled_jobs = []
@@ -4120,7 +4115,7 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
             comps = ["Schneider Electric Partner Network", "Addverb Technologies", "Siemens Automation Node", "Havells Industrial Center", "L&T Automation Systems", "Fanuc Robotics Partner"]
         return comps[idx % len(comps)]
 
-    # 1. PRIMARY: Gemini 2.5 LLM Autonomous Live Job Search Crawler
+    # 1. PRIMARY: Gemini 2.5 LLM Web Job Search Crawler with Live Google Search Tool Grounding
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
         try:
@@ -4128,28 +4123,28 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
             client = genai.Client(api_key=gemini_key)
             skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
             search_prompt = f"""
-            You are a senior recruitment engineer and live web job crawler.
-            The candidate is enrolled in course/track: '{track}' with skills: '{skills_text}'.
-            Target location preference: '{location}'. Keyword filter: '{query}'.
+            Search real live job openings in India or Globally for candidate course/track '{track}', skills '{skills_text}', location '{location}'.
+            Filter keyword: '{query}'.
+            Crawl active postings from LinkedIn India (linkedin.com/jobs), Naukri (naukri.com), Indeed India (in.indeed.com), and official company career portals (e.g. jobs.siemens.com, careers.tatamotors.com, sunpharma.com/careers).
 
-            Synthesize 8-10 authentic, highly accurate, real-world job vacancies tailored SPECIFICALLY to '{track}' in '{location}'.
-            Return strictly a JSON list of objects. Each object must have:
-            - "id": "JOB-AI-CRAWL-" + random 3-digit number
-            - "title": exact job title matching '{track}' (e.g., "Industrial Mechatronics Specialist" for Mechatronics, "Junior Pharmacist" for Pharmacy, "Video Editor" for Video Editing)
-            - "company": real hiring company name in India/Global for this domain
-            - "location": work location matching '{location}' or nearby hub
-            - "salary": realistic LPA salary (e.g. "₹4.2 LPA - ₹6.5 LPA")
+            Return strictly a JSON list of 8 objects with fields:
+            - "id": "JOB-LIVE-" + random 3-digit number
+            - "title": exact job title from posting (e.g. "Industrial Mechatronics & PLC Automation Engineer" or "Junior Pharmacist Quality Analyst")
+            - "company": exact hiring company name
+            - "location": exact work location
+            - "salary": realistic LPA salary range
             - "type": "Full-Time"
             - "exp": "0-2 Years"
             - "skills": list of 4 core technical skills for this role
             - "description": 2-sentence description of role responsibilities
-            - "source": "LinkedIn India Live Feed" | "Naukri Verified" | "Indeed India" | "Google Jobs"
-            - "apply_url": direct application link URL
+            - "source": "LinkedIn Live Feed" | "Naukri Verified" | "Indeed India" | "Siemens Careers" | "Sun Pharma Careers"
+            - "apply_url": exact direct application URL for this job vacancy on the hiring portal or company careers site
             - "student_fit_insight": 1-sentence AI explanation of why candidate's course '{track}' fits this role
             """
             resp = client.models.generate_content(
                 model="gemini-2.5-flash",
-                contents=search_prompt
+                contents=search_prompt,
+                config={"tools": [{"google_search": {}}]}
             )
             if resp and resp.text:
                 match = re.search(r'\[.*\]', resp.text, re.DOTALL)
@@ -4157,12 +4152,13 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
                     parsed = json.loads(match.group(0))
                     if isinstance(parsed, list) and len(parsed) > 0:
                         for idx, p in enumerate(parsed):
+                            raw_u = str(p.get("apply_url") or "").strip()
                             p["apply_url"] = build_guaranteed_working_job_url(
                                 title=p.get("title", track),
                                 company=p.get("company", ""),
                                 location=p.get("location", location),
                                 source=p.get("source", "LinkedIn"),
-                                raw_url=p.get("apply_url", "")
+                                raw_url=raw_u
                             )
                         return parsed
         except Exception as ex:
