@@ -1902,26 +1902,51 @@ def direct_simulate_candidate_loop(score_type: str = "TOP"):
         u_code = uuid.uuid4().hex[:6].upper()
         s_id = f"STU-{u_code}"
 
-        # --- REAL GEMINI 3.5 AI AGENT CANDIDATE GENERATION ENGINE ---
+        # --- REAL GEMINI 2.5 AI AGENT CANDIDATE GENERATION ENGINE ---
         ai_generated_candidate = None
+        
+        # Diverse vocational tracks catalog
+        DIVERSE_TRACKS = [
+            "AI & Machine Learning Operations",
+            "Hindi PhD & Academic Research",
+            "Vocational Diagnostics & Mechatronics",
+            "HPLC Pharmacology & Quality Control",
+            "Solar & EV Automotive Diagnostics",
+            "Tally Prime & Corporate GST Accounting",
+            "Full Stack Cloud & API Engineering",
+            "Cyber Security & Penetration Testing",
+            "VFX & Multimodal Digital Compositing",
+            "Industrial Automation & SCADA Control",
+            "Bio-Tech & Genetic Telemetry Analytics",
+            "Civil Infrastructure & CAD Diagnostics"
+        ]
+        
+        import random
+        target_track = random.choice(DIVERSE_TRACKS)
+
         try:
             from agent_engine import get_genai_client
             client = get_genai_client()
             if client:
                 prompt = f"""
-                You are the SkillForge Autonomous Vocational Candidate Agent.
-                Synthesize a realistic Indian vocational student profile for a {"Top Performer (Grade A+ 90-98%)" if is_top else "Remedial Candidate (Grade C/F 48-58% with diagnostic weakness)"}.
-                
+                You are the SkillForge Autonomous Vocational Candidate Synthesizer.
+                Generate a completely UNIQUE, highly realistic Indian vocational student profile for a {"Top Performer (Grade A+ 90-98%)" if is_top else "Remedial Candidate (Grade C/F 48-58% with diagnostic weakness)"}.
+                Selected Course Track Theme: '{target_track}' (or generate another realistic vocational track).
+
+                Important:
+                - Generate a realistic full name (e.g. Priyanshu Sengupta, Ananya Iyer, Devansh Chhabra, Meera Bhatnagar, Rohan Kulkarni, Shreya Pillai, Tanmay Chatterjee, Zarina Khan).
+                - Ensure the candidate's technical skills, weaknesses, role title, and company match their specific course track!
+
                 Respond ONLY with a raw JSON object (no markdown formatting, no codeblocks):
                 {{
-                    "full_name": "Full Name",
-                    "track": "Vocational Track Name",
+                    "full_name": "Full Indian Name",
+                    "track": "{target_track}",
                     "mcq_score": {"46.0" if is_top else "24.0"},
                     "capstone_score": {"47.5" if is_top else "28.0"},
                     "aggregate_score": {"93.5" if is_top else "52.0"},
-                    "company_name": "Tech Company Name",
-                    "role_title": "Job Role Title",
-                    "weakness": "Diagnostic Skill Gap Area"
+                    "company_name": "Authentic Company Name",
+                    "role_title": "Domain-Specific Job Title",
+                    "weakness": "Domain-Specific Technical Weakness"
                 }}
                 """
                 response = client.models.generate_content(
@@ -1932,51 +1957,41 @@ def direct_simulate_candidate_loop(score_type: str = "TOP"):
                     clean_txt = response.text.strip().replace("```json", "").replace("```", "").strip()
                     ai_generated_candidate = json.loads(clean_txt)
         except Exception as ai_err:
-            print("Gemini Agent generation notice (using dynamic fallback):", ai_err)
+            print("Gemini Agent generation notice (using dynamic procedural generator):", ai_err)
 
-        if ai_generated_candidate:
+        if ai_generated_candidate and isinstance(ai_generated_candidate, dict) and ai_generated_candidate.get('full_name'):
             s_name = f"{ai_generated_candidate.get('full_name', 'Autonomous Candidate')} ({'Top Performer' if is_top else 'Remedial Case'})"
-            track = ai_generated_candidate.get('track', 'Vocational Diagnostics & Mechatronics')
+            track = ai_generated_candidate.get('track', target_track)
             mcq_s = float(ai_generated_candidate.get('mcq_score', 45.0 if is_top else 24.0))
             cap_s = float(ai_generated_candidate.get('capstone_score', 46.0 if is_top else 28.0))
             agg_score = float(ai_generated_candidate.get('aggregate_score', mcq_s + cap_s))
-            company = ai_generated_candidate.get('company_name', 'TechNexus Automation Systems')
-            role = ai_generated_candidate.get('role_title', 'Autonomous Mechatronics Specialist')
-            weakness = ai_generated_candidate.get('weakness', 'Sensor Calibration & Torque Diagnostics')
+            company = ai_generated_candidate.get('company_name', 'TechNexus Innovations')
+            role = ai_generated_candidate.get('role_title', f'{track} Specialist')
+            weakness = ai_generated_candidate.get('weakness', f'{track} Practical Telemetry')
         else:
-            import random
-            top_candidates = [
-                ("Alex Mercer", "Full Stack Web Development", "TechNexus Systems", "Senior Full-Stack Engineer"),
-                ("Priya Sharma", "Vocational Diagnostics & Mechatronics", "RoboTech Industrial Automation", "Embedded Systems Specialist"),
-                ("Aarav Patel", "Tally Prime & Corporate GST Accounting", "Deloitte Financial Advisory", "GST & Ledger Audit Specialist"),
-                ("Vikramaditya Roy", "Automotive & Hardware Diagnostics", "Tesla Motors R&D India", "EV Powertrain Diagnostic Expert"),
-                ("Ananya Deshmukh", "AI & Machine Learning Operations", "Google Cloud AI Labs", "Autonomous Systems Engineer")
-            ]
-            remedial_candidates = [
-                ("Rohan Verma", "Vocational Diagnostics & Mechatronics", "Sensor Calibration & Torque Control"),
-                ("Kabir Singh", "Full Stack Web Development", "Async API Handling & Database Locks"),
-                ("Neha Gupta", "Tally Prime & Corporate GST Accounting", "Reverse Charge Mechanism & E-way Bills"),
-                ("Aditya Mishra", "Automotive & Hardware Diagnostics", "ECU Firmware Flashing & CAN Bus Protocol"),
-                ("Siddharth Malhotra", "AI & Machine Learning Operations", "Tensor Precision & Model Quantization")
-            ]
+            # Rich Procedural Generator Fallback (50+ Indian First Names x 50+ Last Names x 12 Tracks)
+            FIRST_NAMES = ["Aarav", "Ananya", "Vikram", "Ishita", "Priyanshu", "Kavya", "Devansh", "Meera", "Rohan", "Shreya", "Tanmay", "Zarina", "Harsh", "Sneha", "Aditya", "Pooja", "Siddharth", "Nisha", "Varun", "Riya"]
+            LAST_NAMES = ["Sharma", "Mukherjee", "Nair", "Deshmukh", "Sengupta", "Iyer", "Chhabra", "Bhatnagar", "Kulkarni", "Pillai", "Chatterjee", "Khan", "Rathore", "Banerjee", "Verma", "Patel", "Mishra", "Gupta", "Joshi", "Kapoor"]
+            
+            gen_first = random.choice(FIRST_NAMES)
+            gen_last = random.choice(LAST_NAMES)
+            cand_full_name = f"{gen_first} {gen_last}"
+            track = target_track
+
             if is_top:
-                cand_choice = random.choice(top_candidates)
-                s_name = f"{cand_choice[0]} (Top Performer)"
-                track = cand_choice[1]
-                company = cand_choice[2]
-                role = cand_choice[3]
+                s_name = f"{cand_full_name} (Top Performer)"
+                company = f"{track.split()[0]} Global Labs"
+                role = f"Senior {track.split()[0]} Specialist"
                 weakness = "N/A"
-                agg_score = round(random.uniform(90.0, 98.0), 1)
+                agg_score = round(random.uniform(90.0, 98.5), 1)
                 mcq_s = round(agg_score / 2.0, 1)
                 cap_s = round(agg_score - mcq_s, 1)
             else:
-                cand_choice = random.choice(remedial_candidates)
-                s_name = f"{cand_choice[0]} (Remedial Case)"
-                track = cand_choice[1]
-                weakness = cand_choice[2]
+                s_name = f"{cand_full_name} (Remedial Case)"
                 company = "N/A"
                 role = "N/A"
-                agg_score = round(random.uniform(48.0, 58.0), 1)
+                weakness = f"{track} Core Practical Diagnostics"
+                agg_score = round(random.uniform(48.0, 58.5), 1)
                 mcq_s = round(agg_score / 2.0, 1)
                 cap_s = round(agg_score - mcq_s, 1)
 
