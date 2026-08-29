@@ -1374,7 +1374,7 @@ def main_app_layout():
                 with f_col1:
                     job_search_query = st.text_input("🔍 Search Role, Skill, or Company", placeholder="e.g. PLC, Mechatronics, Solar, Python", key="job_search_inp")
                 with f_col2:
-                    job_loc_filter = st.selectbox("📍 Region / Location", options=["Delhi NCR", "Nangloi / West Delhi", "All India", "Hybrid / Remote"], key="job_loc_sel")
+                    job_loc_filter = st.selectbox("📍 Region / Location", options=["Auto-Detect Local Priority", "Nangloi / West Delhi", "Delhi NCR", "Pan-India / All States", "🌐 Global / International (Remote & Overseas)"], key="job_loc_sel")
                 with f_col3:
                     if st.button("🔄 Rescan Live Feed", type="secondary", use_container_width=True, key="btn_rescan_jobs"):
                         st.session_state["force_live_rescan"] = True

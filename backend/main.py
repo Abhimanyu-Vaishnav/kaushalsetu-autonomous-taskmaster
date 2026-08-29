@@ -4288,18 +4288,27 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
         if not filtered:
             filtered = master_job_pool
 
-        # Dynamic Skill Intersection & Capstone Match Calculation
+        # Dynamic Skill Intersection, Location Proximity & Match Calculation
         cand_skill_set = set([str(sk).lower().strip() for sk in cand_skills])
+        cand_loc_clean = (candidate.get("city") or candidate.get("address") or candidate.get("branch_name") or "Delhi NCR").lower()
+        
         ranked = []
         for idx, j in enumerate(filtered):
             job_skills = j.get("skills", [])
+            job_loc_lower = str(j.get("location", "")).lower()
+            
             matched_skills = [sk for sk in job_skills if any(c_sk in sk.lower() or sk.lower() in c_sk for c_sk in cand_skill_set)]
             
             overlap_ratio = len(matched_skills) / max(len(job_skills), 1)
             track_words = [w.lower() for w in track.split() if len(w) > 3]
             track_boost = 15 if any(w in j["title"].lower() or w in j["description"].lower() for w in track_words) else 5
             
-            calculated_pct = int((overlap_ratio * 40) + ((score / 100.0) * 45) + track_boost)
+            # Local Proximity Check (Candidate's exact city/area)
+            is_local = any(loc_word in job_loc_lower for loc_word in cand_loc_clean.split() if len(loc_word) > 2) or any(w in job_loc_lower for w in ["nangloi", "west delhi", "delhi ncr"])
+            is_remote = "remote" in job_loc_lower or "hybrid" in job_loc_lower or "global" in job_loc_lower
+            loc_priority_pts = 20 if is_local else (10 if is_remote else 5)
+
+            calculated_pct = int((overlap_ratio * 35) + ((score / 100.0) * 30) + track_boost + loc_priority_pts)
             final_match = min(98, max(68, calculated_pct))
 
             guaranteed_url = build_guaranteed_working_job_url(
@@ -4314,12 +4323,14 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
                 **j,
                 "apply_url": guaranteed_url,
                 "match_pct": final_match,
+                "is_local_priority": is_local,
                 "is_top_probability": (idx < 2),
-                "selection_chance": "Very High (Top 5%)" if final_match >= 85 else ("High Fit" if final_match >= 75 else "Moderate Alignment"),
+                "selection_chance": "Very High (Top 5% Local Fit)" if (is_local and final_match >= 82) else ("Very High Fit" if final_match >= 85 else ("High Fit" if final_match >= 75 else "Moderate Alignment")),
                 "matched_skills": matched_skills if matched_skills else job_skills[:2]
             })
 
-        ranked.sort(key=lambda x: x["match_pct"], reverse=True)
+        # Dual Priority Sorting: 1st Local Proximity (Local First), 2nd Match Percentage (Global Next)
+        ranked.sort(key=lambda x: (x["is_local_priority"], x["match_pct"]), reverse=True)
 
         total_jobs = len(ranked)
         page_idx = max(1, page)
