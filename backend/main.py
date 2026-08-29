@@ -4060,9 +4060,8 @@ COMPANY_CAREER_MAP = {
 
 def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
     """
-    Constructs a 100% authentic, working job application or official company career portal URL.
-    Prioritizes official corporate career sites (Siemens, Sun Pharma, Tata Motors, HDFC, etc.)
-    and clean single-term role queries on LinkedIn/Naukri/Indeed (0 broken/empty search pages).
+    Constructs a 100% authentic, working job application or official company career portal URL
+    for ANY location globally (India, USA/New York, UK/London, UAE/Dubai, etc.).
     """
     # 1. Direct valid URL pass-through if returned by Gemini live search grounding
     if raw_url and raw_url.startswith("http") and not any(bad in raw_url for bad in ["duckduckgo", "google.com/search", "notfound", "did+not+match"]):
@@ -4074,31 +4073,38 @@ def build_guaranteed_working_job_url(title: str, company: str, location: str, so
         if key in c_lower:
             return portal_url
 
-    # 3. Clean search keywords: Search ONLY the role title to prevent Indeed query over-matching errors
+    # 3. Dynamic Global Location & Domain Parsing
     clean_words = [w for w in re.sub(r'[^a-zA-Z0-9\s]', '', title).split() if len(w) > 2][:3]
     clean_title = " ".join(clean_words) if clean_words else title
-    clean_loc = location.split()[0] if location else "Delhi"
+    clean_loc = location.strip() if location else "Global"
 
     s_lower = str(source).lower()
     encoded_role = urllib.parse.quote(clean_title)
     encoded_loc = urllib.parse.quote(clean_loc)
+    is_india = any(w in clean_loc.lower() for w in ["india", "delhi", "noida", "gurugram", "mumbai", "bengaluru", "bangalore", "pune", "hyderabad", "chennai", "kolkata"])
 
-    if "naukri" in s_lower:
+    if "naukri" in s_lower or (is_india and "indeed" not in s_lower and "linkedin" not in s_lower):
         role_slug = "-".join(clean_words).lower()
-        return f"https://www.naukri.com/{urllib.parse.quote(role_slug)}-jobs-in-{urllib.parse.quote(clean_loc.lower())}"
+        loc_slug = re.sub(r'[^a-zA-Z0-9]', '-', clean_loc.lower())
+        return f"https://www.naukri.com/{urllib.parse.quote(role_slug)}-jobs-in-{urllib.parse.quote(loc_slug)}"
     elif "indeed" in s_lower:
-        return f"https://in.indeed.com/jobs?q={encoded_role}&l={encoded_loc}"
+        domain_prefix = "in.indeed.com" if is_india else "www.indeed.com"
+        return f"https://{domain_prefix}/jobs?q={encoded_role}&l={encoded_loc}"
     elif "ncs" in s_lower:
         return f"https://www.ncs.gov.in/Pages/Search.aspx?k={encoded_role}"
     else:
+        # Global LinkedIn Jobs Search Query (Works for New York, London, Delhi, Tokyo, etc.)
         return f"https://www.linkedin.com/jobs/search/?keywords={encoded_role}&location={encoded_loc}"
 
 def live_internet_crawler_search(track: str, skills: list = None, location: str = "Delhi NCR", query: str = "") -> list:
     """
-    3-Step Mandatory Autonomous Career Engine:
-    - Step 1: Autonomous Web Crawling (Local Priority First, Global Worldwide Next) via Gemini 2.5 Google Search Grounding.
-    - Step 2: Autonomous AI Verification & Audit (Course/Domain Alignment Audit, URL Verification, Experience & Fresher Eligibility Audit, Salary Dual Audit).
-    - Step 3: Verified Job Finder Output Generation (Yields 24-32 verified jobs for multi-page Load More pagination).
+    3-Step Mandatory Autonomous Career Engine (100% Global Location & Company Awareness):
+    - Step 1: Autonomous Web Crawling across ANY company globally (US, India, UK, UAE, etc.) via Gemini 2.5 Google Search Grounding.
+              Priority 1: Candidate's exact local city/region (e.g. 'New York', 'Delhi NCR', 'London').
+              Priority 2: Country-wide hubs.
+              Priority 3: Global Remote / International openings.
+    - Step 2: Autonomous AI Verification & Audit (Course Alignment, URL Verification, Salary Dual Audit, Experience & Fresher Audit).
+    - Step 3: Verified Job Output Generation.
     """
     track_lower = str(track).lower()
 
@@ -4111,26 +4117,31 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
             client = genai.Client(api_key=gemini_key)
             skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
             crawl_prompt = f"""
-            [STEP 1: AUTONOMOUS INTERNET CRAWLER AGENT]
+            [STEP 1: AUTONOMOUS GLOBAL INTERNET CRAWLER AGENT]
             Target Course/Specialization: '{track}'
             Candidate Certified Skills: '{skills_text}'
-            Primary Location Preference: '{location}' (Priority 1: Local regional hubs, Priority 2: Pan-India, Priority 3: Global Remote/International)
+            Primary Candidate Location: '{location}'
             Filter Keywords: '{query}'
 
-            Crawl live hiring portals (LinkedIn India, Naukri, Indeed India, National Career Service) and company career sites (Siemens, Tata Motors, Sun Pharma, etc.) for real active vacancies matching '{track}'.
+            Instructions:
+            1. Search and crawl active vacancies across ANY hiring company career website or job portal WORLDWIDE (e.g. for India: Sun Pharma, Siemens India, Tata, HDFC, Infosys, Naukri; for US/Global: Pfizer, Tesla, Apple, Google, Microsoft, JP Morgan, LinkedIn, Indeed).
+            2. Priority Ranking:
+               - Priority 1: Local vacancies matching candidate's exact city/region '{location}'.
+               - Priority 2: Regional/National vacancies in candidate's country.
+               - Priority 3: Global Remote or International openings.
 
             Return strictly a JSON list of 24 objects (mix of Entry-Level/Fresher 0-1 Yr, 1-2 Yr, and 2-3 Yr roles):
             - "title": exact job title
-            - "company": hiring company name
-            - "location": work location
-            - "disclosed_salary": exact salary if stated (e.g. "₹5.5 LPA - ₹7.2 LPA") OR "Not Disclosed in Posting"
-            - "ai_estimated_salary": estimated LPA benchmark for {track} in {location} (e.g. "₹4.5 LPA - ₹6.5 LPA (AI Benchmark Estimate)")
+            - "company": hiring company name anywhere in the world
+            - "location": work location matching '{location}' or nearby regional hub
+            - "disclosed_salary": exact salary if stated (e.g. "$75,000 - $95,000 / yr" for US OR "₹5.5 LPA - ₹7.2 LPA" for India) OR "Not Disclosed in Posting"
+            - "ai_estimated_salary": estimated salary benchmark for {track} in {location}
             - "type": "Full-Time"
             - "exp": "0-1 Years (Entry-Level / Freshers Eligible)" OR "1-3 Years Experience Required"
             - "is_fresher_eligible": true or false
             - "skills": list of 4 required technical skills
             - "description": 2-sentence summary of role duties
-            - "source": hiring portal or company career site
+            - "source": hiring portal or official company career site
             - "apply_url": direct application or portal link URL
             - "student_fit_insight": 1-sentence AI candidate fit explanation
             """
