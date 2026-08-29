@@ -4122,13 +4122,13 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
             client = genai.Client(api_key=gemini_key)
             skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
             crawl_prompt = f"""
-            [AUTONOMOUS GOOGLE SEARCH GROUNDED CRAWLER & REAL JOB VERIFICATION AGENT]
+            [AUTONOMOUS GLOBAL GOOGLE SEARCH GROUNDED CRAWLER & REAL JOB VERIFICATION AGENT]
             Candidate Track/Course: '{track}'
             Candidate Certified Skills: '{skills_text}'
             Primary Location Preference: '{location}'
 
             Instructions & Constraints:
-            1. Execute live Google Search grounding across global corporate career portals (Google Careers, Siemens, Tata Motors, Sun Pharma, Deloitte, TCS, Infosys, Workday, Lever, Greenhouse, LinkedIn Jobs, Naukri) to discover real, active job postings for candidate's course track '{track}' and skills '{skills_text}'.
+            1. Execute live Google Search grounding across the ENTIRE WORLDWIDE INTERNET — searching ANY hiring company globally (MNCs, startups, universities, research institutions, Workday, Lever, Greenhouse, LinkedIn Jobs, Naukri, etc.) without any company restriction to discover real, active job postings for candidate's course track '{track}' and skills '{skills_text}'.
             2. For each grounded posting, extract the EXACT DIRECT JOB REQUISITION URL (e.g. 'https://www.google.com/about/careers/applications/jobs/results/...' or 'https://careers.tatamotors.com/job-detail/...' or 'https://www.linkedin.com/jobs/view/...'). DO NOT return search query links or fake query URLs.
             3. Verify that the job title, hiring company name, work location, required technical skills, and 2-sentence description match the actual live web posting data extracted during the search.
             4. Prioritize local vacancies in '{location}' first. If local vacancies are limited, expand to pan-India, remote/hybrid, or global opportunities for this track.
