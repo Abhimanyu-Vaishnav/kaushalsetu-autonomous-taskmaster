@@ -1551,19 +1551,20 @@ def main_app_layout():
                 st.markdown("<div style='margin-top: 25px; padding: 16px; background: rgba(15,23,42,0.8); border: 1px solid rgba(59,130,246,0.3); border-radius: 14px;'>", unsafe_allow_html=True)
                 col_prev, col_info, col_next, col_load_more = st.columns([1, 1.4, 1, 2])
                 with col_prev:
-                    if st.button("⬅️ Previous", disabled=(st.session_state.job_page <= 1), key="job_prev_btn", use_container_width=True):
-                        st.session_state.job_page -= 1
+                    if st.button("⬅️ Previous Page", disabled=(st.session_state.job_page <= 1), key="job_prev_btn", use_container_width=True):
+                        st.session_state.job_page = max(1, st.session_state.job_page - 1)
                         st.rerun()
                 with col_info:
-                    st.markdown(f"<p style='text-align: center; color: #60a5fa; font-weight: 700; margin-top: 8px;'>Page {st.session_state.job_page} of {max(st.session_state.job_page, total_pages)}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='text-align: center; color: #60a5fa; font-weight: 700; margin-top: 8px;'>Page {st.session_state.job_page} of {total_pages}</p>", unsafe_allow_html=True)
                 with col_next:
-                    if st.button("Next Page ➡️", key="job_next_btn", use_container_width=True):
-                        st.session_state.job_page += 1
+                    if st.button("Next Page ➡️", disabled=(st.session_state.job_page >= total_pages), key="job_next_btn", use_container_width=True):
+                        st.session_state.job_page = min(total_pages, st.session_state.job_page + 1)
                         st.rerun()
                 with col_load_more:
-                    if st.button(f"⚡ Load More Jobs (Page {st.session_state.job_page + 1}) 🚀", key="job_load_more_btn", type="primary", use_container_width=True):
-                        st.session_state.job_page += 1
-                        st.toast(f"⚡ Crawling & loading Page {st.session_state.job_page} live vacancies...", icon="🌐")
+                    if st.button("⚡ Crawl Fresh Live Batch 🚀", key="job_load_more_btn", type="primary", use_container_width=True):
+                        st.session_state["force_live_rescan"] = True
+                        st.session_state.job_page = 1
+                        st.toast("⚡ Gemini 2.5 Agent executing fresh live internet crawl across career portals...", icon="🌐")
                         st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
 

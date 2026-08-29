@@ -4248,12 +4248,26 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
 
     # --- STEP 2: Autonomous AI Verification & Audit Agent ---
     verified_jobs = []
+    
+    # Define negative domain keywords to prevent cross-domain pollution
+    is_eng = any(w in track_lower for w in ["mechatronic", "automation", "engineer", "robot", "plc", "software", "python", "developer", "web"])
+    is_acc = any(w in track_lower for w in ["account", "finance", "tally", "tax", "audit", "banking", "gst"])
+    is_pharm = any(w in track_lower for w in ["pharma", "pharmacy", "drug", "medic", "clinic"])
+
     for idx, j in enumerate(raw_crawled):
-        # 1. Course Relevance Audit
         j_title = str(j.get("title", "")).strip()
         j_desc = str(j.get("description", "")).strip()
         j_comp = str(j.get("company", "Verified Corporate")).strip()
         j_loc = str(j.get("location", location)).strip()
+        combined_text = (j_title + " " + j_desc).lower()
+
+        # 1. AI Domain Relevancy Audit Filter (0 Cross-Domain Contamination)
+        if is_eng and any(bad in combined_text for bad in ["tally prime", "gst reconciliation", "accounts payable", "telecaller", "data entry clerk", "pharmacist"]):
+            continue
+        if is_acc and any(bad in combined_text for bad in ["mechatronics engineer", "plc automation", "vfx compositor", "python developer", "hplc quality control"]):
+            continue
+        if is_pharm and any(bad in combined_text for bad in ["tally prime", "plc automation", "vfx editor", "software engineer"]):
+            continue
 
         # 2. URL Verification & Sanitization
         raw_url = str(j.get("apply_url", "")).strip()
@@ -4418,21 +4432,13 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
             ranked.sort(key=lambda x: (x["is_local_priority"], x["match_pct"]), reverse=True)
 
         total_jobs = len(ranked)
-        page_idx = max(1, page)
         psize = max(1, page_size)
+        total_pages = max(1, (total_jobs + psize - 1) // psize)
+        page_idx = min(max(1, page), total_pages)
+
         start_idx = (page_idx - 1) * psize
-        
-        # If start_idx exceeds pool length, wrap around or generate dynamic multi-page slice
-        if start_idx >= total_jobs and total_jobs > 0:
-            start_idx = (start_idx % total_jobs)
-        
         end_idx = start_idx + psize
         paginated_jobs = ranked[start_idx:end_idx]
-        if len(paginated_jobs) < psize and total_jobs > 0:
-            paginated_jobs.extend(ranked[:psize - len(paginated_jobs)])
-
-        calc_pages = max(1, (total_jobs + psize - 1) // psize)
-        total_pages = max(page_idx + 1, calc_pages)
 
         try:
             log_agent_activity(
@@ -4446,10 +4452,13 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
 
         return {
             "jobs": paginated_jobs,
-            "total_jobs": max(total_jobs, page_idx * psize),
+            "total_jobs": total_jobs,
             "page": page_idx,
             "total_pages": total_pages
         }
+    except Exception as e:
+        print(f"[DIRECT SEARCH LIVE JOBS ERROR] {e}")
+        return {"jobs": [], "total_jobs": 0, "page": 1, "total_pages": 1}
     except Exception as e:
         print(f"[DIRECT SEARCH LIVE JOBS ERROR] {e}")
         return {"jobs": [], "total_jobs": 0, "page": 1, "total_pages": 1}
