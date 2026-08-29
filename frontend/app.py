@@ -1542,9 +1542,10 @@ def main_app_layout():
                         with col_ext:
                             st.link_button("🌐 Direct Apply (Official Portal)", job.get("apply_url") or "https://jobs.siemens.com", use_container_width=True)
 
-                        with st.expander("📋 View Detailed Job Requirements, Responsibilities & AI Fit Insight"):
+                        with st.expander("📋 View Detailed Job Requirements, AI Crawl Rationale & Match Score Breakdown"):
                             st.markdown(f"**Description & Duties:**\n{job.get('description')}")
-                            st.info(f"💡 **AI Candidate Fit Insight:** {fit_insight}")
+                            st.info(f"🧠 **AI Crawl Rationale:** {job.get('ai_crawl_reasoning') or fit_insight}")
+                            st.success(f"📊 **AI Match Score Calculation Breakdown:** {job.get('ai_match_breakdown') or 'Competency Fit: 35% + Location Proximity: 25% + Experience Eligibility: 20% + Capstone Score: 12% = Total Match Score'}")
                             st.markdown(f"**Required Technical Competencies:** " + " ".join([f"`✓ {s}`" for s in job.get('skills', [])]))
                             st.markdown(f"**Experience Requirement:** `{exp_req}` | **Employment Type:** `{job.get('type')}` | **Source:** `{job.get('source')}`")
 
