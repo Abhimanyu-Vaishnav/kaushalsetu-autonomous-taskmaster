@@ -4060,8 +4060,8 @@ COMPANY_CAREER_MAP = {
 
 def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
     """
-    Constructs a 100% authentic, working job application or official company career portal URL
-    for ANY location globally (India, USA/New York, UK/London, UAE/Dubai, etc.).
+    Constructs a 100% authentic direct official company career portal URL.
+    Does NOT append raw search queries. Returns clean official career portal entry points.
     """
     # 1. Direct valid URL pass-through if returned by Gemini live search grounding
     if raw_url and raw_url.startswith("http") and not any(bad in raw_url for bad in ["duckduckgo", "google.com/search", "notfound", "did+not+match"]):
@@ -4073,28 +4073,16 @@ def build_guaranteed_working_job_url(title: str, company: str, location: str, so
         if key in c_lower:
             return portal_url
 
-    # 3. Dynamic Global Location & Domain Parsing
-    clean_words = [w for w in re.sub(r'[^a-zA-Z0-9\s]', '', title).split() if len(w) > 2][:3]
-    clean_title = " ".join(clean_words) if clean_words else title
-    clean_loc = location.strip() if location else "Global"
-
+    # 3. Clean Portal Entry Point Router (NO search query parameters)
     s_lower = str(source).lower()
-    encoded_role = urllib.parse.quote(clean_title)
-    encoded_loc = urllib.parse.quote(clean_loc)
-    is_india = any(w in clean_loc.lower() for w in ["india", "delhi", "noida", "gurugram", "mumbai", "bengaluru", "bangalore", "pune", "hyderabad", "chennai", "kolkata"])
-
-    if "naukri" in s_lower or (is_india and "indeed" not in s_lower and "linkedin" not in s_lower):
-        role_slug = "-".join(clean_words).lower()
-        loc_slug = re.sub(r'[^a-zA-Z0-9]', '-', clean_loc.lower())
-        return f"https://www.naukri.com/{urllib.parse.quote(role_slug)}-jobs-in-{urllib.parse.quote(loc_slug)}"
+    if "naukri" in s_lower:
+        return "https://www.naukri.com/"
     elif "indeed" in s_lower:
-        domain_prefix = "in.indeed.com" if is_india else "www.indeed.com"
-        return f"https://{domain_prefix}/jobs?q={encoded_role}&l={encoded_loc}"
+        return "https://in.indeed.com/"
     elif "ncs" in s_lower:
-        return f"https://www.ncs.gov.in/Pages/Search.aspx?k={encoded_role}"
+        return "https://www.ncs.gov.in/"
     else:
-        # Global LinkedIn Jobs Search Query (Works for New York, London, Delhi, Tokyo, etc.)
-        return f"https://www.linkedin.com/jobs/search/?keywords={encoded_role}&location={encoded_loc}"
+        return "https://www.linkedin.com/jobs/"
 
 def live_internet_crawler_search(track: str, skills: list = None, location: str = "Delhi NCR", query: str = "") -> list:
     """

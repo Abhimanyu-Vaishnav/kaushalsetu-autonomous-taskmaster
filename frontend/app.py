@@ -1566,10 +1566,11 @@ def main_app_layout():
                         st.session_state.job_page = min(total_pages, st.session_state.job_page + 1)
                         st.rerun()
                 with col_load_more:
-                    if st.button("⚡ Crawl Fresh Live Batch 🚀", key="job_load_more_btn", type="primary", use_container_width=True):
-                        st.session_state["force_live_rescan"] = True
-                        st.session_state.job_page = 1
-                        st.toast("⚡ Gemini 2.5 Agent executing fresh live internet crawl across career portals...", icon="🌐")
+                    if st.button(f"⚡ Load More Jobs (Page {st.session_state.job_page + 1}) 🚀", key="job_load_more_btn", type="primary", use_container_width=True):
+                        st.session_state.job_page += 1
+                        if st.session_state.job_page > total_pages:
+                            st.session_state["force_live_rescan"] = True
+                        st.toast(f"⚡ Loading Page {st.session_state.job_page} live vacancies...", icon="🌐")
                         st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
 
