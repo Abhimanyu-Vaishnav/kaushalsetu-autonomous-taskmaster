@@ -87,7 +87,7 @@ def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_
         f"Also generate a practical capstone project challenge and 3 specific grading rubric parameters."
     )
     
-    model_name = "gemini-2.5-pro"
+    model_name = "gemini-2.5-flash"
     
     try:
         response = client.models.generate_content(
@@ -96,7 +96,8 @@ def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=AssessmentSchema,
-                temperature=0.7,
+                temperature=0.3,
+                max_output_tokens=1024,
             ),
         )
         

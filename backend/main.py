@@ -4172,7 +4172,7 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
     # --- STEP 1: Autonomous Web Crawling Agent with Gemini Google Search Grounding ---
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
-        models_to_try = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-flash-latest"]
+        models_to_try = ["gemini-2.5-flash"]
         for m_name in models_to_try:
             if raw_crawled:
                 break
@@ -4215,7 +4215,8 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
                         contents=crawl_prompt,
                         config=types.GenerateContentConfig(
                             tools=[types.Tool(google_search=types.GoogleSearch())],
-                            temperature=0.3 + (attempt * 0.2)
+                            temperature=0.3,
+                            max_output_tokens=1024
                         )
                     )
                     if resp and resp.text:
