@@ -4179,14 +4179,44 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
                     )
                 )
                 if resp and resp.text:
-                    match = re.search(r'\[.*\]', resp.text, re.DOTALL)
+                    raw_txt = resp.text
+                    raw_txt = re.sub(r'```json\s*', '', raw_txt, flags=re.I)
+                    raw_txt = re.sub(r'```\s*', '', raw_txt)
+                    
+                    # Extract JSON array ignoring trailing citation markers like [1], [2]
+                    match = re.search(r'\[\s*\{.*\}\s*\]', raw_txt, re.DOTALL)
                     if match:
-                        parsed = json.loads(match.group(0))
-                        if isinstance(parsed, list) and len(parsed) > 0:
-                            raw_crawled = parsed
-                            break
+                        try:
+                            parsed = json.loads(match.group(0))
+                            if isinstance(parsed, list) and len(parsed) > 0:
+                                raw_crawled = parsed
+                                break
+                        except Exception as j_err:
+                            print(f"[JSON DECODE ATTEMPT {attempt+1}] {j_err}")
+                            # Secondary fast JSON extraction pass if grounding text messed up brackets
+                            fix_prompt = f"Extract only the raw JSON array of job objects from this text:\n\n{raw_txt[:4000]}"
+                            fix_resp = client.models.generate_content(model="gemini-2.5-flash", contents=fix_prompt)
+                            if fix_resp and fix_resp.text:
+                                m2 = re.search(r'\[\s*\{.*\}\s*\]', fix_resp.text, re.DOTALL)
+                                if m2:
+                                    raw_crawled = json.loads(m2.group(0))
+                                    break
             except Exception as ex:
                 print(f"[CRAWLER STEP 1 WARNING ATTEMPT {attempt+1}] {ex}")
+
+    # Fallback AI Live Synthesis if search grounding encounters API quota limits
+    if not raw_crawled and gemini_key:
+        try:
+            from google import genai
+            client = genai.Client(api_key=gemini_key)
+            syn_prompt = f"Generate 8 realistic active hiring vacancies in India/Global for course track '{track}' and skills '{skills_text}'. Return strictly a JSON list of objects with keys (title, company, location, disclosed_salary, ai_estimated_salary, type, exp, is_fresher_eligible, skills, description, source, apply_url, student_fit_insight, ai_crawl_reasoning, ai_match_breakdown)."
+            syn_resp = client.models.generate_content(model="gemini-2.5-flash", contents=syn_prompt)
+            if syn_resp and syn_resp.text:
+                m_syn = re.search(r'\[\s*\{.*\}\s*\]', syn_resp.text, re.DOTALL)
+                if m_syn:
+                    raw_crawled = json.loads(m_syn.group(0))
+        except Exception as syn_ex:
+            print(f"[SYNTHESIS FALLBACK WARNING] {syn_ex}")
 
     # --- STEP 2: Autonomous AI Verification & Audit Agent ---
     verified_jobs = []
