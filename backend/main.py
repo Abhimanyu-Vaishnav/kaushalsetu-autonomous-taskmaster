@@ -4129,7 +4129,9 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
     - Step 2: Autonomous AI Verification & Deep URL Extraction Agent (Title/URL Grounding Match, Deep Requisition Link Resolution, Salary Audit).
     - Step 3: Verified Direct Job Output Generation.
     """
+    track = track if track else "Mechatronics & Industrial Automation"
     track_lower = str(track).lower()
+    skills_text = ", ".join(skills) if isinstance(skills, list) and len(skills) > 0 else f"{track} Diagnostics, Quality Control"
     raw_crawled = []
 
     # --- STEP 1: Autonomous Web Crawling Agent with Gemini 2.5 Google Search Grounding ---
@@ -4140,7 +4142,6 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
                 from google import genai
                 from google.genai import types
                 client = genai.Client(api_key=gemini_key)
-                skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
                 crawl_prompt = f"""
                 [AUTONOMOUS GLOBAL GOOGLE SEARCH GROUNDED CRAWLER & REAL JOB VERIFICATION AGENT - ATTEMPT {attempt+1}]
                 Candidate Track/Course: '{track}'
@@ -4436,7 +4437,7 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
         conn.close()
 
         candidate = dict(s_row) if s_row else {}
-        track = candidate.get("track") or candidate.get("course_name") or ""
+        track = candidate.get("track") or candidate.get("course_name") or query or "Mechatronics & Systems Operations"
         score = float(candidate.get("aggregate_score") or 85.0)
         cand_exp_yrs = int(candidate.get("work_experience_years") or 0)
 
