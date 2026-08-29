@@ -1029,6 +1029,8 @@ def main_app_layout():
                             st.session_state["authenticated_student"] = fresh_s
                             st.session_state["active_student_view"] = "results" if fresh_s.get("exam_completed") == 1 else "exam"
                             st.session_state["current_exam"] = None
+                            st.session_state["job_page"] = 1
+                            st.session_state["force_live_rescan"] = True
                             st.toast(f"✅ Welcome, {fresh_s.get('full_name') or fresh_s.get('name')}!", icon="🎉")
                             st.rerun()
                         else:
