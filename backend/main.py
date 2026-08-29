@@ -4098,14 +4098,14 @@ def agent_verify_and_extract_direct_job_url(title: str, company: str, location: 
             from google.genai import types
             client = genai.Client(api_key=gemini_key)
             verify_prompt = f"""
-            [DEDICATED DEEP JOB REQUISITION URL EXTRACTOR AGENT]
+            [DEDICATED GLOBAL DEEP JOB REQUISITION URL EXTRACTOR AGENT]
             Find the EXACT DIRECT DEEP JOB REQUISITION URL on the web for active hiring vacancy:
             Job Title: '{title}'
             Hiring Company: '{company}'
             Location: '{location}'
 
             Instructions:
-            - Perform live Google Search grounding to find the exact direct job posting URL on Google Careers, official corporate career portal, LinkedIn Jobs View (e.g. linkedin.com/jobs/view/...), Workday, Lever, or Greenhouse.
+            - Perform live Google Search grounding across the ENTIRE WORLDWIDE INTERNET — searching ANY company globally (Google Careers, Apple, Microsoft, Siemens, Tata, Sun Pharma, Workday, Lever, Greenhouse, LinkedIn Jobs View, Naukri, etc.) without any restriction to find the exact direct deep job requisition URL for '{title}' at '{company}'.
             - DO NOT return search query links or generic homepages like linkedin.com/jobs/.
             - Return strictly a JSON object: {{"direct_job_url": "https://..."}}
             """
