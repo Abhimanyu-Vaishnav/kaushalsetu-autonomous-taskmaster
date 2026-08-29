@@ -3211,6 +3211,100 @@ def agent_synthesize_resume_dossier(name: str, track: str, resume_raw: str, skil
         "soft_skills": ["Problem Solving", "Technical Leadership", "System Optimization"]
     }
 
+def agent_generate_ai_portfolio_theme(track_name: str, tech_skills: list) -> dict:
+    """Uses Gemini 2.5 AI to dynamically decide visual theme, color palette, domain label, and SVG metrics for ANY custom course (Humanities, Video Editing, Culinary Arts, etc.)."""
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if gemini_key:
+        try:
+            from google import genai
+            client = genai.Client(api_key=gemini_key)
+            prompt = f"""
+            Analyze the course/track '{track_name}' and skills {tech_skills}.
+            Design a custom visual theme specification for a portfolio.
+            Return strictly a JSON object with:
+            - "accent_color": hex color (e.g. "#ff2a6d", "#10b981", "#a855f7", "#f59e0b", "#06b6d4")
+            - "secondary_color": hex color (e.g. "#05d9e8", "#fbbf24", "#ec4899", "#38bdf8")
+            - "theme_gradient": CSS linear gradient string e.g. "linear-gradient(135deg, #2a0845 0%, #6441a5 50%, #050505 100%)"
+            - "domain_label": Professional title string
+            - "metric_1_text": Metric 1 label and value string e.g. "Color Grade Precision: 99.4%"
+            - "metric_2_text": Metric 2 label and value string e.g. "Render Timeline Sync: 100%"
+            """
+            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            if resp and resp.text:
+                match = re.search(r'\{.*\}', resp.text, re.DOTALL)
+                if match:
+                    res_json = json.loads(match.group(0))
+                    if isinstance(res_json, dict) and "accent_color" in res_json:
+                        return res_json
+        except Exception:
+            pass
+
+    # Universal Heuristic Visual Mapper for Any Unseen Track (Video Editing, Humanities, Culinary, Design, etc.)
+    t_lower = str(track_name).lower()
+    if any(w in t_lower for w in ["video", "edit", "film", "media", "motion", "animat", "creative", "design", "graphic", "vfx"]):
+        return {
+            "accent_color": "#ff2a6d",
+            "secondary_color": "#05d9e8",
+            "theme_gradient": "linear-gradient(135deg, #2a0845 0%, #6441a5 50%, #050505 100%)",
+            "domain_label": "Creative Video & Motion Graphics Specialist",
+            "metric_1_text": "Timeline Render & Color Grade: 99.4%",
+            "metric_2_text": "Multitrack Audio Sync: 100%"
+        }
+    elif any(w in t_lower for w in ["humanities", "arts", "history", "sociology", "literature", "policy", "social", "psychology", "teaching"]):
+        return {
+            "accent_color": "#a855f7",
+            "secondary_color": "#ec4899",
+            "theme_gradient": "linear-gradient(135deg, #3b0764 0%, #581c87 50%, #030712 100%)",
+            "domain_label": "Humanities, Social Policy & Academic Fellow",
+            "metric_1_text": "Qualitative Analysis Rigor: 98.8%",
+            "metric_2_text": "Policy Synthesis Score: 99.5%"
+        }
+    elif any(w in t_lower for w in ["account", "finance", "tally", "tax", "banking", "audit", "commerce", "ca", "cpa", "business"]):
+        return {
+            "accent_color": "#10b981",
+            "secondary_color": "#fbbf24",
+            "theme_gradient": "linear-gradient(135deg, #022c22 0%, #064e3b 50%, #030712 100%)",
+            "domain_label": "Certified Financial Accountant & Ledger Auditor",
+            "metric_1_text": "GAAP Ledger Audit: 99.4%",
+            "metric_2_text": "Tax Reconciliation: 100%"
+        }
+    elif any(w in t_lower for w in ["web", "python", "full", "software", "code", "cloud", "frontend", "backend", "developer", "java", "c++", "cs", "it"]):
+        return {
+            "accent_color": "#6366f1",
+            "secondary_color": "#38bdf8",
+            "theme_gradient": "linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #020617 100%)",
+            "domain_label": "Full Stack Software & Cloud Systems Engineer",
+            "metric_1_text": "Code Velocity: 96%",
+            "metric_2_text": "API Latency: 38ms"
+        }
+    elif any(w in t_lower for w in ["solar", "renew", "green", "power", "energy"]):
+        return {
+            "accent_color": "#059669",
+            "secondary_color": "#34d399",
+            "theme_gradient": "linear-gradient(135deg, #022c22 0%, #064e3b 50%, #020617 100%)",
+            "domain_label": "Solar SCADA & Inverter Telemetry Engineer",
+            "metric_1_text": "MPPT Efficiency: 99.1%",
+            "metric_2_text": "Grid Sync: 100%"
+        }
+    elif any(w in t_lower for w in ["electric", "ev", "battery", "powertrain", "automotive"]):
+        return {
+            "accent_color": "#f59e0b",
+            "secondary_color": "#ef4444",
+            "theme_gradient": "linear-gradient(135deg, #451a03 0%, #78350f 50%, #0f172a 100%)",
+            "domain_label": "EV Battery Systems & ECU Diagnostic Specialist",
+            "metric_1_text": "CAN-Bus Sync: 99.8%",
+            "metric_2_text": "Thermal Balancing: 98.6%"
+        }
+    else:
+        return {
+            "accent_color": "#06b6d4",
+            "secondary_color": "#f43f5e",
+            "theme_gradient": "linear-gradient(135deg, #0c4a6e 0%, #0f172a 50%, #020617 100%)",
+            "domain_label": f"{track_name} Specialist",
+            "metric_1_text": "Domain Competency: 98.5%",
+            "metric_2_text": "Quality Standards Match: 100%"
+        }
+
 # --- PART 3: HYPER-PERSONALIZED AI DYNAMIC PORTFOLIO GENERATOR ---
 def generate_dynamic_ai_portfolio(student_id: str) -> str:
     """Generates an individual, animated, glassmorphic world-class portfolio HTML tailored to candidate's profile."""
@@ -3274,97 +3368,28 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 {"title": "Automated Sensor Fault Identification System", "desc": "Implemented diagnostic isolation scripts to detect early drift and insulation breakdown in high-voltage industrial actuators.", "tag": "Verification Lab"}
             ]
 
-        # Multi-Domain Adaptive Theme & Visual Engine (5 Distinct Visual Layout Themes)
-        track_lower = track.lower()
-        if any(w in track_lower for w in ["account", "finance", "tally", "tax", "banking", "audit", "commerce", "ca", "cpa", "business"]):
-            accent_color = "#10b981"
-            secondary_color = "#fbbf24"
-            theme_gradient = "linear-gradient(135deg, #022c22 0%, #064e3b 50%, #030712 100%)"
-            domain_label = "Certified Financial Accountant & Ledger Auditor"
-            chart_svg = f"""
-            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #10b98166);">
-                <defs>
-                    <linearGradient id="grad_acc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#10b981" stop-opacity="0.4"/><stop offset="100%" stop-color="#022c22" stop-opacity="0"/></linearGradient>
-                    <linearGradient id="line_grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#fbbf24"/></linearGradient>
-                </defs>
-                <path d="M 20 140 L 90 100 L 170 120 L 250 40 L 380 30 M 380 30 L 430 50" fill="none" stroke="url(#line_grad)" stroke-width="4" stroke-linecap="round" class="animated-path"/>
-                <path d="M 20 140 L 90 100 L 170 120 L 250 40 L 380 30 L 430 50 L 430 150 L 20 150 Z" fill="url(#grad_acc)"/>
-                <circle cx="250" cy="40" r="6" fill="#fbbf24" class="pulse-node"/>
-                <circle cx="380" cy="30" r="6" fill="#34d399" class="pulse-node"/>
-                <text x="255" y="32" fill="#fbbf24" font-size="11" font-weight="bold">GAAP Ledger Audit: 99.4%</text>
-                <text x="270" y="110" fill="#34d399" font-size="11" font-weight="bold">Tax Reconciliation: 100%</text>
-            </svg>
-            """
-        elif any(w in track_lower for w in ["web", "python", "full", "software", "code", "cloud", "frontend", "backend", "developer", "java", "c++", "cs", "it"]):
-            accent_color = "#6366f1"
-            secondary_color = "#38bdf8"
-            theme_gradient = "linear-gradient(135deg, #090d16 0%, #1e1b4b 50%, #020617 100%)"
-            domain_label = "Full Stack Software & Cloud Systems Engineer"
-            chart_svg = f"""
-            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #6366f166);">
-                <defs>
-                    <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity="0.4"/><stop offset="100%" stop-color="#020617" stop-opacity="0"/></linearGradient>
-                    <linearGradient id="line_grad2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#6366f1"/><stop offset="50%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#34d399"/></linearGradient>
-                </defs>
-                <path d="M 20 130 Q 80 40 140 100 T 260 50 T 380 35 L 430 45" fill="none" stroke="url(#line_grad2)" stroke-width="4" stroke-linecap="round" class="animated-path"/>
-                <path d="M 20 130 Q 80 40 140 100 T 260 50 T 380 35 L 430 45 L 430 150 L 20 150 Z" fill="url(#grad1)"/>
-                <circle cx="140" cy="100" r="6" fill="#38bdf8" class="pulse-node"/>
-                <circle cx="260" cy="50" r="6" fill="#34d399" class="pulse-node"/>
-                <circle cx="380" cy="35" r="6" fill="#818cf8" class="pulse-node"/>
-                <text x="145" y="90" fill="#38bdf8" font-size="11" font-weight="bold">Code Velocity: 96%</text>
-                <text x="265" y="40" fill="#34d399" font-size="11" font-weight="bold">API Latency: 38ms</text>
-                <text x="325" y="25" fill="#818cf8" font-size="11" font-weight="bold">CI/CD Pass: 100%</text>
-            </svg>
-            """
-        elif any(w in track_lower for w in ["solar", "renew", "green", "power", "energy"]):
-            accent_color = "#059669"
-            secondary_color = "#34d399"
-            theme_gradient = "linear-gradient(135deg, #022c22 0%, #064e3b 50%, #020617 100%)"
-            domain_label = "Solar SCADA & Inverter Telemetry Engineer"
-            chart_svg = f"""
-            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #05966966);">
-                <defs>
-                    <linearGradient id="grad_sol" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#059669" stop-opacity="0.4"/><stop offset="100%" stop-color="#020617" stop-opacity="0"/></linearGradient>
-                </defs>
-                <path d="M 20 120 L 110 60 L 200 90 L 290 30 L 390 40 L 430 20" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" class="animated-path"/>
-                <path d="M 20 120 L 110 60 L 200 90 L 290 30 L 390 40 L 430 20 L 430 150 L 20 150 Z" fill="url(#grad_sol)"/>
-                <circle cx="290" cy="30" r="6" fill="#fbbf24" class="pulse-node"/>
-                <text x="295" y="25" fill="#fbbf24" font-size="11" font-weight="bold">MPPT Efficiency: 99.1%</text>
-            </svg>
-            """
-        elif any(w in track_lower for w in ["electric", "ev", "battery", "powertrain", "automotive"]):
-            accent_color = "#f59e0b"
-            secondary_color = "#ef4444"
-            theme_gradient = "linear-gradient(135deg, #451a03 0%, #78350f 50%, #0f172a 100%)"
-            domain_label = "EV Battery Systems & ECU Diagnostic Specialist"
-            chart_svg = f"""
-            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #f59e0b66);">
-                <defs>
-                    <linearGradient id="grad_ev" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.4"/><stop offset="100%" stop-color="#0f172a" stop-opacity="0"/></linearGradient>
-                </defs>
-                <path d="M 20 130 L 90 70 L 180 110 L 270 40 L 360 80 L 430 25" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" class="animated-path"/>
-                <path d="M 20 130 L 90 70 L 180 110 L 270 40 L 360 80 L 430 25 L 430 150 L 20 150 Z" fill="url(#grad_ev)"/>
-                <circle cx="270" cy="40" r="6" fill="#ef4444" class="pulse-node"/>
-                <text x="275" y="35" fill="#ef4444" font-size="11" font-weight="bold">CAN-Bus Sync: 99.8%</text>
-            </svg>
-            """
-        else:
-            accent_color = "#3b82f6"
-            secondary_color = "#60a5fa"
-            theme_gradient = "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #020617 100%)"
-            domain_label = "Industrial Automation & Technical Specialist"
-            chart_svg = f"""
-            <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px #3b82f666);">
-                <defs>
-                    <linearGradient id="grad_ind" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.4"/><stop offset="100%" stop-color="#020617" stop-opacity="0"/></linearGradient>
-                </defs>
-                <path d="M 20 130 L 100 90 L 180 110 L 260 40 L 380 60 L 430 30" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" class="animated-path"/>
-                <path d="M 20 130 L 100 90 L 180 110 L 260 40 L 380 60 L 430 30 L 430 150 L 20 150 Z" fill="url(#grad_ind)"/>
-                <circle cx="260" cy="40" r="6" fill="#60a5fa" class="pulse-node"/>
-                <circle cx="430" cy="30" r="6" fill="#34d399" class="pulse-node"/>
-                <text x="270" y="35" fill="#60a5fa" font-size="11" font-weight="bold">PLC Circuit Response: 98.2%</text>
-            </svg>
-            """
+        # Gemini 2.5 AI Universal Dynamic Theme & Visual Specification Engine
+        ai_theme = agent_generate_ai_portfolio_theme(track, tech_skills)
+        accent_color = ai_theme.get("accent_color", "#3b82f6")
+        secondary_color = ai_theme.get("secondary_color", "#60a5fa")
+        theme_gradient = ai_theme.get("theme_gradient", "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #020617 100%)")
+        domain_label = ai_theme.get("domain_label", f"{track} Specialist")
+        m1_text = ai_theme.get("metric_1_text", "Domain Competency: 98.5%")
+        m2_text = ai_theme.get("metric_2_text", "Quality Standards Match: 100%")
+
+        chart_svg = f"""
+        <svg viewBox="0 0 450 160" style="width: 100%; height: 160px; filter: drop-shadow(0 0 14px {accent_color}66);">
+            <defs>
+                <linearGradient id="grad_dyn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="{accent_color}" stop-opacity="0.4"/><stop offset="100%" stop-color="#020617" stop-opacity="0"/></linearGradient>
+            </defs>
+            <path d="M 20 130 L 100 90 L 180 110 L 260 40 L 380 60 L 430 30" fill="none" stroke="{accent_color}" stroke-width="4" stroke-linecap="round" class="animated-path"/>
+            <path d="M 20 130 L 100 90 L 180 110 L 260 40 L 380 60 L 430 30 L 430 150 L 20 150 Z" fill="url(#grad_dyn)"/>
+            <circle cx="260" cy="40" r="6" fill="{secondary_color}" class="pulse-node"/>
+            <circle cx="430" cy="30" r="6" fill="#34d399" class="pulse-node"/>
+            <text x="270" y="35" fill="{secondary_color}" font-size="11" font-weight="bold">{m1_text}</text>
+            <text x="120" y="100" fill="#34d399" font-size="11" font-weight="bold">{m2_text}</text>
+        </svg>
+        """
 
         grade = "Distinction (Grade A+)" if score >= 85 else ("Merit (Grade A)" if score >= 70 else "Certified (Grade B)")
         
