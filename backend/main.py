@@ -572,12 +572,28 @@ def record_agent_activity_log(action_type: str, description: str, student_id: st
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        c.execute("PRAGMA table_info(agent_activity_logs)")
+        cols = {r[1] for r in c.fetchall()}
+
         log_id = f"LOG-{uuid.uuid4().hex[:8].upper()}"
         meta_json = json.dumps(metadata) if isinstance(metadata, dict) else "{}"
-        c.execute("""
-            INSERT INTO agent_activity_logs (id, institute_id, branch_id, student_id, action_type, description, metadata_json)
-            VALUES (?, 'INST-GLOBAL-01', ?, ?, ?, ?, ?)
-        """, (log_id, str(branch_id or ""), str(student_id or ""), str(action_type), str(description), meta_json))
+        s_id = str(student_id or "").strip()
+
+        fields = {"id": log_id}
+        if "institute_id" in cols: fields["institute_id"] = "INST-GLOBAL-01"
+        if "branch_id" in cols: fields["branch_id"] = str(branch_id or "")
+        if "student_id" in cols: fields["student_id"] = s_id
+        if "action_type" in cols: fields["action_type"] = str(action_type)
+        if "description" in cols: fields["description"] = str(description)
+        if "action" in cols: fields["action"] = str(action_type)
+        if "details" in cols: fields["details"] = str(description)
+        if "entity_id" in cols: fields["entity_id"] = s_id if s_id else log_id
+        if "entity_type" in cols: fields["entity_type"] = "student" if s_id else "agent"
+        if "metadata_json" in cols: fields["metadata_json"] = meta_json
+
+        col_str = ", ".join(fields.keys())
+        placeholders = ", ".join(["?"] * len(fields))
+        c.execute(f"INSERT INTO agent_activity_logs ({col_str}) VALUES ({placeholders})", list(fields.values()))
         conn.commit()
         conn.close()
     except Exception as ex:

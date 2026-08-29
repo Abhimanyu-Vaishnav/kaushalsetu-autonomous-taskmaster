@@ -1394,11 +1394,11 @@ def log_agent_activity(
         if "action_type" in cols: insert_fields["action_type"] = act_val
         if "details" in cols: insert_fields["details"] = det_val
         if "description" in cols: insert_fields["description"] = det_val
-        if "entity_type" in cols and entity_type: insert_fields["entity_type"] = entity_type
-        if "entity_id" in cols and e_id: insert_fields["entity_id"] = e_id
-        if "student_id" in cols and e_id: insert_fields["student_id"] = e_id
-        if "institute_id" in cols and institute_id: insert_fields["institute_id"] = institute_id
-        if "branch_id" in cols and branch_id: insert_fields["branch_id"] = branch_id
+        if "entity_type" in cols: insert_fields["entity_type"] = entity_type or ("student" if e_id else "agent")
+        if "entity_id" in cols: insert_fields["entity_id"] = e_id or log_id
+        if "student_id" in cols: insert_fields["student_id"] = e_id
+        if "institute_id" in cols: insert_fields["institute_id"] = institute_id or "INST-GLOBAL-01"
+        if "branch_id" in cols: insert_fields["branch_id"] = branch_id or ""
         if "metadata_json" in cols: insert_fields["metadata_json"] = json.dumps(metadata or {})
 
         col_str = ", ".join(insert_fields.keys())
