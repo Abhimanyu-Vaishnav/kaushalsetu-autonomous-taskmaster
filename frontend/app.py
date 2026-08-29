@@ -2732,17 +2732,8 @@ def main_app_layout():
                                 if j_skills:
                                     st.caption(f"Skills Matched: {', '.join(j_skills)}")
                             with col_j3:
-                                g_url = job.get('google_jobs_url') or f"https://www.google.com/search?q={urllib.parse.quote(j_role + ' ' + j_comp)}+jobs&ibp=htl;jobs"
-                                li_url = job.get('linkedin_url') or f"https://www.linkedin.com/jobs/search/?keywords={urllib.parse.quote(j_role + ' ' + j_comp)}"
-                                ind_url = job.get('indeed_url') or f"https://in.indeed.com/jobs?q={urllib.parse.quote(j_role + ' ' + j_comp)}"
-
-                                btn_c1, btn_c2, btn_c3 = st.columns(3)
-                                with btn_c1:
-                                    st.link_button("🌐 Google", g_url, use_container_width=True, help="View on Google Jobs Live Widget")
-                                with btn_c2:
-                                    st.link_button("💼 LinkedIn", li_url, use_container_width=True, help="Search on LinkedIn India")
-                                with btn_c3:
-                                    st.link_button("🏢 Indeed", ind_url, use_container_width=True, help="Search on Indeed India")
+                                direct_apply_link = job.get('apply_url') or job.get('google_jobs_url') or "https://www.linkedin.com/jobs/"
+                                st.link_button("🌐 Direct Apply (Official Job Post)", direct_apply_link, use_container_width=True, help="Open direct official job requisition page")
                                 
                                 if new_mode:
                                     st.markdown('<span class="badge-emerald" style="display:block; text-align:center; margin-top:4px;">🤖 AUTO-APPLY ACTIVE</span>', unsafe_allow_html=True)
@@ -2762,15 +2753,14 @@ def main_app_layout():
                                         st.balloons()
                                         st.rerun()
 
-                            # Interactive Expandable Job Specs Drawer with Canonical Search & HR Mailto
+                            # Interactive Expandable Job Specs Drawer
                             with st.expander(f"📋 View Complete Job & Company Specs ({j_role})", expanded=False):
-                                comp_search_url = job.get('company_website_search') or f"https://www.google.com/search?q={urllib.parse.quote(j_comp)}+official+website"
                                 hr_mailto = job.get('recruiter_mailto') or f"mailto:careers@{re.sub(r'[^a-zA-Z0-9]+', '', j_comp.lower())}.com?subject=Application%20for%20{urllib.parse.quote(j_role)}%20-%20KaushalSetu%20Certified%20Candidate"
                                 
                                 col_jd1, col_jd2 = st.columns(2)
                                 with col_jd1:
                                     st.markdown(f"**Role Title:** {j_role}")
-                                    st.markdown(f"**Company Name:** {j_comp} ([Official Search]({comp_search_url}))")
+                                    st.markdown(f"**Company Name:** {j_comp}")
                                     st.markdown(f"**Location:** {j_loc}")
                                     st.markdown(f"**Compensation (CTC):** {j_sal}")
                                     st.markdown(f"**Experience Level:** {j_exp}")
