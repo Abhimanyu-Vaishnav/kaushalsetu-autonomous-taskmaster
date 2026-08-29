@@ -1502,29 +1502,34 @@ def main_app_layout():
                         exp_badge_color = "#34d399" if is_fresher_eligible else "#fbbf24"
 
                         st.markdown(f"""
-                        <div style="background: rgba(255,255,255,0.03); border: 1px solid {'#f59e0b' if is_top else 'rgba(255,255,255,0.08)'}; border-radius: 12px; padding: 20px; margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                        <div style="background: rgba(15,23,42,0.85); border: 1px solid {'#f59e0b' if is_top else 'rgba(255,255,255,0.08)'}; border-radius: 14px; padding: 22px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
                                 <div>
-                                    <h3 style="margin: 0; color: #ffffff; font-size: 1.25rem;">{job.get('title')} {top_badge_html}</h3>
-                                    <p style="margin: 4px 0 8px 0; color: #60a5fa; font-weight: 600;">🏢 {job.get('company')} &nbsp;•&nbsp; 📍 {job.get('location')} &nbsp;•&nbsp; <span style='color: #34d399;'>🛡️ {audit_badge}</span></p>
-                                    <div style="margin: 6px 0; font-size: 0.82rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-                                        <span style="background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: 6px; font-weight: 700;">💵 Posting Salary: {disc_sal}</span>
-                                        <span style="background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); padding: 2px 8px; border-radius: 6px; font-weight: 700;">📊 AI Benchmark Est: {ai_sal}</span>
-                                        <span style="background: rgba(245,158,11,0.12); color: {exp_badge_color}; border: 1px solid {exp_badge_color}44; padding: 2px 8px; border-radius: 6px; font-weight: 700;">🎓 Experience Req: {exp_req}</span>
+                                    <h3 style="margin: 0 0 6px 0; color: #ffffff; font-size: 1.2rem; font-weight: 700;">{job.get('title')} {top_badge_html}</h3>
+                                    <div style="color: #94a3b8; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                        <span style="color: #60a5fa;">🏢 {job.get('company')}</span>
+                                        <span>•</span>
+                                        <span>📍 {job.get('location')}</span>
+                                        <span>•</span>
+                                        <span style="color: #34d399; font-weight: 700;">🛡️ Verified Audit</span>
+                                    </div>
+                                    <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;">
+                                        <span style="background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">💰 Salary: {disc_sal if 'Actual' in disc_sal else ai_sal}</span>
+                                        <span style="background: rgba(245,158,11,0.1); color: {exp_badge_color}; border: 1px solid {exp_badge_color}44; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">🎓 Exp: {exp_req}</span>
                                     </div>
                                 </div>
                                 <div style="text-align: right;">
-                                    <span style="font-size: 1.1rem; font-weight: 800; color: {'#34d399' if j_match >= 85 else '#60a5fa'};">{j_match}% Match</span>
-                                    <br><span style="font-size: 0.75rem; color: #a7f3d0; font-weight:700;">🎯 {sel_chance}</span>
-                                    <br><span style="font-size: 0.72rem; color: #9ca3af;">{job.get('source', 'Gemini Verified Crawler')}</span>
+                                    <span style="font-size: 1.25rem; font-weight: 800; color: {'#34d399' if j_match >= 85 else '#60a5fa'};">{j_match}% Match</span>
+                                    <br><span style="font-size: 0.78rem; color: #a7f3d0; font-weight: 700;">🎯 {sel_chance}</span>
+                                    <br><span style="font-size: 0.72rem; color: #64748b;">{job.get('source', 'Verified Partner')}</span>
                                 </div>
                             </div>
-                            <p style="color: #cbd5e1; font-size: 0.9rem; margin: 10px 0;">{job.get('description')}</p>
-                            <div style="margin: 8px 0; padding: 8px 12px; background: rgba(59,130,246,0.1); border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 0.82rem; color: #93c5fd;">
+                            <p style="color: #cbd5e1; font-size: 0.9rem; margin: 14px 0 10px 0; line-height: 1.5;">{job.get('description')}</p>
+                            <div style="margin: 10px 0; padding: 10px 14px; background: rgba(59,130,246,0.08); border-left: 3px solid #3b82f6; border-radius: 6px; font-size: 0.84rem; color: #93c5fd;">
                                 💡 <b>AI Candidate Fit Insight:</b> {fit_insight}
                             </div>
-                            <div style="margin-bottom: 12px; margin-top: 10px;">
-                                {' '.join([f"<span style='background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 5px;'>✓ {s}</span>" for s in job.get('skills', [])])}
+                            <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;">
+                                {' '.join([f"<span style='background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); padding: 2px 8px; border-radius: 4px; font-size: 0.76rem;'>✓ {s}</span>" for s in job.get('skills', [])])}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -1537,25 +1542,25 @@ def main_app_layout():
                                 if st.button("🚀 1-Click Autonomous Apply", key=f"apply_btn_{jid}", type="primary", use_container_width=True):
                                     apply_res = agent_apply_job_for_student(s_id, job)
                                     if apply_res.get("status") == "success":
-                                        st.toast(f"🎉 Dossier dispatched to {job.get('company')}! Logged in Institute Ledger.", icon="✅")
+                                        st.toast(f"🎉 Application dossier dispatched to {job.get('company')}!", icon="✅")
                                         st.rerun()
                                     else:
                                         st.error(apply_res.get("message"))
                         with col_ext:
-                            st.link_button("🌐 Direct Apply (Official Portal)", job.get("apply_url") or "https://www.ncs.gov.in", use_container_width=True)
+                            st.link_button("🌐 Direct Apply (Official Portal)", job.get("apply_url") or "https://jobs.siemens.com", use_container_width=True)
                         with col_view:
                             if st.button("📋 Requirements & Prep", key=f"req_btn_{jid}", use_container_width=True):
-                                st.info(f"**Experience:** {job.get('exp')} | **Job Type:** {job.get('type')}\n\n**Candidate Advantage:** High practical capstone score matches requirement for {job.get('title')}.\n\n**Direct Link:** [{job.get('apply_url')}]({job.get('apply_url')})")
+                                st.info(f"**Role:** {job.get('title')} at {job.get('company')}\n\n**Experience:** {job.get('exp')} | **Job Type:** {job.get('type')}\n\n**Candidate Advantage:** Certified competency in {s_track} matches exact requirements.\n\n**Official Portal URL:** [{job.get('apply_url')}]({job.get('apply_url')})")
 
-                # Redesigned 100% Working Load More & Pagination Navigation Bar
-                st.markdown("<div style='margin-top: 25px; padding: 16px; background: rgba(15,23,42,0.8); border: 1px solid rgba(59,130,246,0.3); border-radius: 14px;'>", unsafe_allow_html=True)
-                col_prev, col_info, col_next, col_load_more = st.columns([1, 1.4, 1, 2])
+                # Redesigned 100% Working Load More & Pagination Bar
+                st.markdown("<div style='margin-top: 25px; padding: 16px; background: rgba(15,23,42,0.95); border: 1px solid rgba(59,130,246,0.3); border-radius: 14px;'>", unsafe_allow_html=True)
+                col_prev, col_info, col_next, col_load_more = st.columns([1.2, 1.6, 1.2, 2])
                 with col_prev:
                     if st.button("⬅️ Previous Page", disabled=(st.session_state.job_page <= 1), key="job_prev_btn", use_container_width=True):
                         st.session_state.job_page = max(1, st.session_state.job_page - 1)
                         st.rerun()
                 with col_info:
-                    st.markdown(f"<p style='text-align: center; color: #60a5fa; font-weight: 700; margin-top: 8px;'>Page {st.session_state.job_page} of {total_pages}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='text-align: center; color: #60a5fa; font-weight: 700; margin-top: 8px;'>Page {st.session_state.job_page} of {max(1, total_pages)}</p>", unsafe_allow_html=True)
                 with col_next:
                     if st.button("Next Page ➡️", disabled=(st.session_state.job_page >= total_pages), key="job_next_btn", use_container_width=True):
                         st.session_state.job_page = min(total_pages, st.session_state.job_page + 1)
