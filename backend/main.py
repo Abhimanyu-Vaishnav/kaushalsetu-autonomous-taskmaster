@@ -4169,76 +4169,78 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
     skills_text = ", ".join(skills) if isinstance(skills, list) and len(skills) > 0 else f"{track} Diagnostics, Quality Control"
     raw_crawled = []
 
-    # --- STEP 1: Autonomous Web Crawling Agent with Gemini 2.5 Google Search Grounding ---
+    # --- STEP 1: Autonomous Web Crawling Agent with Gemini Google Search Grounding ---
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
-        for attempt in range(2):
-            try:
-                from google import genai
-                from google.genai import types
-                client = genai.Client(api_key=gemini_key)
-                crawl_prompt = f"""
-                [AUTONOMOUS GLOBAL GOOGLE SEARCH GROUNDED CRAWLER & REAL JOB VERIFICATION AGENT - ATTEMPT {attempt+1}]
-                Candidate Track/Course: '{track}'
-                Candidate Certified Skills: '{skills_text}'
-                Primary Location Preference: '{location}'
+        models_to_try = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-flash-latest"]
+        for m_name in models_to_try:
+            if raw_crawled:
+                break
+            for attempt in range(2):
+                try:
+                    from google import genai
+                    from google.genai import types
+                    client = genai.Client(api_key=gemini_key)
+                    crawl_prompt = f"""
+                    [AUTONOMOUS GLOBAL GOOGLE SEARCH GROUNDED CRAWLER & REAL JOB VERIFICATION AGENT - ATTEMPT {attempt+1}]
+                    Candidate Track/Course: '{track}'
+                    Candidate Certified Skills: '{skills_text}'
+                    Primary Location Preference: '{location}'
 
-                Instructions & Constraints:
-                1. Perform LIVE Google Search grounding across the ENTIRE WORLDWIDE INTERNET — searching ANY hiring company globally (MNCs, startups, universities, research institutions, Workday, Lever, Greenhouse, LinkedIn Jobs, Naukri, etc.) to discover real, active job postings for candidate's course track '{track}' and skills '{skills_text}'.
-                2. For each grounded posting, extract the EXACT DIRECT JOB REQUISITION URL (e.g. 'https://www.google.com/about/careers/applications/jobs/results/88496073537921734-software-engineer-google-pay' or 'https://careers.tatamotors.com/job-detail/10293' or 'https://www.linkedin.com/jobs/view/392819283/'). DO NOT return search query links or generic homepages.
-                3. Verify that the job title, hiring company name, work location, required technical skills, and 2-sentence description match the actual live web posting data extracted during the search.
-                4. Prioritize local vacancies in '{location}' first. If local vacancies are limited, expand to pan-India, remote/hybrid, or global opportunities for this track.
+                    Instructions & Constraints:
+                    1. Perform LIVE Google Search grounding across the ENTIRE WORLDWIDE INTERNET — searching ANY hiring company globally (MNCs, startups, universities, research institutions, Workday, Lever, Greenhouse, LinkedIn Jobs, Naukri, etc.) to discover real, active job postings for candidate's course track '{track}' and skills '{skills_text}'.
+                    2. For each grounded posting, extract the EXACT DIRECT JOB REQUISITION URL (e.g. 'https://www.google.com/about/careers/applications/jobs/results/88496073537921734-software-engineer-google-pay' or 'https://careers.tatamotors.com/job-detail/10293' or 'https://www.linkedin.com/jobs/view/392819283/'). DO NOT return search query links or generic homepages.
+                    3. Verify that the job title, hiring company name, work location, required technical skills, and 2-sentence description match the actual live web posting data extracted during the search.
+                    4. Prioritize local vacancies in '{location}' first. If local vacancies are limited, expand to pan-India, remote/hybrid, or global opportunities for this track.
 
-                Return strictly a JSON list of 10 objects:
-                - "title": exact clean job title from active posting
-                - "company": hiring organization or company name
-                - "location": work location (City, Hub / Remote / Hybrid)
-                - "disclosed_salary": exact salary stated in post or "Not Disclosed in Posting"
-                - "ai_estimated_salary": estimated LPA benchmark for {track}
-                - "type": "Full-Time" | "Remote" | "Hybrid"
-                - "exp": "0-1 Years (Freshers Eligible)" OR "1-3 Years Experience Required"
-                - "is_fresher_eligible": true or false
-                - "skills": list of 4 required technical skills from the post
-                - "description": 2-sentence summary of actual role duties from the post
-                - "source": "LinkedIn Live Job View" | "Naukri Verified" | "Official Corporate Portal"
-                - "apply_url": exact direct application / job requisition link
-                - "student_fit_insight": 1-sentence AI candidate fit explanation
-                - "ai_crawl_reasoning": 2-sentence AI decisioning explaining WHY this job was crawled for this candidate's course '{track}'
-                - "ai_match_breakdown": "Competency Alignment: 35% + Proximity: 25% + Experience Fit: 20% + Capstone Score: 12% = Total Match Score"
-                """
-                resp = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=crawl_prompt,
-                    config=types.GenerateContentConfig(
-                        tools=[{"google_search": {}}],
-                        temperature=0.3 + (attempt * 0.2)
+                    Return strictly a JSON list of 10 objects:
+                    - "title": exact clean job title from active posting
+                    - "company": hiring organization or company name
+                    - "location": work location (City, Hub / Remote / Hybrid)
+                    - "disclosed_salary": exact salary stated in post or "Not Disclosed in Posting"
+                    - "ai_estimated_salary": estimated LPA benchmark for {track}
+                    - "type": "Full-Time" | "Remote" | "Hybrid"
+                    - "exp": "0-1 Years (Freshers Eligible)" OR "1-3 Years Experience Required"
+                    - "is_fresher_eligible": true or false
+                    - "skills": list of 4 required technical skills from the post
+                    - "description": 2-sentence summary of actual role duties from the post
+                    - "source": "LinkedIn Live Job View" | "Naukri Verified" | "Official Corporate Portal"
+                    - "apply_url": exact direct application / job requisition link
+                    - "student_fit_insight": 1-sentence AI candidate fit explanation
+                    - "ai_crawl_reasoning": 2-sentence AI decisioning explaining WHY this job was crawled for this candidate's course '{track}'
+                    - "ai_match_breakdown": "Competency Alignment: 35% + Proximity: 25% + Experience Fit: 20% + Capstone Score: 12% = Total Match Score"
+                    """
+                    resp = client.models.generate_content(
+                        model=m_name,
+                        contents=crawl_prompt,
+                        config=types.GenerateContentConfig(
+                            tools=[types.Tool(google_search=types.GoogleSearch())],
+                            temperature=0.3 + (attempt * 0.2)
+                        )
                     )
-                )
-                if resp and resp.text:
-                    raw_txt = resp.text
-                    raw_txt = re.sub(r'```json\s*', '', raw_txt, flags=re.I)
-                    raw_txt = re.sub(r'```\s*', '', raw_txt)
-                    
-                    # Extract JSON array ignoring trailing citation markers like [1], [2]
-                    match = re.search(r'\[\s*\{.*\}\s*\]', raw_txt, re.DOTALL)
-                    if match:
-                        try:
-                            parsed = json.loads(match.group(0))
-                            if isinstance(parsed, list) and len(parsed) > 0:
-                                raw_crawled = parsed
-                                break
-                        except Exception as j_err:
-                            print(f"[JSON DECODE ATTEMPT {attempt+1}] {j_err}")
-                            # Secondary fast JSON extraction pass if grounding text messed up brackets
-                            fix_prompt = f"Extract only the raw JSON array of job objects from this text:\n\n{raw_txt[:4000]}"
-                            fix_resp = client.models.generate_content(model="gemini-2.5-flash", contents=fix_prompt)
-                            if fix_resp and fix_resp.text:
-                                m2 = re.search(r'\[\s*\{.*\}\s*\]', fix_resp.text, re.DOTALL)
-                                if m2:
-                                    raw_crawled = json.loads(m2.group(0))
+                    if resp and resp.text:
+                        raw_txt = resp.text
+                        raw_txt = re.sub(r'```json\s*', '', raw_txt, flags=re.I)
+                        raw_txt = re.sub(r'```\s*', '', raw_txt)
+                        
+                        match = re.search(r'\[\s*\{.*\}\s*\]', raw_txt, re.DOTALL)
+                        if match:
+                            try:
+                                parsed = json.loads(match.group(0))
+                                if isinstance(parsed, list) and len(parsed) > 0:
+                                    raw_crawled = parsed
                                     break
-            except Exception as ex:
-                print(f"[CRAWLER STEP 1 WARNING ATTEMPT {attempt+1}] {ex}")
+                            except Exception as j_err:
+                                print(f"[JSON DECODE ATTEMPT {attempt+1}] {j_err}")
+                                fix_prompt = f"Extract only the raw JSON array of job objects from this text:\n\n{raw_txt[:4000]}"
+                                fix_resp = client.models.generate_content(model=m_name, contents=fix_prompt)
+                                if fix_resp and fix_resp.text:
+                                    m2 = re.search(r'\[\s*\{.*\}\s*\]', fix_resp.text, re.DOTALL)
+                                    if m2:
+                                        raw_crawled = json.loads(m2.group(0))
+                                        break
+                except Exception as ex:
+                    print(f"[CRAWLER MODEL {m_name} ATTEMPT {attempt+1} NOTICE] {ex}")
 
     # Fallback AI Live Synthesis if search grounding encounters API quota limits
     if not raw_crawled and gemini_key:
