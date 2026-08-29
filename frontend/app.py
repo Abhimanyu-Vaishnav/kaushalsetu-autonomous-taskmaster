@@ -54,10 +54,10 @@ try:
     from backend.database import DB_PATH, get_db, init_complete_db
 except ImportError:
     from database import DB_PATH, get_db, init_complete_db
-
 try:
     from backend.main import (
         direct_get_agent_logs,
+        direct_clear_all_agent_logs,
         direct_create_student,
         direct_update_student,
         direct_delete_student,
@@ -100,6 +100,7 @@ try:
 except ImportError:
     from main import (
         direct_get_agent_logs,
+        direct_clear_all_agent_logs,
         direct_create_student,
         direct_update_student,
         direct_delete_student,
