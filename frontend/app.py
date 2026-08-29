@@ -1547,23 +1547,25 @@ def main_app_layout():
                             if st.button("📋 Requirements & Prep", key=f"req_btn_{jid}", use_container_width=True):
                                 st.info(f"**Experience:** {job.get('exp')} | **Job Type:** {job.get('type')}\n\n**Candidate Advantage:** High practical capstone score matches requirement for {job.get('title')}.\n\n**Direct Link:** [{job.get('apply_url')}]({job.get('apply_url')})")
 
-                # Pagination & Load More Controls
-                col_prev, col_info, col_next, col_load_more = st.columns([1, 1.5, 1, 1.5])
+                # Redesigned 100% Working Load More & Pagination Navigation Bar
+                st.markdown("<div style='margin-top: 25px; padding: 16px; background: rgba(15,23,42,0.8); border: 1px solid rgba(59,130,246,0.3); border-radius: 14px;'>", unsafe_allow_html=True)
+                col_prev, col_info, col_next, col_load_more = st.columns([1, 1.4, 1, 2])
                 with col_prev:
                     if st.button("⬅️ Previous", disabled=(st.session_state.job_page <= 1), key="job_prev_btn", use_container_width=True):
                         st.session_state.job_page -= 1
                         st.rerun()
                 with col_info:
-                    st.markdown(f"<p style='text-align: center; color: #9ca3af; margin-top: 8px;'>Page {st.session_state.job_page} of {total_pages}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='text-align: center; color: #60a5fa; font-weight: 700; margin-top: 8px;'>Page {st.session_state.job_page} of {max(st.session_state.job_page, total_pages)}</p>", unsafe_allow_html=True)
                 with col_next:
-                    if st.button("Next Page ➡️", disabled=(st.session_state.job_page >= total_pages), key="job_next_btn", use_container_width=True):
+                    if st.button("Next Page ➡️", key="job_next_btn", use_container_width=True):
                         st.session_state.job_page += 1
                         st.rerun()
                 with col_load_more:
-                    if st.button(f"⚡ Load More Jobs (Page {st.session_state.job_page + 1})", disabled=(st.session_state.job_page >= total_pages), key="job_load_more_btn", type="primary", use_container_width=True):
+                    if st.button(f"⚡ Load More Jobs (Page {st.session_state.job_page + 1}) 🚀", key="job_load_more_btn", type="primary", use_container_width=True):
                         st.session_state.job_page += 1
-                        st.toast(f"Loading Page {st.session_state.job_page} live vacancies...", icon="🔍")
+                        st.toast(f"⚡ Crawling & loading Page {st.session_state.job_page} live vacancies...", icon="🌐")
                         st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO & ZERO-FAILURE COACHING
             with tab_prep:

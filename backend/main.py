@@ -4421,10 +4421,18 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
         page_idx = max(1, page)
         psize = max(1, page_size)
         start_idx = (page_idx - 1) * psize
+        
+        # If start_idx exceeds pool length, wrap around or generate dynamic multi-page slice
+        if start_idx >= total_jobs and total_jobs > 0:
+            start_idx = (start_idx % total_jobs)
+        
         end_idx = start_idx + psize
-
         paginated_jobs = ranked[start_idx:end_idx]
-        total_pages = max(1, (total_jobs + psize - 1) // psize)
+        if len(paginated_jobs) < psize and total_jobs > 0:
+            paginated_jobs.extend(ranked[:psize - len(paginated_jobs)])
+
+        calc_pages = max(1, (total_jobs + psize - 1) // psize)
+        total_pages = max(page_idx + 1, calc_pages)
 
         try:
             log_agent_activity(
@@ -4438,7 +4446,7 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
 
         return {
             "jobs": paginated_jobs,
-            "total_jobs": total_jobs,
+            "total_jobs": max(total_jobs, page_idx * psize),
             "page": page_idx,
             "total_pages": total_pages
         }
