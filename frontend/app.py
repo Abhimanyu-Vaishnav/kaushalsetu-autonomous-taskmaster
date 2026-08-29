@@ -1460,16 +1460,17 @@ def main_app_layout():
                         else:
                             st.error(res_auto.get("message"))
 
-                # Fetch Live Paginated Jobs with real-time web crawler
-                is_force_rescan = st.session_state.pop("force_live_rescan", False)
-                job_results = direct_search_live_jobs(
-                    student_id=s_id,
-                    location=job_loc_filter,
-                    query=job_search_query,
-                    page=st.session_state.job_page,
-                    page_size=8,
-                    force_rescan=is_force_rescan
-                )
+                # Fetch Live Paginated Jobs with real-time web crawler and explicit Loading Spinner
+                with st.spinner("🌐 Gemini AI Agent is crawling real-world live job postings across global company career portals... Please wait a moment."):
+                    is_force_rescan = st.session_state.pop("force_live_rescan", False)
+                    job_results = direct_search_live_jobs(
+                        student_id=s_id,
+                        location=job_loc_filter,
+                        query=job_search_query,
+                        page=st.session_state.job_page,
+                        page_size=8,
+                        force_rescan=is_force_rescan
+                    )
                 jobs_list = job_results.get("jobs", [])
                 total_pages = job_results.get("total_pages", 1)
                 total_count = job_results.get("total_jobs", 0)

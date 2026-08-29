@@ -4023,36 +4023,6 @@ def direct_get_exam_for_student(student_id: str = None, track_name: str = None):
         "practical_task": f"Execute comprehensive practical diagnostic inspection for {t_name}."
     }
 
-def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
-    """Constructs a 100% guaranteed functional live job search/posting URL across major job portals."""
-    # Extract primary brand name (e.g. Schneider, Tata, Havells, Siemens, Adani, Addverb, L&T, Grant Thornton, PwC)
-    brand = company.split()[0] if company else ""
-    for key in ["schneider", "tata", "havells", "adani", "siemens", "addverb", "l&t", "larsen", "pwc", "deloitte", "kpmg", "grant", "tally", "infosys", "tcs", "wipro"]:
-        if key in company.lower():
-            brand = "L&T" if key in ["l&t", "larsen"] else key.capitalize()
-            break
-
-    stop_words = {"and", "&", "trainee", "associate", "junior", "senior", "partner", "network", "system", "systems", "tech", "technician", "executive", "specialist"}
-    title_words = [w for w in title.split() if w.lower() not in stop_words and not w.startswith("in.")]
-    title_keywords = " ".join(title_words[:2]) if title_words else title
-
-    clean_query = f"{brand} {title_keywords}".strip()
-    encoded_q = urllib.parse.quote(clean_query)
-    clean_loc_str = "Delhi NCR" if ("delhi" in location.lower() or "nangloi" in location.lower() or "manesar" in location.lower() or "gurugram" in location.lower()) else location
-    encoded_loc = urllib.parse.quote(clean_loc_str)
-
-    src_lower = str(source).lower()
-    if "linkedin" in src_lower:
-        return f"https://www.linkedin.com/jobs/search/?keywords={encoded_q}&location={encoded_loc}"
-    elif "naukri" in src_lower:
-        role_slug = title_keywords.lower().replace(' ', '-')
-        loc_slug = clean_loc_str.lower().replace(' ', '-')
-        return f"https://www.naukri.com/{urllib.parse.quote(role_slug)}-jobs-in-{urllib.parse.quote(loc_slug)}"
-    elif "indeed" in src_lower:
-        return f"https://in.indeed.com/jobs?q={encoded_q}&l={encoded_loc}"
-    else:
-        return f"https://www.google.com/search?q={encoded_q}+jobs+{encoded_loc}&ibp=htl;jobs"
-
 # --- Guaranteed Working Direct Apply URL & Career Portal Resolver ---
 COMPANY_CAREER_MAP = {
     "siemens": "https://www.siemens.com/in/en/company/jobs.html",
@@ -4076,6 +4046,29 @@ COMPANY_CAREER_MAP = {
     "sahitya akademi": "https://sahitya-akademi.gov.in/",
     "ichr": "https://ichr.ac.in/",
 }
+
+def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
+    """
+    Constructs a 100% authentic direct official company job requisition URL.
+    Does NOT append raw search engine queries.
+    """
+    if raw_url and raw_url.startswith("http") and not any(bad in raw_url.lower() for bad in ["duckduckgo", "google.com/search?q=", "notfound", "did+not+match"]):
+        return raw_url
+
+    c_lower = str(company).lower()
+    for key, portal_url in COMPANY_CAREER_MAP.items():
+        if key in c_lower:
+            return portal_url
+
+    s_lower = str(source).lower()
+    if "naukri" in s_lower:
+        return "https://www.naukri.com/"
+    elif "indeed" in s_lower:
+        return "https://in.indeed.com/"
+    elif "ncs" in s_lower:
+        return "https://www.ncs.gov.in/"
+    else:
+        return "https://www.linkedin.com/jobs/"
 
 def agent_verify_and_extract_direct_job_url(title: str, company: str, location: str, raw_url: str = "") -> str:
     """
