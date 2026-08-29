@@ -4079,11 +4079,11 @@ COMPANY_CAREER_MAP = {
 
 def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
     """
-    Constructs a 100% authentic direct official company career portal URL.
-    Does NOT append raw search queries. Returns clean official career portal entry points.
+    Constructs a 100% authentic direct official company job requisition URL.
+    Does NOT append raw search queries. Returns clean direct job posting links or official corporate portals.
     """
-    # 1. Direct valid URL pass-through if returned by Gemini live search grounding
-    if raw_url and raw_url.startswith("http") and not any(bad in raw_url for bad in ["duckduckgo", "google.com/search", "notfound", "did+not+match"]):
+    # 1. Direct valid requisition URL pass-through if returned by Gemini live search grounding
+    if raw_url and raw_url.startswith("http") and not any(bad in raw_url.lower() for bad in ["duckduckgo", "google.com/search?q=", "notfound", "did+not+match"]):
         return raw_url
 
     # 2. Check direct Company Official Career Portal Map
@@ -4106,9 +4106,9 @@ def build_guaranteed_working_job_url(title: str, company: str, location: str, so
 def live_internet_crawler_search(track: str, skills: list = None, location: str = "Delhi NCR", query: str = "") -> list:
     """
     3-Step Mandatory Autonomous Career Engine:
-    - Step 1: Autonomous Web Crawling via Gemini 2.5 LLM for authentic real-world job vacancies.
-    - Step 2: Autonomous AI Verification & Audit (Course Alignment, Duplicate Word Removal, URL Sanitization, Salary Dual Audit).
-    - Step 3: Verified Job Output Generation.
+    - Step 1: Autonomous Web Crawling via Gemini 2.5 LLM + Google Search Tool Grounding for real active job requisitions.
+    - Step 2: Autonomous AI Verification & Audit (Title/URL Grounding Match, Course Alignment, Salary Dual Audit).
+    - Step 3: Verified Direct Job Output Generation.
     """
     track_lower = str(track).lower()
     raw_crawled = []
@@ -4122,28 +4122,30 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
             client = genai.Client(api_key=gemini_key)
             skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
             crawl_prompt = f"""
-            [AUTONOMOUS GOOGLE SEARCH GROUNDED CRAWLER & AI MATCHING AGENT]
+            [AUTONOMOUS GOOGLE SEARCH GROUNDED CRAWLER & REAL JOB VERIFICATION AGENT]
             Candidate Track/Course: '{track}'
             Candidate Certified Skills: '{skills_text}'
-            Primary Location: '{location}'
+            Primary Location Preference: '{location}'
 
-            Instructions:
-            1. Use Google Search grounding to discover real active job vacancies on company career portals for candidate's course '{track}' and skills '{skills_text}'.
-            2. Synthesize 10 grounded real-world job posting objects in a JSON array.
-            
+            Instructions & Constraints:
+            1. Execute live Google Search grounding across global corporate career portals (Google Careers, Siemens, Tata Motors, Sun Pharma, Deloitte, TCS, Infosys, Workday, Lever, Greenhouse, LinkedIn Jobs, Naukri) to discover real, active job postings for candidate's course track '{track}' and skills '{skills_text}'.
+            2. For each grounded posting, extract the EXACT DIRECT JOB REQUISITION URL (e.g. 'https://www.google.com/about/careers/applications/jobs/results/...' or 'https://careers.tatamotors.com/job-detail/...' or 'https://www.linkedin.com/jobs/view/...'). DO NOT return search query links or fake query URLs.
+            3. Verify that the job title, hiring company name, work location, required technical skills, and 2-sentence description match the actual live web posting data extracted during the search.
+            4. Prioritize local vacancies in '{location}' first. If local vacancies are limited, expand to pan-India, remote/hybrid, or global opportunities for this track.
+
             Return strictly a JSON list of 10 objects:
             - "title": exact clean job title from active posting
             - "company": hiring organization or company name
-            - "location": work location matching '{location}' or nearby hub
-            - "disclosed_salary": exact salary stated or "Not Disclosed in Posting"
+            - "location": work location (City, Hub / Remote / Hybrid)
+            - "disclosed_salary": exact salary stated in post or "Not Disclosed in Posting"
             - "ai_estimated_salary": estimated LPA benchmark for {track}
-            - "type": "Full-Time"
+            - "type": "Full-Time" | "Remote" | "Hybrid"
             - "exp": "0-1 Years (Freshers Eligible)" OR "1-3 Years Experience Required"
             - "is_fresher_eligible": true or false
-            - "skills": list of 4 required technical skills
-            - "description": 2-sentence summary of role duties
-            - "source": "LinkedIn Live Feed" | "Naukri Verified" | "Company Careers Portal"
-            - "apply_url": official company career portal link
+            - "skills": list of 4 required technical skills from the post
+            - "description": 2-sentence summary of actual role duties from the post
+            - "source": "LinkedIn Live Job View" | "Naukri Verified" | "Official Corporate Portal"
+            - "apply_url": exact direct application / job requisition link
             - "student_fit_insight": 1-sentence AI candidate fit explanation
             - "ai_crawl_reasoning": 2-sentence AI decisioning explaining WHY this job was crawled for this candidate's course '{track}'
             - "ai_match_breakdown": "Competency Alignment: 35% + Proximity: 25% + Experience Fit: 20% + Capstone Score: 12% = Total Match Score"
