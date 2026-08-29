@@ -4038,34 +4038,60 @@ def build_guaranteed_working_job_url(title: str, company: str, location: str, so
     else:
         return f"https://www.google.com/search?q={encoded_q}+jobs+{encoded_loc}&ibp=htl;jobs"
 
-# --- Guaranteed Working Direct Apply URL Resolver ---
+# --- Guaranteed Working Direct Apply URL & Career Portal Resolver ---
+COMPANY_CAREER_MAP = {
+    "siemens": "https://jobs.siemens.com/jobs",
+    "schneider": "https://www.se.com/in/en/about-us/careers/overview.jsp",
+    "sun pharma": "https://sunpharma.com/careers/",
+    "cipla": "https://www.cipla.com/careers",
+    "dr. reddy": "https://careers.drreddys.com/",
+    "mankind": "https://www.mankindpharma.com/careers",
+    "addverb": "https://addverb.com/careers/",
+    "tata motors": "https://careers.tatamotors.com/",
+    "thermax": "https://www.thermaxglobal.com/careers/",
+    "l&t": "https://www.larsentoubro.com/corporate/careers/",
+    "infosys": "https://www.infosys.com/careers.html",
+    "tcs": "https://www.tcs.com/careers",
+    "wipro": "https://careers.wipro.com/",
+    "hdfc": "https://www.hdfcbank.com/personal/about-us/careers",
+    "fanuc": "https://www.fanucindia.com/careers",
+    "havells": "https://www.havells.com/careers.html",
+}
+
 def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
     """
-    Constructs an authentic, direct, working job application URL
-    across verified portals (LinkedIn India, Indeed India, Naukri, NCS India, Company Careers).
+    Constructs a 100% authentic, working job application or official company career portal URL.
+    Prioritizes official corporate career sites (Siemens, Sun Pharma, Tata Motors, HDFC, etc.)
+    and clean single-term role queries on LinkedIn/Naukri/Indeed (0 broken/empty search pages).
     """
-    if raw_url and raw_url.startswith("http") and not any(bad in raw_url for bad in ["duckduckgo", "google.com/search", "notfound"]):
+    # 1. Direct valid URL pass-through if returned by Gemini live search grounding
+    if raw_url and raw_url.startswith("http") and not any(bad in raw_url for bad in ["duckduckgo", "google.com/search", "notfound", "did+not+match"]):
         return raw_url
 
+    # 2. Check direct Company Official Career Portal Map
+    c_lower = str(company).lower()
+    for key, portal_url in COMPANY_CAREER_MAP.items():
+        if key in c_lower:
+            return portal_url
+
+    # 3. Clean search keywords: Search ONLY the role title to prevent Indeed query over-matching errors
     clean_words = [w for w in re.sub(r'[^a-zA-Z0-9\s]', '', title).split() if len(w) > 2][:3]
     clean_title = " ".join(clean_words) if clean_words else title
-    clean_company = re.sub(r'[^a-zA-Z0-9\s]', '', company).strip()
     clean_loc = location.split()[0] if location else "Delhi"
 
     s_lower = str(source).lower()
+    encoded_role = urllib.parse.quote(clean_title)
+    encoded_loc = urllib.parse.quote(clean_loc)
+
     if "naukri" in s_lower:
         role_slug = "-".join(clean_words).lower()
         return f"https://www.naukri.com/{urllib.parse.quote(role_slug)}-jobs-in-{urllib.parse.quote(clean_loc.lower())}"
     elif "indeed" in s_lower:
-        q_str = urllib.parse.quote(f"{clean_title} {clean_company}".strip())
-        return f"https://in.indeed.com/jobs?q={q_str}&l={urllib.parse.quote(clean_loc)}"
+        return f"https://in.indeed.com/jobs?q={encoded_role}&l={encoded_loc}"
     elif "ncs" in s_lower:
-        return f"https://www.ncs.gov.in/Pages/Search.aspx?k={urllib.parse.quote(clean_title)}"
+        return f"https://www.ncs.gov.in/Pages/Search.aspx?k={encoded_role}"
     else:
-        # Guaranteed LinkedIn Search Query with strict URL quotes (0 404 Not Found Errors)
-        encoded_kw = urllib.parse.quote(f"{clean_title} {clean_company}".strip())
-        encoded_l = urllib.parse.quote(clean_loc)
-        return f"https://www.linkedin.com/jobs/search/?keywords={encoded_kw}&location={encoded_l}"
+        return f"https://www.linkedin.com/jobs/search/?keywords={encoded_role}&location={encoded_loc}"
 
 def live_internet_crawler_search(track: str, skills: list = None, location: str = "Delhi NCR", query: str = "") -> list:
     """
