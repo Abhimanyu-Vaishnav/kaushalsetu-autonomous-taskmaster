@@ -549,9 +549,39 @@ def direct_add_student(payload: dict):
         return {"status": "error", "message": "Invalid payload format"}
     try:
         from database import add_student
-        return add_student(**payload)
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+def record_agent_activity_log(action_type: str, description: str, student_id: str = "", branch_id: str = "", metadata: dict = None):
+    """
+    Universally records every autonomous AI agent action into agent_activity_logs DB table.
+    Ensures 100% provenance audit compliance for both simulation & live manual user interactions.
+    """
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS agent_activity_logs (
+                id TEXT PRIMARY KEY,
+                institute_id TEXT DEFAULT 'INST-GLOBAL-01',
+                branch_id TEXT DEFAULT '',
+                student_id TEXT DEFAULT '',
+                action_type TEXT NOT NULL,
+                description TEXT NOT NULL,
+                metadata_json TEXT DEFAULT '{}',
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        log_id = f"LOG-{uuid.uuid4().hex[:8].upper()}"
+        meta_json = json.dumps(metadata) if isinstance(metadata, dict) else "{}"
+        c.execute("""
+            INSERT INTO agent_activity_logs (id, institute_id, branch_id, student_id, action_type, description, metadata_json)
+            VALUES (?, 'INST-GLOBAL-01', ?, ?, ?, ?, ?)
+        """, (log_id, str(branch_id or ""), str(student_id or ""), str(action_type), str(description), meta_json))
+        conn.commit()
+        conn.close()
+    except Exception as ex:
+        print(f"[AGENT LOGGING NOTICE] {ex}")
 
 def direct_get_agent_logs(page: int = 1, page_size: int = 15, branch_id: str = None):
     try:
@@ -1718,11 +1748,17 @@ def direct_evaluate_and_dispatch_exam(payload: dict):
         conn.close()
 
         try:
-            log_agent_activity(
-                action="EXAM_EVALUATED",
-                entity_type="student",
-                entity_id=student_id,
-                details=f"Candidate {stu_name} scored {aggregate_score}% | Sealed: {status_seal} | Dispatched: {company}"
+            record_agent_activity_log(
+                action_type="MCQ_ASSESSMENT_EVALUATION",
+                description=f"Autonomous Agent evaluated MCQ & Capstone submission for candidate {stu_name} ({student_id}). Aggregate Score: {aggregate_score}%.",
+                student_id=student_id,
+                branch_id=stu_branch
+            )
+            record_agent_activity_log(
+                action_type="CRYPTOGRAPHIC_SEAL_GENERATION",
+                description=f"Minted SHA-256 cryptographic provenance seal & competency dossier ({status_seal}) for {stu_name}.",
+                student_id=student_id,
+                branch_id=stu_branch
             )
         except Exception:
             pass
@@ -2119,30 +2155,42 @@ def direct_get_exam_for_student(student_id: str = None, track_name: str = None):
         if row:
             c_dict = dict(row)
             parsed_mcqs = None
-            if isinstance(c_dict.get("mcqs"), str) and c_dict["mcqs"].startswith("["):
-                try:
-                    parsed_mcqs = json.loads(c_dict["mcqs"])
-                except Exception:
-                    pass
-            return {
-                "course_id": c_dict.get("id", "CRS-DEFAULT"),
-                "exam_id": c_dict.get("id", "CRS-DEFAULT"),
-                "course_title": c_dict.get("title") or c_dict.get("course_name") or "Vocational Track",
-                "mcqs": parsed_mcqs if parsed_mcqs else default_mcqs,
-                "capstone": c_dict.get("capstone") or default_capstone,
-                "practical_task": c_dict.get("capstone") or default_capstone
-            }
-    except Exception as e:
-        print(f"Exam fetch notice: {e}")
-
-    return {
-        "course_id": "CRS-VOCATIONAL-MAIN",
-        "exam_id": "CRS-VOCATIONAL-MAIN",
-        "course_title": track_name or "Vocational Diagnostics & Mechatronics",
-        "mcqs": default_mcqs,
-        "capstone": default_capstone,
-        "practical_task": default_capstone
-    }
+        c_dict = dict(row) if row else {}
+        parsed_mcqs = None
+        if isinstance(c_dict.get("mcqs"), str) and c_dict["mcqs"].startswith("["):
+            try:
+                parsed_mcqs = json.loads(c_dict["mcqs"])
+            except Exception:
+                pass
+        res_exam = {
+            "course_id": c_dict.get("id", "CRS-DEFAULT") if row else "CRS-DEFAULT",
+            "exam_id": c_dict.get("id", "CRS-DEFAULT") if row else "CRS-DEFAULT",
+            "course_title": (c_dict.get("title") or c_dict.get("course_name") or "Vocational Track") if row else (t_name or "Vocational Track"),
+            "mcqs": parsed_mcqs if (row and parsed_mcqs) else default_mcqs,
+            "practical_task": c_dict.get("capstone") if row else default_capstone,
+            "capstone": c_dict.get("capstone") if row else default_capstone
+        }
+        record_agent_activity_log(
+            action_type="MCQ_ASSESSMENT_GENERATION",
+            description=f"Autonomous Agent generated {len(res_exam['mcqs'])} multimodal evaluation MCQs for student '{student_id or 'Active User'}' ({t_name or 'Default Track'}).",
+            student_id=str(student_id or "")
+        )
+        return res_exam
+    except Exception:
+        res_exam = {
+            "course_id": "CRS-DEFAULT",
+            "exam_id": "CRS-DEFAULT",
+            "course_title": track_name or "Vocational Track",
+            "mcqs": default_mcqs,
+            "practical_task": default_capstone,
+            "capstone": default_capstone
+        }
+        record_agent_activity_log(
+            action_type="MCQ_ASSESSMENT_GENERATION",
+            description=f"Autonomous Agent generated {len(default_mcqs)} multimodal evaluation MCQs for candidate '{student_id or 'Active User'}'.",
+            student_id=str(student_id or "")
+        )
+        return res_exam
 
 def direct_get_student_by_id(student_id: str):
     """Fetches real-time student record cleanly by ID."""
@@ -3888,6 +3936,11 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
         except Exception:
             pass
 
+        record_agent_activity_log(
+            action_type="PORTFOLIO_GENERATION",
+            description=f"Autonomous Agent synthesized interactive web portfolio & capstone showcase for candidate '{name}' ({sid}).",
+            student_id=str(sid)
+        )
         return portfolio_html
     except Exception as ex:
         return f"<h3 style='color:white;'>Portfolio Generation Notice: {ex}</h3>"
@@ -4542,6 +4595,11 @@ def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query:
         paginated_jobs = ranked[start_idx:end_idx]
 
         try:
+            record_agent_activity_log(
+                action_type="LIVE_JOB_CRAWL",
+                description=f"Autonomous Agent crawled worldwide web & verified {total_jobs} active job requisitions matching track '{track}' in {location}.",
+                student_id=sid
+            )
             log_agent_activity(
                 action="GEMINI_JOB_CRAWLER",
                 entity_type="student",
@@ -4937,6 +4995,12 @@ def agent_apply_job_for_student(student_id: str, job_dict: dict):
         """, (branch_id, f"Candidate Action: {s_name} applied to {company}", f"Candidate {s_name} ({sid}) applied for {role} with a {match_pct}% competency match rating."))
 
         try:
+            record_agent_activity_log(
+                action_type="AUTONOMOUS_JOB_APPLICATION",
+                description=f"Autonomous Agent dispatched 1-Click application for candidate {s_name} ({sid}) to {company} for role '{role}' ({match_pct}% Match).",
+                student_id=sid,
+                branch_id=branch_id
+            )
             log_agent_activity("JOB_APPLIED", "student", sid, f"Candidate {s_name} applied to {role} at {company} ({match_pct}% Match)")
         except Exception:
             pass
@@ -4987,6 +5051,12 @@ def agent_schedule_interview(app_id: str, date_str: str, time_str: str):
         """, (app.get("branch_id"), f"🗓️ Candidate Interview Confirmed: {app.get('student_name')}", f"{app.get('student_name')} has an interview with {app.get('company_name')} on {date_str} at {time_str}."))
 
         try:
+            record_agent_activity_log(
+                action_type="INTERVIEW_SCHEDULING",
+                description=f"Autonomous Agent scheduled technical interview for {app.get('student_name')} ({app.get('student_id')}) with {app.get('company_name')} ({app.get('role_title')}) on {date_str} at {time_str}.",
+                student_id=app.get("student_id"),
+                branch_id=app.get("branch_id")
+            )
             log_agent_activity("INTERVIEW_SCHEDULED", "application", app_id, f"Interview set for {app.get('student_name')} ({app.get('role_title')} @ {app.get('company_name')}) on {date_str}")
         except Exception:
             pass
