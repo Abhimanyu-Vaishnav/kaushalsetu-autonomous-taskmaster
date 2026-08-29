@@ -4135,419 +4135,58 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
     # --- STEP 1: Autonomous Web Crawling Agent with Gemini 2.5 Google Search Grounding ---
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
-        try:
-            from google import genai
-            from google.genai import types
-            client = genai.Client(api_key=gemini_key)
-            skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
-            crawl_prompt = f"""
-            [AUTONOMOUS GLOBAL GOOGLE SEARCH GROUNDED CRAWLER & REAL JOB VERIFICATION AGENT]
-            Candidate Track/Course: '{track}'
-            Candidate Certified Skills: '{skills_text}'
-            Primary Location Preference: '{location}'
+        for attempt in range(2):
+            try:
+                from google import genai
+                from google.genai import types
+                client = genai.Client(api_key=gemini_key)
+                skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
+                crawl_prompt = f"""
+                [AUTONOMOUS GLOBAL GOOGLE SEARCH GROUNDED CRAWLER & REAL JOB VERIFICATION AGENT - ATTEMPT {attempt+1}]
+                Candidate Track/Course: '{track}'
+                Candidate Certified Skills: '{skills_text}'
+                Primary Location Preference: '{location}'
 
-            Instructions & Constraints:
-            1. Execute live Google Search grounding across the ENTIRE WORLDWIDE INTERNET — searching ANY hiring company globally (MNCs, startups, universities, research institutions, Workday, Lever, Greenhouse, LinkedIn Jobs, Naukri, etc.) without any company restriction to discover real, active job postings for candidate's course track '{track}' and skills '{skills_text}'.
-            2. For each grounded posting, extract the EXACT DIRECT JOB REQUISITION URL (e.g. 'https://www.google.com/about/careers/applications/jobs/results/88496073537921734-software-engineer-google-pay' or 'https://careers.tatamotors.com/job-detail/10293' or 'https://www.linkedin.com/jobs/view/392819283/'). DO NOT return search query links or generic homepages.
-            3. Verify that the job title, hiring company name, work location, required technical skills, and 2-sentence description match the actual live web posting data extracted during the search.
-            4. Prioritize local vacancies in '{location}' first. If local vacancies are limited, expand to pan-India, remote/hybrid, or global opportunities for this track.
+                Instructions & Constraints:
+                1. Perform LIVE Google Search grounding across the ENTIRE WORLDWIDE INTERNET — searching ANY hiring company globally (MNCs, startups, universities, research institutions, Workday, Lever, Greenhouse, LinkedIn Jobs, Naukri, etc.) to discover real, active job postings for candidate's course track '{track}' and skills '{skills_text}'.
+                2. For each grounded posting, extract the EXACT DIRECT JOB REQUISITION URL (e.g. 'https://www.google.com/about/careers/applications/jobs/results/88496073537921734-software-engineer-google-pay' or 'https://careers.tatamotors.com/job-detail/10293' or 'https://www.linkedin.com/jobs/view/392819283/'). DO NOT return search query links or generic homepages.
+                3. Verify that the job title, hiring company name, work location, required technical skills, and 2-sentence description match the actual live web posting data extracted during the search.
+                4. Prioritize local vacancies in '{location}' first. If local vacancies are limited, expand to pan-India, remote/hybrid, or global opportunities for this track.
 
-            Return strictly a JSON list of 10 objects:
-            - "title": exact clean job title from active posting
-            - "company": hiring organization or company name
-            - "location": work location (City, Hub / Remote / Hybrid)
-            - "disclosed_salary": exact salary stated in post or "Not Disclosed in Posting"
-            - "ai_estimated_salary": estimated LPA benchmark for {track}
-            - "type": "Full-Time" | "Remote" | "Hybrid"
-            - "exp": "0-1 Years (Freshers Eligible)" OR "1-3 Years Experience Required"
-            - "is_fresher_eligible": true or false
-            - "skills": list of 4 required technical skills from the post
-            - "description": 2-sentence summary of actual role duties from the post
-            - "source": "LinkedIn Live Job View" | "Naukri Verified" | "Official Corporate Portal"
-            - "apply_url": exact direct application / job requisition link
-            - "student_fit_insight": 1-sentence AI candidate fit explanation
-            - "ai_crawl_reasoning": 2-sentence AI decisioning explaining WHY this job was crawled for this candidate's course '{track}'
-            - "ai_match_breakdown": "Competency Alignment: 35% + Proximity: 25% + Experience Fit: 20% + Capstone Score: 12% = Total Match Score"
-            """
-            resp = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=crawl_prompt,
-                config=types.GenerateContentConfig(
-                    tools=[{"google_search": {}}],
-                    temperature=0.3
+                Return strictly a JSON list of 10 objects:
+                - "title": exact clean job title from active posting
+                - "company": hiring organization or company name
+                - "location": work location (City, Hub / Remote / Hybrid)
+                - "disclosed_salary": exact salary stated in post or "Not Disclosed in Posting"
+                - "ai_estimated_salary": estimated LPA benchmark for {track}
+                - "type": "Full-Time" | "Remote" | "Hybrid"
+                - "exp": "0-1 Years (Freshers Eligible)" OR "1-3 Years Experience Required"
+                - "is_fresher_eligible": true or false
+                - "skills": list of 4 required technical skills from the post
+                - "description": 2-sentence summary of actual role duties from the post
+                - "source": "LinkedIn Live Job View" | "Naukri Verified" | "Official Corporate Portal"
+                - "apply_url": exact direct application / job requisition link
+                - "student_fit_insight": 1-sentence AI candidate fit explanation
+                - "ai_crawl_reasoning": 2-sentence AI decisioning explaining WHY this job was crawled for this candidate's course '{track}'
+                - "ai_match_breakdown": "Competency Alignment: 35% + Proximity: 25% + Experience Fit: 20% + Capstone Score: 12% = Total Match Score"
+                """
+                resp = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=crawl_prompt,
+                    config=types.GenerateContentConfig(
+                        tools=[{"google_search": {}}],
+                        temperature=0.3 + (attempt * 0.2)
+                    )
                 )
-            )
-            if resp and resp.text:
-                match = re.search(r'\[.*\]', resp.text, re.DOTALL)
-                if match:
-                    parsed = json.loads(match.group(0))
-                    if isinstance(parsed, list) and len(parsed) > 0:
-                        raw_crawled = parsed
-        except Exception as ex:
-            print(f"[CRAWLER STEP 1 WARNING] {ex}")
-
-    # Rich multi-domain seed pool with authentic deep job requisition links
-    if not raw_crawled or len(raw_crawled) < 4:
-        if any(w in track_lower for w in ["ai", "machine", "ml", "data", "intelligence"]):
-            raw_crawled = [
-                {
-                    "title": "AI & Machine Learning Operations Engineer",
-                    "company": "Infosys AI Innovation Labs",
-                    "location": f"{location} / Noida Sector 62",
-                    "disclosed_salary": "₹5.5 LPA - ₹8.0 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹5.5 LPA - ₹8.0 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Python", "PyTorch", "MLOps Pipeline", "FastAPI"],
-                    "description": "Deploy machine learning inference endpoints, monitor model drift metrics, and optimize PyTorch telemetry pipelines.",
-                    "source": "LinkedIn Live Job View",
-                    "apply_url": "https://www.linkedin.com/jobs/view/3958201948/",
-                    "student_fit_insight": "Top fit for candidates certified in AI & Machine Learning Operations.",
-                    "ai_crawl_reasoning": f"Crawled because candidate's certified track '{track}' matches Infosys AI Labs' active MLOps deployment pipeline.",
-                    "ai_match_breakdown": "PyTorch/FastAPI Competency: 35% + Noida Proximity: 25% + Entry-Level Eligibility: 20% + Capstone: 12% = 92% Total Score"
-                },
-                {
-                    "title": "Junior MLOps & Computer Vision Associate",
-                    "company": "TCS Digital AI Engineering",
-                    "location": f"{location} / Gurugram CyberCity",
-                    "disclosed_salary": "Not Disclosed in Posting",
-                    "ai_estimated_salary": "₹4.8 LPA - ₹7.2 LPA (AI Industry Benchmark)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["OpenCV", "TensorFlow", "Docker", "Model Quantization"],
-                    "description": "Containerize deep learning vision models, benchmark TensorRT latency, and execute automated dataset pipelines.",
-                    "source": "TCS iBegin Careers Portal",
-                    "apply_url": "https://ibegin.tcs.com/iBegin/jobs/search",
-                    "student_fit_insight": "Matches deep learning model deployment and Docker containerization capstones.",
-                    "ai_crawl_reasoning": f"Crawled because candidate's Docker and OpenCV skills align with TCS Digital's vision model containerization opening.",
-                    "ai_match_breakdown": "OpenCV/TensorFlow Skills: 32% + NCR Proximity: 25% + Fresher Fit: 20% + Capstone: 11% = 88% Total Score"
-                },
-                {
-                    "title": "LLM Fine-Tuning & Data Engine Analyst",
-                    "company": "Google AI Labs India",
-                    "location": f"{location} / Gurugram",
-                    "disclosed_salary": "₹12.0 LPA - ₹18.0 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹12.0 LPA - ₹18.0 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-2 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["HuggingFace", "LoRA Fine-Tuning", "Prompt Engineering", "Vector DB"],
-                    "description": "Prepare instruction datasets for LLM domain adaptation, evaluate RAG vector embeddings, and benchmark response quality.",
-                    "source": "Google Careers Portal",
-                    "apply_url": "https://www.google.com/about/careers/applications/jobs/results/88496073537921734-software-engineer-google-pay",
-                    "student_fit_insight": "Direct match for LLM evaluation and prompt engineering coursework.",
-                    "ai_crawl_reasoning": f"Crawled because Google AI requires HuggingFace prompt engineering skills certified in '{track}'.",
-                    "ai_match_breakdown": "LLM/Prompt Engineering: 30% + Gurugram Proximity: 25% + Fresher Fit: 20% + Capstone: 10% = 85% Total Score"
-                }
-            ]
-        elif any(w in track_lower for w in ["mechatronic", "automation", "diagnostic", "robot", "plc", "sensor"]):
-            raw_crawled = [
-                {
-                    "title": "Junior Mechatronics & PLC Automation Trainee",
-                    "company": "Schneider Electric Partner Network",
-                    "location": f"{location} / Local Industrial Hub",
-                    "disclosed_salary": "Not Disclosed in Posting",
-                    "ai_estimated_salary": "₹4.2 LPA - ₹6.5 LPA (AI Industry Benchmark)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["PLC Diagnostics", "Sensor Telemetry", "Industrial Automation", "Modbus"],
-                    "description": "Assist in deploying automated PLC control circuits, calibrate industrial sensors, and inspect edge diagnostic telemetry.",
-                    "source": "Schneider Electric Careers",
-                    "apply_url": "https://www.se.com/in/en/about-us/careers/overview.jsp",
-                    "student_fit_insight": "Top fit for fresh graduates certified in Vocational Diagnostics & Mechatronics.",
-                    "ai_crawl_reasoning": f"Crawled because Schneider Electric requires PLC ladder logic and sensor telemetry certified in '{track}'.",
-                    "ai_match_breakdown": "PLC Competency: 35% + Local Proximity: 25% + Fresher Fit: 20% + Capstone: 12% = 92% Total Score"
-                },
-                {
-                    "title": "Industrial Automation Specialist",
-                    "company": "Addverb Technologies",
-                    "location": f"{location} / Noida Sector 62",
-                    "disclosed_salary": "₹4.8 LPA - ₹7.2 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹4.8 LPA - ₹7.2 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-2 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Robotics Telemetry", "SCADA Integration", "PLC Ladder Logic", "CAN-Bus"],
-                    "description": "Deploy SCADA control node software, verify automated guided vehicle (AGV) telemetry, and optimize industrial robotics.",
-                    "source": "Addverb Careers Portal",
-                    "apply_url": "https://addverb.com/careers/",
-                    "student_fit_insight": "Matches practical robotics and SCADA telemetry coursework.",
-                    "ai_crawl_reasoning": f"Crawled because Addverb Technologies AGV robotics telemetry matches candidate's certified mechatronics capstones.",
-                    "ai_match_breakdown": "SCADA/Robotics Fit: 32% + Noida Proximity: 25% + Fresher Fit: 20% + Capstone: 11% = 88% Total Score"
-                },
-                {
-                    "title": "Smart Building Automation & SCADA Control Engineer",
-                    "company": "Siemens Building Technologies",
-                    "location": f"{location} / Mayapuri Hub",
-                    "disclosed_salary": "₹5.0 LPA - ₹7.5 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹5.0 LPA - ₹7.5 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["BACnet/IP", "HVAC Telemetry", "BMS Controllers", "Field Calibration"],
-                    "description": "Maintain automated building management controllers, calibrate temperature transducers, and monitor SCADA telemetry.",
-                    "source": "Siemens Careers Portal",
-                    "apply_url": "https://www.siemens.com/in/en/company/jobs.html",
-                    "location": f"{location} / Gurugram Industrial Corridor",
-                    "disclosed_salary": "₹4.5 LPA - ₹6.8 LPA",
-                    "ai_estimated_salary": "₹4.5 LPA - ₹6.8 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Servo Drives", "Motion Kinematics", "FANUC Controller", "Interlock Circuitry"],
-                    "description": "Perform field diagnostics on 6-axis robotic arms, calibrate servo encoder positions, and integrate safety light curtains.",
-                    "source": "FANUC Careers",
-                    "apply_url": "https://www.fanucindia.com/careers",
-                    "student_fit_insight": "Matches motion control kinematics and robotics telemetry coursework."
-                },
-                {
-                    "title": "Industrial Instrumentation & SCADA Inspector",
-                    "company": "Thermax Global Systems",
-                    "location": f"{location} / Okhla Industrial Phase II",
-                    "disclosed_salary": "₹4.6 LPA - ₹6.5 LPA",
-                    "ai_estimated_salary": "₹4.6 LPA - ₹6.5 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-2 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Process Control", "Transducer Calibration", "4-20mA Loop", "HMI Systems"],
-                    "description": "Calibrate pressure transmitters, program HMI operator touch panels, and verify thermal energy telemetry circuits.",
-                    "source": "Thermax Careers",
-                    "apply_url": "https://www.thermaxglobal.com/careers/",
-                    "student_fit_insight": "Direct match for industrial instrumentation and process control diagnostics."
-                },
-                {
-                    "title": "Automotive Telemetry & ECU Test Associate",
-                    "company": "Tata Motors R&D",
-                    "location": f"{location} / NCR Hub",
-                    "disclosed_salary": "₹5.2 LPA - ₹7.8 LPA",
-                    "ai_estimated_salary": "₹5.2 LPA - ₹7.8 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["CAN-Bus Protocol", "ECU Flashing", "Diagnostic Trouble Codes", "Vector CANoe"],
-                    "description": "Execute ECU hardware-in-the-loop (HIL) testing, capture CAN-bus telemetry logs, and analyze DTC fault codes.",
-                    "source": "Tata Motors Careers",
-                    "apply_url": "https://careers.tatamotors.com/",
-                    "student_fit_insight": "Top fit for candidates trained in ECU telemetry and CAN-bus diagnostics."
-                }
-            ]
-        elif any(w in track_lower for w in ["hindi", "phd", "academic", "humanities", "arts", "literature", "research", "history", "policy"]):
-            raw_crawled = [
-                {
-                    "title": "Assistant Professor in Hindi Literature & Cultural Research",
-                    "company": "University of Delhi & Affiliated Colleges",
-                    "location": f"{location} / North Campus Hub",
-                    "disclosed_salary": "₹57,700 - ₹79,800 / month (UGC Pay Matrix Level 10)",
-                    "ai_estimated_salary": "₹7.0 LPA - ₹9.5 LPA (UGC Standard)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (PhD / NET Qualified Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Hindi Philology", "Academic Manuscript Review", "Research Methodology", "Lecturing"],
-                    "description": "Teach undergraduate & postgraduate courses in Hindi literature, guide research dissertations, and publish peer-reviewed papers.",
-                    "source": "UGC Academic Portal / University Bulletin",
-                    "apply_url": "https://www.du.ac.in/",
-                    "student_fit_insight": "Top fit for PhD & Masters graduates specializing in Hindi Literature & Academic Research."
-                },
-                {
-                    "title": "Senior Hindi Content Strategist & Archival Research Officer",
-                    "company": "Sahitya Akademi / Ministry of Culture Node",
-                    "location": f"{location} / Mandi House Cultural Hub",
-                    "disclosed_salary": "₹5.2 LPA - ₹7.5 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹5.2 LPA - ₹7.5 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-2 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Manuscript Translation", "Cultural Documentation", "Hindi Lexicography", "Editorial Review"],
-                    "description": "Curate literary archives, execute cross-lingual translation projects, and review academic journal publications.",
-                    "source": "Government National Career Service (NCS)",
-                    "apply_url": "https://www.ncs.gov.in/",
-                    "student_fit_insight": "Direct match for research competencies in Hindi philology and archival documentation."
-                },
-                {
-                    "title": "Academic Research Associate & Lexicographical Analyst",
-                    "company": "Indian Council of Historical Research (ICHR)",
-                    "location": f"{location} / Institutional Area",
-                    "disclosed_salary": "₹4.8 LPA - ₹6.8 LPA",
-                    "ai_estimated_salary": "₹4.8 LPA - ₹6.8 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Historical Text Analysis", "Sanskrit & Hindi Translation", "Archival Cataloging", "Report Writing"],
-                    "description": "Catalog rare literary manuscripts, compile historical dictionary references, and prepare research monographs.",
-                    "source": "ICHR Research Portal",
-                    "apply_url": "https://ichr.ac.in/",
-                    "student_fit_insight": "Matches academic research methodology and literary manuscript analysis."
-                }
-            ]
-        elif any(w in track_lower for w in ["vfx", "compositing", "multimodal", "media", "graphic", "animation", "video", "editor"]):
-            raw_crawled = [
-                {
-                    "title": "Junior VFX Compositor & Rotoscopy Artist",
-                    "company": "Red Chillies VFX Studios",
-                    "location": f"{location} / Film City Node",
-                    "disclosed_salary": "₹4.5 LPA - ₹7.0 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹4.5 LPA - ₹7.0 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Nuke Compositing", "After Effects", "Green Screen Keying", "Rotoscopy"],
-                    "description": "Execute multi-pass CGI compositing, clean green screen plates, and match camera lighting for feature film VFX.",
-                    "source": "Red Chillies Careers Portal",
-                    "apply_url": "https://www.redchilliesvfx.com/careers/",
-                    "student_fit_insight": "Top fit for VFX graduates trained in Nuke compositing and rotoscopy."
-                },
-                {
-                    "title": "3D Multimodal Digital Compositor",
-                    "company": "DNEG Digital Visual Effects",
-                    "location": f"{location} / Studio Hub",
-                    "disclosed_salary": "₹5.2 LPA - ₹8.0 LPA",
-                    "ai_estimated_salary": "₹5.2 LPA - ₹8.0 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-2 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Maya 3D", "Nuke", "Deep Compositing", "Color Grading"],
-                    "description": "Composite 3D Maya render passes, generate volumetric lighting effects, and execute final master color grading.",
-                    "source": "DNEG Careers Portal",
-                    "apply_url": "https://www.dneg.com/careers/",
-                    "student_fit_insight": "Direct match for 3D digital compositing and Maya pipeline capstones."
-                },
-                {
-                    "title": "Motion Graphics & Multimodal Video Editor",
-                    "company": "Prime Focus World",
-                    "location": f"{location} / Digital Media Hub",
-                    "disclosed_salary": "₹4.2 LPA - ₹6.5 LPA",
-                    "ai_estimated_salary": "₹4.2 LPA - ₹6.5 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Premiere Pro", "Cinema 4D", "Motion Graphics", "Audio Mixing"],
-                    "description": "Assemble promotional video sequences, design 3D motion graphics overlays, and synchronize audio telemetry channels.",
-                    "source": "Prime Focus Careers",
-                    "apply_url": "https://www.primefocus.com/careers",
-                    "student_fit_insight": "Matches motion graphics and multimodal video editing coursework."
-                }
-            ]
-        elif any(w in track_lower for w in ["cyber", "security", "penetration", "ethical", "network", "firewall"]):
-            raw_crawled = [
-                {
-                    "title": "Junior Cyber Security & Vulnerability Analyst",
-                    "company": "PwC Cyber Risk Advisory",
-                    "location": f"{location} / Gurugram CyberCity",
-                    "disclosed_salary": "₹6.0 LPA - ₹9.0 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹6.0 LPA - ₹9.0 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Penetration Testing", "Wireshark", "Metasploit", "Vulnerability Scanning"],
-                    "description": "Execute network penetration tests, inspect packet captures for malware anomalies, and draft SOC incident reports.",
-                    "source": "PwC Careers Portal",
-                    "apply_url": "https://jobs.pwc.com/",
-                    "student_fit_insight": "Top fit for certified Cyber Security & Ethical Hacking candidates."
-                },
-                {
-                    "title": "SOC Security Operations Center Specialist",
-                    "company": "CrowdStrike Security Operations",
-                    "location": f"{location} / Noida Sector 62",
-                    "disclosed_salary": "₹6.5 LPA - ₹10.0 LPA",
-                    "ai_estimated_salary": "₹6.5 LPA - ₹10.0 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-2 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["SIEM Operations", "CrowdStrike Falcon", "Endpoint Protection", "Threat Hunting"],
-                    "description": "Monitor SIEM alert telemetry 24/7, isolate suspicious process trees, and remediate endpoint threat vectors.",
-                    "source": "CrowdStrike Careers Portal",
-                    "apply_url": "https://www.crowdstrike.com/careers/",
-                    "student_fit_insight": "Direct match for SOC operations and endpoint threat hunting capstones."
-                }
-            ]
-        elif any(w in track_lower for w in ["solar", "ev", "automotive", "battery", "electric vehicle"]):
-            raw_crawled = [
-                {
-                    "title": "EV Battery Management & Diagnostics Engineer",
-                    "company": "Tata Passenger Electric Mobility",
-                    "location": f"{location} / NCR Hub",
-                    "disclosed_salary": "₹5.5 LPA - ₹8.5 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹5.5 LPA - ₹8.5 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["BMS Algorithms", "CAN-Bus Protocol", "Li-Ion Diagnostics", "Thermal Telemetry"],
-                    "description": "Calibrate battery management system (BMS) cell balancing circuits, monitor thermal runaway telemetry, and test EV powertrains.",
-                    "source": "Tata Motors Careers",
-                    "apply_url": "https://careers.tatamotors.com/",
-                    "student_fit_insight": "Top fit for Electric Vehicle & Battery Systems certified candidates."
-                },
-                {
-                    "title": "Solar PV Plant Operations & SCADA Inspector",
-                    "company": "Tata Power Solar Systems",
-                    "location": f"{location} / Renewable Hub",
-                    "disclosed_salary": "₹4.8 LPA - ₹7.2 LPA",
-                    "ai_estimated_salary": "₹4.8 LPA - ₹7.2 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["Solar Inverters", "Grid Integration", "SCADA Telemetry", "PV Calibration"],
-                    "description": "Inspect 100MW solar inverter arrays, calibrate MPPT controllers, and track grid power injection telemetry.",
-                    "source": "Tata Power Careers",
-                    "apply_url": "https://www.tatapower.com/careers/",
-                    "student_fit_insight": "Matches Solar Photovoltaic operations and inverter calibration diagnostics."
-                }
-            ]
-        elif any(w in track_lower for w in ["pharma", "pharmacy", "drug", "medic", "clinic"]):
-            raw_crawled = [
-                {
-                    "title": "Junior Pharmacist & Quality Assurance Trainee",
-                    "company": "Sun Pharma Industries",
-                    "location": f"{location} / Sector Hub",
-                    "disclosed_salary": "₹4.2 LPA - ₹6.2 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹4.2 LPA - ₹6.2 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["HPLC Testing", "Pharmacology", "GMP Compliance", "API Assays"],
-                    "description": "Perform HPLC purity testing on active pharmaceutical ingredients (APIs), document GMP audit trails, and inspect tablet dissolution samples.",
-                    "source": "Sun Pharma Careers",
-                    "apply_url": "https://sunpharma.com/careers/",
-                    "student_fit_insight": "Top fit for Pharmacy graduates specializing in HPLC analytical testing."
-                }
-            ]
-        else:
-            clean_t = track.title().replace("Operations Operations", "Operations")
-            raw_crawled = [
-                {
-                    "title": f"{clean_t} Engineer",
-                    "company": "Schneider Electric Network",
-                    "location": location,
-                    "disclosed_salary": "₹4.8 LPA - ₹7.2 LPA (Actual Disclosed)",
-                    "ai_estimated_salary": "₹4.8 LPA - ₹7.2 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": [f"{track} Diagnostics", "Quality Assurance", "Practical Operations", "Technical Support"],
-                    "description": f"Execute specialized technical workflows and deliver certified operational outcomes in {track}.",
-                    "source": "Schneider Electric Careers",
-                    "apply_url": "https://www.se.com/in/en/about-us/careers/overview.jsp",
-                    "student_fit_insight": f"Matches practical coursework and skills certified in {track}."
-                },
-                {
-                    "title": f"Junior {clean_t} Associate",
-                    "company": "Siemens Technical Operations",
-                    "location": location,
-                    "disclosed_salary": "₹5.0 LPA - ₹7.5 LPA",
-                    "ai_estimated_salary": "₹5.0 LPA - ₹7.5 LPA (Verified)",
-                    "type": "Full-Time",
-                    "exp": "0-1 Years (Freshers Eligible)",
-                    "is_fresher_eligible": True,
-                    "skills": ["System Calibration", "Diagnostics", "Telemetry", "Field Inspection"],
-                    "description": f"Perform diagnostic inspections, calibrate sensor loops, and verify field telemetry for {track}.",
-                    "source": "Siemens Careers Portal",
-                    "apply_url": "https://www.siemens.com/in/en/company/jobs.html",
-                    "student_fit_insight": f"Direct domain match for practical training in {track}."
-                }
-            ]
+                if resp and resp.text:
+                    match = re.search(r'\[.*\]', resp.text, re.DOTALL)
+                    if match:
+                        parsed = json.loads(match.group(0))
+                        if isinstance(parsed, list) and len(parsed) > 0:
+                            raw_crawled = parsed
+                            break
+            except Exception as ex:
+                print(f"[CRAWLER STEP 1 WARNING ATTEMPT {attempt+1}] {ex}")
 
     # --- STEP 2: Autonomous AI Verification & Audit Agent ---
     verified_jobs = []
