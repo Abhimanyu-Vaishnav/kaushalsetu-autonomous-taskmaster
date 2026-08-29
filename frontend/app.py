@@ -1467,7 +1467,7 @@ def main_app_layout():
                     location=job_loc_filter,
                     query=job_search_query,
                     page=st.session_state.job_page,
-                    page_size=4,
+                    page_size=8,
                     force_rescan=is_force_rescan
                 )
                 jobs_list = job_results.get("jobs", [])
@@ -1479,7 +1479,7 @@ def main_app_layout():
                 applied_job_ids = {a.get("job_id") for a in applied_jobs}
                 applied_role_titles = {a.get("role_title") for a in applied_jobs}
 
-                st.markdown(f"**Found {total_count} Verified Live Openings** (Sorted by Algorithmic Competency Fit)")
+                st.markdown(f"**Found {total_count} Verified Live Openings** (Ranked by Fresher Eligibility, Proximity & Competency Fit)")
 
                 if not jobs_list:
                     st.info("ℹ️ No active vacancies matching this specific filter. Try clearing your search keyword or changing location.")
@@ -1497,6 +1497,9 @@ def main_app_layout():
                         disc_sal = job.get("disclosed_salary") or job.get("salary") or "Not Disclosed in Posting"
                         ai_sal = job.get("ai_estimated_salary") or "₹4.2 LPA - ₹6.5 LPA (AI Industry Benchmark)"
                         audit_badge = job.get("verification_status") or "✓ AI Verification Audit Passed"
+                        exp_req = job.get("exp") or "0-2 Years (Freshers Eligible)"
+                        is_fresher_eligible = job.get("is_fresher_eligible", True)
+                        exp_badge_color = "#34d399" if is_fresher_eligible else "#fbbf24"
 
                         st.markdown(f"""
                         <div style="background: rgba(255,255,255,0.03); border: 1px solid {'#f59e0b' if is_top else 'rgba(255,255,255,0.08)'}; border-radius: 12px; padding: 20px; margin-bottom: 15px;">
@@ -1504,9 +1507,10 @@ def main_app_layout():
                                 <div>
                                     <h3 style="margin: 0; color: #ffffff; font-size: 1.25rem;">{job.get('title')} {top_badge_html}</h3>
                                     <p style="margin: 4px 0 8px 0; color: #60a5fa; font-weight: 600;">🏢 {job.get('company')} &nbsp;•&nbsp; 📍 {job.get('location')} &nbsp;•&nbsp; <span style='color: #34d399;'>🛡️ {audit_badge}</span></p>
-                                    <div style="margin: 4px 0; font-size: 0.82rem;">
-                                        <span style="background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: 6px; font-weight: 700; margin-right: 8px;">💵 Posting Salary: {disc_sal}</span>
+                                    <div style="margin: 6px 0; font-size: 0.82rem; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                                        <span style="background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: 6px; font-weight: 700;">💵 Posting Salary: {disc_sal}</span>
                                         <span style="background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); padding: 2px 8px; border-radius: 6px; font-weight: 700;">📊 AI Benchmark Est: {ai_sal}</span>
+                                        <span style="background: rgba(245,158,11,0.12); color: {exp_badge_color}; border: 1px solid {exp_badge_color}44; padding: 2px 8px; border-radius: 6px; font-weight: 700;">🎓 Experience Req: {exp_req}</span>
                                     </div>
                                 </div>
                                 <div style="text-align: right;">
