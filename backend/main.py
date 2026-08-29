@@ -2758,6 +2758,15 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
                 improvements = llm_eval.get("improvements") or ["Deepen domain terminology", "Structure step-by-step workflow"]
                 if llm_eval.get("model_answer"):
                     ideal_model = str(llm_eval.get("model_answer"))
+                try:
+                    log_agent_activity(
+                        action="GEMINI_INTERVIEW_EVALUATED",
+                        entity_type="interview",
+                        entity_id=session_id,
+                        details=f"Gemini 2.5 AI Recruiter evaluated Turn {turn} for '{job_role}' | Score: {turn_score*10}% | Feedback: {feedback[:75]}..."
+                    )
+                except Exception:
+                    pass
             else:
                 # 5. Semantic Relevance Check against Last Question
                 ans_q_matches = [w for w in q_words_all if w in ans_clean.lower()]
@@ -3067,6 +3076,15 @@ def agent_synthesize_resume_dossier(name: str, track: str, resume_raw: str, skil
                         )
                         res_json["education"] = c_edu
                         res_json["work_experience"] = c_exp
+                        try:
+                            log_agent_activity(
+                                action="GEMINI_RESUME_PARSED",
+                                entity_type="student",
+                                entity_id=name,
+                                details=f"Gemini 2.5 AI Agent parsed and synthesized resume dossier for candidate '{name}' ({track_clean})."
+                            )
+                        except Exception:
+                            pass
                         return res_json
         except Exception as ex:
             print(f"[RESUME INTELLIGENCE AGENT NOTICE] {ex}")
@@ -3235,6 +3253,15 @@ def agent_generate_ai_portfolio_theme(track_name: str, tech_skills: list) -> dic
                 if match:
                     res_json = json.loads(match.group(0))
                     if isinstance(res_json, dict) and "accent_color" in res_json:
+                        try:
+                            log_agent_activity(
+                                action="GEMINI_PORTFOLIO_THEMED",
+                                entity_type="portfolio",
+                                entity_id=track_name,
+                                details=f"Gemini 2.5 AI Agent synthesized custom visual layout theme (Accent: {res_json.get('accent_color')}) for '{track_name}'."
+                            )
+                        except Exception:
+                            pass
                         return res_json
         except Exception:
             pass
@@ -4628,6 +4655,16 @@ def agentic_synthesize_course(raw_input: str, branch_id: str = "BR-NANGLOI"):
                         raw_mods = ai_data.get("modules", [])
                         modules = [{"title": str(m), "duration": "2.5 Weeks"} for m in raw_mods]
                         mcqs = ai_data.get("mcqs", [])
+
+                        try:
+                            log_agent_activity(
+                                action="GEMINI_COURSE_SYNTHESIZED",
+                                entity_type="course",
+                                entity_id=branch_id,
+                                details=f"Gemini 2.5 AI Agent synthesized custom curriculum '{title}' ({len(modules)} Modules, {len(mcqs)} MCQs) for topic '{clean_text}'."
+                            )
+                        except Exception:
+                            pass
 
                         return {
                             "title": title,
