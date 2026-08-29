@@ -4098,25 +4098,29 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
     track_lower = str(track).lower()
     raw_crawled = []
 
-    # --- STEP 1: Autonomous Web Crawling Agent ---
+    # --- STEP 1: Autonomous Web Crawling Agent with Gemini 2.5 Google Search Grounding ---
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
         try:
             from google import genai
+            from google.genai import types
             client = genai.Client(api_key=gemini_key)
             skills_text = ", ".join(skills) if isinstance(skills, list) else str(skills)
             crawl_prompt = f"""
-            [AUTONOMOUS CRAWLER & AI MATCHING AGENT]
+            [AUTONOMOUS GOOGLE SEARCH GROUNDED CRAWLER & AI MATCHING AGENT]
             Candidate Track/Course: '{track}'
             Candidate Certified Skills: '{skills_text}'
             Primary Location: '{location}'
 
-            Synthesize 10 authentic, real-world job vacancies across top verified company career portals.
+            Instructions:
+            1. Use Google Search grounding to discover real active job vacancies on company career portals for candidate's course '{track}' and skills '{skills_text}'.
+            2. Synthesize 10 grounded real-world job posting objects in a JSON array.
+            
             Return strictly a JSON list of 10 objects:
-            - "title": exact clean job title
-            - "company": hiring company name
+            - "title": exact clean job title from active posting
+            - "company": hiring organization or company name
             - "location": work location matching '{location}' or nearby hub
-            - "disclosed_salary": exact salary or "Not Disclosed in Posting"
+            - "disclosed_salary": exact salary stated or "Not Disclosed in Posting"
             - "ai_estimated_salary": estimated LPA benchmark for {track}
             - "type": "Full-Time"
             - "exp": "0-1 Years (Freshers Eligible)" OR "1-3 Years Experience Required"
@@ -4131,7 +4135,11 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
             """
             resp = client.models.generate_content(
                 model="gemini-2.5-flash",
-                contents=crawl_prompt
+                contents=crawl_prompt,
+                config=types.GenerateContentConfig(
+                    tools=[{"google_search": {}}],
+                    temperature=0.3
+                )
             )
             if resp and resp.text:
                 match = re.search(r'\[.*\]', resp.text, re.DOTALL)
