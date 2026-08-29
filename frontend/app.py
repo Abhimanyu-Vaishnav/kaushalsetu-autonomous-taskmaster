@@ -1063,7 +1063,13 @@ def main_app_layout():
         if is_exam_done and not student_data.get("retest_approved"):
             s_id = student_data.get("student_id") or student_data.get("id")
             s_name = student_data.get("full_name") or student_data.get("name") or "Candidate"
-            s_track = student_data.get("course_name") or student_data.get("track") or "Vocational Diagnostics & Mechatronics"
+            s_track = (
+                student_data.get("course_name") or 
+                student_data.get("track") or 
+                student_data.get("course_title") or 
+                student_data.get("enrolled_course") or 
+                "Vocational & Specialized Curriculum Track"
+            )
             s_branch = student_data.get("branch_name") or student_data.get("branch_center") or "Nangloi Center (Delhi)"
 
             # Top-Level AI Interview Turn Submission Interceptor
@@ -1169,6 +1175,17 @@ def main_app_layout():
                         </div>
                     </div>
 
+                    <!-- PROMINENT ENROLLED COURSE PROGRAM BANNER -->
+                    <div style="margin-top: 16px; padding: 14px 18px; background: linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(56,189,248,0.15) 100%); border: 1.5px solid #6366f1; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <div style="font-size: 0.72rem; color: #818cf8; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;">🎓 ENROLLED COURSE PROGRAM & SPECIALIZATION:</div>
+                            <h3 style="color: #38bdf8; margin: 3px 0 0 0; font-size: 1.4rem; font-weight: 800;">{s_track}</h3>
+                        </div>
+                        <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; letter-spacing: 0.5px;">
+                            OFFICIAL COURSE MARKSHEET
+                        </span>
+                    </div>
+
                     <div style="margin: 18px 0; padding: 14px; background: rgba(15,23,42,0.8); border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-wrap: wrap; gap: 16px;">
                         <div style="flex: 1; min-width: 180px;">
                             <div style="font-size: 0.7rem; color: #64748b; font-weight: 700;">CANDIDATE NAME</div>
@@ -1179,8 +1196,8 @@ def main_app_layout():
                             <div style="font-size: 1.05rem; color: #38bdf8; font-family: monospace; font-weight: 700;">{s_id}</div>
                         </div>
                         <div style="flex: 1; min-width: 180px;">
-                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 700;">VOCATIONAL TRACK</div>
-                            <div style="font-size: 1.0rem; color: #a855f7; font-weight: 700;">{s_track}</div>
+                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 700;">ENROLLED COURSE NAME</div>
+                            <div style="font-size: 1.05rem; color: #a855f7; font-weight: 800;">{s_track}</div>
                         </div>
                         <div style="flex: 1; min-width: 160px;">
                             <div style="font-size: 0.7rem; color: #64748b; font-weight: 700;">BRANCH NODE</div>
@@ -1198,7 +1215,7 @@ def main_app_layout():
                             <div style="width:100%; background:#1e293b; border-radius:10px; height:6px; overflow:hidden; margin-top:6px;">
                                 <div style="width:{(mcq_s/50.0)*100}%; background:#34d399; height:100%;"></div>
                             </div>
-                            <div style="font-size:0.7rem; color:#94a3b8; margin-top:4px;">Multimodal AI adaptive questions score</div>
+                            <div style="font-size:0.7rem; color:#94a3b8; margin-top:4px;">Multimodal AI adaptive questions score for {s_track}</div>
                         </div>
 
                         <div style="flex: 1; min-width: 200px; background: rgba(56, 189, 248, 0.06); padding: 16px; border-radius: 10px; border: 1px solid rgba(56, 189, 248, 0.3);">
@@ -1210,7 +1227,7 @@ def main_app_layout():
                             <div style="width:100%; background:#1e293b; border-radius:10px; height:6px; overflow:hidden; margin-top:6px;">
                                 <div style="width:{(cap_s/50.0)*100}%; background:#38bdf8; height:100%;"></div>
                             </div>
-                            <div style="font-size:0.7rem; color:#94a3b8; margin-top:4px;">Gemini code & mechatronic execution score</div>
+                            <div style="font-size:0.7rem; color:#94a3b8; margin-top:4px;">Practical capstone evaluation score for {s_track}</div>
                         </div>
 
                         <div style="flex: 1.2; min-width: 220px; background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); padding: 16px; border-radius: 10px; border: 2px solid #818cf8;">
@@ -1238,15 +1255,15 @@ def main_app_layout():
                             </thead>
                             <tbody>
                                 <tr style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02);">
-                                    <td style="padding: 10px 12px;"><b>Theory Multimodal MCQs</b></td>
+                                    <td style="padding: 10px 12px;"><b>Theory Multimodal MCQs ({s_track})</b></td>
                                     <td style="padding: 10px 12px;">Automated Gemma AI Token Matching</td>
                                     <td style="padding: 10px 12px;">50</td>
                                     <td style="padding: 10px 12px; color:#34d399; font-weight:700;">{mcq_s} Marks</td>
                                     <td style="padding: 10px 12px;">{(mcq_s/100.0)*100:.1f}%</td>
                                 </tr>
                                 <tr style="border-top: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.04);">
-                                    <td style="padding: 10px 12px;"><b>Practical Capstone Assessment</b></td>
-                                    <td style="padding: 10px 12px;">Gemini 3.5 Code Sandbox Review</td>
+                                    <td style="padding: 10px 12px;"><b>Practical Capstone Assessment ({s_track})</b></td>
+                                    <td style="padding: 10px 12px;">Gemini 3.5 Sandbox Review</td>
                                     <td style="padding: 10px 12px;">50</td>
                                     <td style="padding: 10px 12px; color:#38bdf8; font-weight:700;">{cap_s} Marks</td>
                                     <td style="padding: 10px 12px;">{(cap_s/100.0)*100:.1f}%</td>
@@ -1273,7 +1290,7 @@ def main_app_layout():
                     </div>
                 </div>
                 """
-                components.html(card_html, height=560, scrolling=True)
+                components.html(card_html, height=580, scrolling=True)
                 
                 col_pt1, col_pt2, col_retake = st.columns([1, 1, 1])
                 with col_pt1:
@@ -1303,7 +1320,7 @@ def main_app_layout():
                     <html>
                     <head>
                         <meta charset="utf-8">
-                        <title>Official Marksheet - {s_name}</title>
+                        <title>Official Marksheet - {s_name} ({s_track})</title>
                         <style>
                             @media print {{
                                 body {{ background: #ffffff !important; color: #000000 !important; font-family: 'Segoe UI', sans-serif; }}
@@ -1313,8 +1330,9 @@ def main_app_layout():
                             body {{ background: #ffffff; color: #1e293b; font-family: Arial, sans-serif; padding: 10px; margin: 0; }}
                             .print-container {{ border: 2px solid #3b82f6; border-radius: 12px; padding: 30px; background: #ffffff; }}
                             .header-table {{ width: 100%; border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 20px; }}
+                            .course-banner {{ background: #1e3a8a; color: #ffffff; padding: 12px 18px; border-radius: 6px; margin-bottom: 20px; text-align: center; }}
                             .meta-table {{ width: 100%; margin-bottom: 20px; border-collapse: collapse; font-size: 0.95rem; }}
-                            .meta-table td {{ padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; }}
+                            .meta-table td {{ padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; }}
                             .score-table {{ width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.95rem; }}
                             .score-table th {{ background: #1e3a8a; color: #ffffff; padding: 10px; border: 1px solid #1e3a8a; text-align: left; }}
                             .score-table td {{ padding: 10px; border: 1px solid #cbd5e1; }}
@@ -1338,16 +1356,25 @@ def main_app_layout():
                                 </tr>
                             </table>
 
+                            <div class="course-banner">
+                                <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #93c5fd;">OFFICIAL ACADEMIC MARKSHEET & EVALUATION CERTIFICATE FOR:</div>
+                                <h2 style="margin: 4px 0 0 0; color: #ffffff; font-size: 1.4rem;">{s_track.upper()}</h2>
+                            </div>
+
                             <table class="meta-table">
                                 <tr>
                                     <td><b>Candidate Name:</b> {s_name}</td>
                                     <td><b>Student ID:</b> {s_id}</td>
                                 </tr>
                                 <tr>
-                                    <td><b>Specialization Track:</b> {s_track}</td>
+                                    <td><b>Certified Course Program:</b> <b style="color:#1e3a8a; font-size: 1.05rem;">{s_track}</b></td>
                                     <td><b>Branch Center:</b> {s_branch}</td>
                                 </tr>
                                 <tr>
+                                    <td><b>Evaluation Method:</b> Multimodal AI (Gemma + Gemini 3.5)</td>
+                                    <td><b>Grade & Rank:</b> {grade_str}</td>
+                                </tr>
+                            </table>
                                     <td><b>Evaluation Method:</b> Multimodal AI (Gemma + Gemini 3.5)</td>
                                     <td><b>Grade & Rank:</b> {grade_str}</td>
                                 </tr>
