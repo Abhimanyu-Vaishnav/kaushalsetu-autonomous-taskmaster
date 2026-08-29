@@ -1501,40 +1501,33 @@ def main_app_layout():
                         is_fresher_eligible = job.get("is_fresher_eligible", True)
                         exp_badge_color = "#34d399" if is_fresher_eligible else "#fbbf24"
 
+                        # Clean Minimalist Essential Job Card
                         st.markdown(f"""
-                        <div style="background: rgba(15,23,42,0.85); border: 1px solid {'#f59e0b' if is_top else 'rgba(255,255,255,0.08)'}; border-radius: 14px; padding: 22px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+                        <div style="background: rgba(15,23,42,0.85); border: 1px solid {'#f59e0b' if is_top else 'rgba(255,255,255,0.08)'}; border-radius: 14px; padding: 20px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
                                 <div>
-                                    <h3 style="margin: 0 0 6px 0; color: #ffffff; font-size: 1.2rem; font-weight: 700;">{job.get('title')} {top_badge_html}</h3>
-                                    <div style="color: #94a3b8; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                    <h3 style="margin: 0 0 4px 0; color: #ffffff; font-size: 1.15rem; font-weight: 700;">{job.get('title')} {top_badge_html}</h3>
+                                    <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                                         <span style="color: #60a5fa;">🏢 {job.get('company')}</span>
                                         <span>•</span>
                                         <span>📍 {job.get('location')}</span>
                                         <span>•</span>
                                         <span style="color: #34d399; font-weight: 700;">🛡️ Verified Audit</span>
                                     </div>
-                                    <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;">
-                                        <span style="background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">💰 Salary: {disc_sal if 'Actual' in disc_sal else ai_sal}</span>
-                                        <span style="background: rgba(245,158,11,0.1); color: {exp_badge_color}; border: 1px solid {exp_badge_color}44; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;">🎓 Exp: {exp_req}</span>
+                                    <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
+                                        <span style="background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">💰 Salary: {disc_sal if 'Actual' in disc_sal else ai_sal}</span>
+                                        <span style="background: rgba(245,158,11,0.1); color: {exp_badge_color}; border: 1px solid {exp_badge_color}44; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">🎓 Exp: {exp_req}</span>
                                     </div>
                                 </div>
                                 <div style="text-align: right;">
-                                    <span style="font-size: 1.25rem; font-weight: 800; color: {'#34d399' if j_match >= 85 else '#60a5fa'};">{j_match}% Match</span>
-                                    <br><span style="font-size: 0.78rem; color: #a7f3d0; font-weight: 700;">🎯 {sel_chance}</span>
-                                    <br><span style="font-size: 0.72rem; color: #64748b;">{job.get('source', 'Verified Partner')}</span>
+                                    <span style="font-size: 1.2rem; font-weight: 800; color: {'#34d399' if j_match >= 85 else '#60a5fa'};">{j_match}% Match</span>
+                                    <br><span style="font-size: 0.75rem; color: #a7f3d0; font-weight: 700;">🎯 {sel_chance}</span>
                                 </div>
-                            </div>
-                            <p style="color: #cbd5e1; font-size: 0.9rem; margin: 14px 0 10px 0; line-height: 1.5;">{job.get('description')}</p>
-                            <div style="margin: 10px 0; padding: 10px 14px; background: rgba(59,130,246,0.08); border-left: 3px solid #3b82f6; border-radius: 6px; font-size: 0.84rem; color: #93c5fd;">
-                                💡 <b>AI Candidate Fit Insight:</b> {fit_insight}
-                            </div>
-                            <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px;">
-                                {' '.join([f"<span style='background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); padding: 2px 8px; border-radius: 4px; font-size: 0.76rem;'>✓ {s}</span>" for s in job.get('skills', [])])}
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
 
-                        col_app, col_ext, col_view = st.columns([2, 2, 2])
+                        col_app, col_ext = st.columns([1, 1])
                         with col_app:
                             if is_already_applied:
                                 st.success("✅ Application Dispatched")
@@ -1548,9 +1541,12 @@ def main_app_layout():
                                         st.error(apply_res.get("message"))
                         with col_ext:
                             st.link_button("🌐 Direct Apply (Official Portal)", job.get("apply_url") or "https://jobs.siemens.com", use_container_width=True)
-                        with col_view:
-                            if st.button("📋 Requirements & Prep", key=f"req_btn_{jid}", use_container_width=True):
-                                st.info(f"**Role:** {job.get('title')} at {job.get('company')}\n\n**Experience:** {job.get('exp')} | **Job Type:** {job.get('type')}\n\n**Candidate Advantage:** Certified competency in {s_track} matches exact requirements.\n\n**Official Portal URL:** [{job.get('apply_url')}]({job.get('apply_url')})")
+
+                        with st.expander("📋 View Detailed Job Requirements, Responsibilities & AI Fit Insight"):
+                            st.markdown(f"**Description & Duties:**\n{job.get('description')}")
+                            st.info(f"💡 **AI Candidate Fit Insight:** {fit_insight}")
+                            st.markdown(f"**Required Technical Competencies:** " + " ".join([f"`✓ {s}`" for s in job.get('skills', [])]))
+                            st.markdown(f"**Experience Requirement:** `{exp_req}` | **Employment Type:** `{job.get('type')}` | **Source:** `{job.get('source')}`")
 
                 # Redesigned 100% Working Load More & Pagination Bar
                 st.markdown("<div style='margin-top: 25px; padding: 16px; background: rgba(15,23,42,0.95); border: 1px solid rgba(59,130,246,0.3); border-radius: 14px;'>", unsafe_allow_html=True)
@@ -1568,9 +1564,8 @@ def main_app_layout():
                 with col_load_more:
                     if st.button(f"⚡ Load More Jobs (Page {st.session_state.job_page + 1}) 🚀", key="job_load_more_btn", type="primary", use_container_width=True):
                         st.session_state.job_page += 1
-                        if st.session_state.job_page > total_pages:
-                            st.session_state["force_live_rescan"] = True
-                        st.toast(f"⚡ Loading Page {st.session_state.job_page} live vacancies...", icon="🌐")
+                        st.session_state["force_live_rescan"] = True
+                        st.toast(f"⚡ Crawling fresh live vacancies for Page {st.session_state.job_page}...", icon="🌐")
                         st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1581,7 +1576,40 @@ def main_app_layout():
 
                 # Profile-Aware Domain Role Options Isolation
                 s_track = str(student_data.get("course_name") or student_data.get("track") or "").lower()
-                if any(w in s_track for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
+                if any(w in s_track for w in ["ai", "machine", "ml", "data", "intelligence"]):
+                    auto_role = "AI & Machine Learning Operations (MLOps) Specialist"
+                    role_options = [
+                        f"🎯 Auto-Matched ({auto_role})",
+                        "AI & Machine Learning Operations (MLOps) Specialist",
+                        "Computer Vision & Deep Learning Deployment Engineer",
+                        "LLM Fine-Tuning & Prompt Engineering Analyst",
+                        "Data Science & Predictive Modeling Engineer"
+                    ]
+                    theme_accent = "#8b5cf6"
+                    theme_sub = "#a78bfa"
+                elif any(w in s_track for w in ["hindi", "phd", "academic", "humanities", "literature", "research"]):
+                    auto_role = "Assistant Professor & Academic Research Fellow"
+                    role_options = [
+                        f"🎯 Auto-Matched ({auto_role})",
+                        "Assistant Professor & Academic Research Fellow",
+                        "Senior Archival & Content Documentation Specialist",
+                        "Literary Translation & Lexicographical Analyst",
+                        "UGC Humanities & Cultural Policy Research Officer"
+                    ]
+                    theme_accent = "#ec4899"
+                    theme_sub = "#f472b6"
+                elif any(w in s_track for w in ["pharma", "pharmacy", "drug", "medic"]):
+                    auto_role = "Pharmacology & HPLC Quality Control Analyst"
+                    role_options = [
+                        f"🎯 Auto-Matched ({auto_role})",
+                        "Pharmacology & HPLC Quality Control Analyst",
+                        "GMP Compliance & Drug Assay Inspector",
+                        "Clinical Trial & Pharmaceutical Research Trainee",
+                        "Industrial Quality Assurance Specialist"
+                    ]
+                    theme_accent = "#10b981"
+                    theme_sub = "#34d399"
+                elif any(w in s_track for w in ["account", "finance", "tally", "tax", "audit", "commerce"]):
                     auto_role = "Senior Tally & GST Accountant"
                     role_options = [
                         f"🎯 Auto-Matched ({auto_role})",
