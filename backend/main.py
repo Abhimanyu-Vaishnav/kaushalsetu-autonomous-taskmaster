@@ -4041,14 +4041,15 @@ def build_guaranteed_working_job_url(title: str, company: str, location: str, so
 # --- Guaranteed Working Direct Apply URL Resolver ---
 def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
     """
-    Constructs an authentic, direct, working job application or search URL
-    across verified portals (LinkedIn India, Indeed India, Naukri, NCS India).
+    Constructs an authentic, direct, working job application or Google Jobs search URL
+    across verified portals (Google Jobs Tab, LinkedIn India, Indeed India, Naukri, NCS India).
     """
-    if raw_url and raw_url.startswith("http") and not any(bad in raw_url for bad in ["duckduckgo", "google.com/search", "notfound"]):
+    if raw_url and raw_url.startswith("http") and not any(bad in raw_url for bad in ["duckduckgo", "notfound"]):
         return raw_url
 
     clean_words = [w for w in re.sub(r'[^a-zA-Z0-9\s]', '', title).split() if len(w) > 2][:3]
     clean_title = "+".join(clean_words) if clean_words else "Engineer"
+    clean_company = re.sub(r'[^a-zA-Z0-9\s]', '', company).strip().replace(" ", "+")
     clean_loc = location.split()[0] if location else "Delhi"
 
     s_lower = str(source).lower()
@@ -4056,11 +4057,14 @@ def build_guaranteed_working_job_url(title: str, company: str, location: str, so
         role_slug = "-".join(clean_words).lower()
         return f"https://www.naukri.com/{role_slug}-jobs-in-{clean_loc.lower()}"
     elif "indeed" in s_lower:
-        return f"https://in.indeed.com/jobs?q={clean_title}&l={clean_loc}"
+        return f"https://in.indeed.com/jobs?q={clean_title}+{clean_company}&l={clean_loc}"
     elif "ncs" in s_lower:
         return f"https://www.ncs.gov.in/Pages/Search.aspx?k={clean_title}"
+    elif "linkedin" in s_lower:
+        return f"https://www.linkedin.com/jobs/search/?keywords={clean_title}+{clean_company}&location={clean_loc}"
     else:
-        return f"https://www.linkedin.com/jobs/search/?keywords={clean_title}&location={clean_loc}"
+        # Direct Google Jobs Search Tab URL
+        return f"https://www.google.com/search?q={clean_company}+{clean_title}+jobs+{clean_loc}&ibp=htl;jobs"
 
 def live_internet_crawler_search(track: str, skills: list = None, location: str = "Delhi NCR", query: str = "") -> list:
     """
