@@ -14,18 +14,29 @@ ENV/
 backend/.env
 backend/.env.example
 
-# Local SQLite Database Temporary Files & Legacy DB
+# Local SQLite Database & Temporary Files (Keep Local Data Secret)
+*.db
 *.db-shm
 *.db-wal
+*.sqlite
+*.sqlite3
+backend/*.db
 backend/*.db-shm
 backend/*.db-wal
 backend/skillforge.db
+backend/kaushalsetu.db
+backend/kaushalsetu_prod.db
 
-# User Uploaded Temporary Artifacts (Keep directory clean)
+# Dynamic Generated Portfolios & Resumes
+backend/static/portfolios/*
+!backend/static/portfolios/.gitkeep
 backend/resumes/*
 !backend/resumes/.gitkeep
 
-# Local Demo & Submission Helper Markdown (Keep local only)
+# State & Snapshot Files
+state_snapshot.json
+
+# Local Demo & Submission Helper Markdown
 DEVPOST_SUBMISSION.md
 DEMO_SCRIPT.md
 
@@ -41,3 +52,9 @@ $RECYCLE.BIN/
 .idea/
 *.swp
 *.swo
+
+# Secrets & Keys
+*.key
+*.pem
+credentials.json
+service_account.json
