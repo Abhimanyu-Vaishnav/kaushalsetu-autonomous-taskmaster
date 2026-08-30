@@ -1561,13 +1561,7 @@ def main_app_layout():
                 end_p = min(start_p + PAGE_SIZE, total_len)
                 paged_jobs = all_jobs[start_p:end_p]
 
-                col_stat, col_expand = st.columns([3, 1])
-                with col_stat:
-                    st.markdown(f"**Showing `{len(paged_jobs)}` of `{total_len}` Domain-Verified Openings** — *(Page {curr_pg} of {total_pgs})*")
-                with col_expand:
-                    if total_len > PAGE_SIZE and st.button("📥 Load 20 More Jobs", key="btn_load_more_jobs", use_container_width=True):
-                        st.session_state["job_page_size"] += 20
-                        st.rerun()
+                st.markdown(f"**Showing `{len(paged_jobs)}` of `{total_len}` Domain-Verified Openings** — *(Page {curr_pg} of {total_pgs})*")
 
                 if not paged_jobs:
                     st.info("No active openings matched the current criteria. Click 'Rescan Intelligence Engine'.")
@@ -1613,6 +1607,15 @@ def main_app_layout():
                                 st.toast(f"✅ Application dispatched to {job.get('company_name')}!", icon="📬")
                         with col_b:
                             st.link_button("🔗 Open Direct Verified Vacancy Permalink ↗", url=job.get("apply_url"), use_container_width=True)
+
+                # LOAD MORE JOBS BUTTON (Right after the last job card)
+                if total_len > len(paged_jobs):
+                    st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
+                    if st.button("📥 Load 20 More Live Domain Openings...", key="btn_load_more_jobs_after_list", use_container_width=True):
+                        with st.spinner("⏳ Ingesting & screening 20 more live vacancies..."):
+                            st.session_state["job_page_size"] += 20
+                            time.sleep(0.3)
+                            st.rerun()
 
                 # Pagination Controls
                 st.markdown("<br>", unsafe_allow_html=True)
