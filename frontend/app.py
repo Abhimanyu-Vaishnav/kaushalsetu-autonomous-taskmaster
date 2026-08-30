@@ -1606,25 +1606,25 @@ def main_app_layout():
                         with col_b:
                             st.link_button("🔗 Open Direct Verified Vacancy Permalink ↗", url=job.get("apply_url"), use_container_width=True)
 
-                # LOAD NEXT PAGE BUTTON (Right after 10th job card)
-                if curr_pg < total_pgs:
-                    st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
-                    if st.button(f"📥 Load 10 More Live Openings (Go to Page {curr_pg + 1} ➡)...", key=f"btn_load_next_page_{curr_pg}", use_container_width=True):
-                        with st.spinner(f"⏳ Loading Page {curr_pg + 1} with 10 more verified domain openings..."):
-                            st.session_state["job_page_idx"] = curr_pg + 1
-                            time.sleep(0.3)
-                            st.rerun()
+                        # DIRECTLY AFTER THE LAST JOB CARD (idx == len(paged_jobs) - 1)
+                        if idx == len(paged_jobs) - 1 and curr_pg < total_pgs:
+                            st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
+                            if st.button(f"📥 Load 10 More Live Openings (Go to Page {curr_pg + 1} of {total_pgs} ➡)...", key=f"btn_load_more_after_card_{curr_pg}", type="primary", use_container_width=True):
+                                with st.spinner(f"⏳ Loading Page {curr_pg + 1} with 10 more verified domain openings..."):
+                                    st.session_state["job_page_idx"] = curr_pg + 1
+                                    time.sleep(0.3)
+                                    st.rerun()
 
-                # Pagination Controls
+                # Bottom Pagination Controls
                 st.markdown("<br>", unsafe_allow_html=True)
-                col_prev, col_txt, col_next = st.columns([1, 2, 1])
-                with col_prev:
+                col_p, col_c, col_n = st.columns([1, 2, 1])
+                with col_p:
                     if st.button("⬅ Previous 10 Jobs", disabled=(curr_pg <= 1), key="btn_prev_10_jobs", use_container_width=True):
                         st.session_state["job_page_idx"] = max(1, curr_pg - 1)
                         st.rerun()
-                with col_txt:
+                with col_c:
                     st.markdown(f"<p style='text-align:center; margin-top:8px; color:#94a3b8; font-weight:600;'>Page {curr_pg} of {total_pgs} ({total_len} Total Jobs)</p>", unsafe_allow_html=True)
-                with col_next:
+                with col_n:
                     if st.button("Next 10 Jobs ➡", disabled=(curr_pg >= total_pgs), key="btn_next_10_jobs", use_container_width=True):
                         st.session_state["job_page_idx"] = min(total_pgs, curr_pg + 1)
                         st.rerun()
