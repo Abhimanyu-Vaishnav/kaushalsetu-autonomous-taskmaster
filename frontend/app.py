@@ -1883,7 +1883,7 @@ def main_app_layout():
                     .mic-wave-bar:nth-child(2) {{ animation-delay: 0.15s; background: #f59e0b; }}
                     .mic-wave-bar:nth-child(3) {{ animation-delay: 0.3s; background: #ef4444; }}
                     </style>
-                    <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); padding: 12px 18px; border-radius: 12px; margin-bottom: 8px;">
+                    <div style="font-family: system-ui, -apple-system, sans-serif; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 12px 18px; margin-bottom: 12px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div id="mic_pulse_anim" style="display: none; align-items: center; gap: 3px; height: 16px; margin-right: 4px;">
@@ -1893,10 +1893,10 @@ def main_app_layout():
                                 </div>
                                 <div>
                                     <b style="color: #34d399; font-size: 0.9rem;">🎙️ Live Voice Dictation Helper:</b>
-                                    <span style="color: #cbd5e1; font-size: 0.82rem; margin-left: 6px;" id="mic_status_txt">Click green mic button & speak — words dictate LIVE into answer box below!</span>
+                                    <span style="color: #cbd5e1; font-size: 0.82rem; margin-left: 6px;" id="mic_status_txt">Click green mic button & speak into your microphone...</span>
                                 </div>
                             </div>
-                            <button id="stt_mic_btn" onclick="toggleMicDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.84rem; font-weight: 700; cursor: pointer; box-shadow: 0 0 14px rgba(16,185,129,0.4); transition: all 0.25s ease;">
+                            <button id="stt_mic_btn" onclick="toggleMicDictation()" style="background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all 0.2s ease;">
                                 🎙️ Start Live Real-Time Voice Typing
                             </button>
                         </div>
@@ -1905,42 +1905,67 @@ def main_app_layout():
                     var dictationRec;
                     var isListening = false;
                     var baseTranscript = "";
-                    
+
+                    function syncReactInput(element, val) {{
+                        if (!element) return;
+                        try {{
+                            var lastVal = element.value;
+                            element.value = val;
+                            var tracker = element._valueTracker;
+                            if (tracker) {{
+                                tracker.setValue(lastVal);
+                            }}
+                            element.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                            element.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        }} catch(e) {{
+                            element.value = val;
+                        }}
+                    }}
+
+                    function updateParentTextArea(fullText) {{
+                        try {{
+                            var pArea = window.parent.document.querySelector("textarea");
+                            if (pArea) {{
+                                syncReactInput(pArea, fullText);
+                            }}
+                        }} catch(e) {{}}
+                    }}
+
                     function toggleMicDictation() {{
                         var btn = document.getElementById("stt_mic_btn");
                         var status = document.getElementById("mic_status_txt");
                         var micAnim = document.getElementById("mic_pulse_anim");
                         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                        
+
                         if (!SpeechRecognition) {{
-                            status.innerText = "⚠️ Voice Speech Recognition API requires Google Chrome or Microsoft Edge browser.";
+                            status.innerText = " Voice Speech Recognition API requires Google Chrome or Microsoft Edge browser.";
                             status.style.color = "#f87171";
                             return;
                         }}
-                        
+
                         if (!isListening) {{
                             dictationRec = new SpeechRecognition();
                             dictationRec.continuous = true;
                             dictationRec.interimResults = true;
                             dictationRec.lang = "en-US";
-                            
+
                             try {{
                                 var targetArea = window.parent.document.querySelector("textarea");
                                 baseTranscript = targetArea && targetArea.value ? targetArea.value.trim() + " " : "";
                             }} catch(e) {{
                                 baseTranscript = "";
                             }}
-                            
+
                             dictationRec.onstart = function() {{
                                 isListening = true;
                                 btn.style.background = "#ef4444";
                                 btn.style.animation = "mic-glow-pulse 1.5s infinite";
-                                btn.innerText = "🛑 Stop Voice Dictation";
-                                status.innerText = "🔴 Listening live... Speak now into your mic!";
+                                btn.innerText = " Stop Voice Dictation";
+                                status.innerText = " Listening live... Speak now into your mic!";
                                 status.style.color = "#ef4444";
                                 micAnim.style.display = "inline-flex";
                             }};
-                            
+
                             dictationRec.onresult = function(event) {{
                                 var interimTranscript = "";
                                 var finalTranscript = "";
@@ -1954,32 +1979,31 @@ def main_app_layout():
                                 if (finalTranscript) {{
                                     baseTranscript += finalTranscript + " ";
                                 }}
-                                var fullText = (baseTranscript + interimTranscript).replace(/\\b(\\w+)\\s+\\1\\b/gi, '$1');
-                                
-                                try {{
-                                    var pArea = window.parent.document.querySelector("textarea");
-                                    if (pArea) {{
-                                        pArea.value = fullText;
-                                        pArea.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                    }}
-                                }} catch(e) {{}}
+                                var fullText = (baseTranscript + interimTranscript).replace(/\\b(\\w+)\\s+\\1\\b/gi, '$1').trim();
+                                updateParentTextArea(fullText);
                             }};
-                            
+
                             dictationRec.onerror = function(event) {{
                                 status.innerText = "Mic Notice: " + event.error;
                                 status.style.color = "#f87171";
                             }};
-                            
+
                             dictationRec.onend = function() {{
                                 isListening = false;
                                 btn.style.background = "linear-gradient(135deg, #10b981, #059669)";
                                 btn.style.animation = "none";
-                                btn.innerText = "🎙️ Start Live Real-Time Voice Typing";
-                                status.innerText = "✓ Live voice dictation complete! Click Submit button below.";
+                                btn.innerText = " Start Live Real-Time Voice Typing";
+                                status.innerText = " Live voice dictation complete! You can edit text or click Submit below.";
                                 status.style.color = "#34d399";
                                 micAnim.style.display = "none";
+                                try {{
+                                    var targetArea = window.parent.document.querySelector("textarea");
+                                    if (targetArea && targetArea.value) {{
+                                        updateParentTextArea(targetArea.value.trim());
+                                    }}
+                                }} catch(e) {{}}
                             }};
-                            
+
                             dictationRec.start();
                         }} else {{
                             if (dictationRec) dictationRec.stop();
