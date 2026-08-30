@@ -87,7 +87,7 @@ def generate_assessment(topic: str, difficulty: str = "Intermediate", institute_
         f"Also generate a practical capstone project challenge and 3 specific grading rubric parameters."
     )
     
-    model_name = "gemini-2.5-flash"
+    model_name = "gemini-3.5-flash"
     
     try:
         response = client.models.generate_content(
@@ -183,7 +183,7 @@ def enrich_and_synthesize_course_input(title: str, description: str, raw_modules
     )
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -219,7 +219,7 @@ def synthesize_course_from_input(course_title_or_syllabus: str) -> dict:
     )
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -250,7 +250,7 @@ def parse_resume_profile(text_or_url: str) -> dict:
     )
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -315,7 +315,7 @@ def generate_remedial_curriculum(candidate_name: str, skill_gaps: List[str]) -> 
     
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -402,7 +402,7 @@ def evaluate_submission(
             
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash",
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -805,7 +805,7 @@ def parse_pdf_resume_with_gemini(pdf_bytes: bytes, filename: str = "resume.pdf")
             "}"
         )
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.5-flash',
             contents=[
                 types.Part.from_bytes(data=pdf_bytes, mime_type='application/pdf'),
                 prompt

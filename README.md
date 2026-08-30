@@ -101,11 +101,11 @@ digest = "0xKAUSHALSETU_" + hashlib.sha256(raw_str.encode('utf-8')).hexdigest()[
 
 | Feature Module | Model / Tool Used | Function & Technical Role |
 | :--- | :--- | :--- |
-| **Grounded Job Discovery** | `gemini-2.5-flash` + `google_search` Tool | Real-time live web search grounding across Google Jobs, LinkedIn, Naukri, Indeed, and NCS for active job openings. |
-| **AI Technical Interview Studio** | `gemini-2.5-flash` / `gemini-2.5-pro` | Turn-by-turn conversational technical recruiter, evaluating user answers, scoring precision, and generating 10/10 exemplar responses. |
-| **Multimodal Resume Parsing** | `gemini-2.5-flash` (`types.Part.from_bytes`) | Extracts structured JSON bio, skills, and work history directly from raw uploaded candidate PDF resumes. |
-| **Dynamic Portfolio Synthesizer** | `gemini-2.5-flash` | Generates full-page, standalone HTML/CSS candidate portfolios with Chart.js radar skill metrics and GitHub project cards. |
-| **Course & MCQ Synthesizer** | `gemini-2.5-pro` | Synthesizes domain-aligned diagnostic MCQs and practical capstone rubrics from raw vocational syllabi. |
+| **Grounded Job Discovery** | `gemini-3.5-flash` + `google_search` Tool | Real-time live web search grounding across Google Jobs, LinkedIn, Naukri, Indeed, and NCS for active job openings. |
+| **AI Technical Interview Studio** | `gemini-3.5-flash` | Turn-by-turn conversational technical recruiter, evaluating user answers, scoring precision, and generating 10/10 exemplar responses. |
+| **Multimodal Resume Parsing** | `gemini-3.5-flash` (`types.Part.from_bytes`) | Extracts structured JSON bio, skills, and work history directly from raw uploaded candidate PDF resumes. |
+| **Dynamic Portfolio Synthesizer** | `gemini-3.5-flash` | Generates full-page, standalone HTML/CSS candidate portfolios with Chart.js radar skill metrics and GitHub project cards. |
+| **Course & MCQ Synthesizer** | `gemini-3.5-flash` | Synthesizes domain-aligned diagnostic MCQs and practical capstone rubrics from raw vocational syllabi. |
 
 ---
 

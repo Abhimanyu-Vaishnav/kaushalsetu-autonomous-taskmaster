@@ -538,7 +538,7 @@ Requirements:
 Return strictly a valid JSON array of {page_size} objects.
             """
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.5-flash",
                 contents=prompt,
                 config={"tools": [{"google_search": {}}]}
             )

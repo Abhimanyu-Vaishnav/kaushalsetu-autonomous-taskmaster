@@ -2099,7 +2099,7 @@ def direct_simulate_candidate_loop(score_type: str = "TOP"):
                 }}
                 """
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.5-flash',
                     contents=prompt
                 )
                 if response and response.text:
@@ -2556,7 +2556,7 @@ def start_or_get_interview_session(student_id: str, job_role: str = "", mode: st
                 Synthesize a highly realistic, domain-authentic Question #1 for this candidate that specifically references their background, course, or resume projects.
                 Return JSON: {{"question": "text"}}
                 """
-                resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
                 if resp and resp.text:
                     match = re.search(r'\{.*\}', resp.text, re.DOTALL)
                     if match:
@@ -2637,7 +2637,7 @@ def agent_generate_alternative_question(session_id: str) -> dict:
                 from google import genai
                 client = genai.Client(api_key=gemini_key)
                 prompt = f"Generate a completely new, realistic technical interview question (Turn {turn}) for role '{job_role}' focusing on practical shop-floor or office execution. Return JSON: {{\"question\": \"text\"}}"
-                resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
                 if resp and resp.text:
                     match = re.search(r'\{.*\}', resp.text, re.DOTALL)
                     if match:
@@ -2688,7 +2688,7 @@ def agent_refine_candidate_interview_answer(question: str, draft_answer: str, jo
             - key_improvements_made: array of 3 specific improvements added
             - target_terms_added: array of 4 domain technical terms included
             """
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
             if resp and resp.text:
                 match = re.search(r'\{.*\}', resp.text, re.DOTALL)
                 if match:
@@ -2738,7 +2738,7 @@ def generate_question_aware_best_answer(question: str, job_role: str = "", style
             
             Return JSON with key: "model_answer" (string).
             """
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
             if resp and resp.text:
                 match = re.search(r'\{.*\}', resp.text, re.DOTALL)
                 if match:
@@ -2928,7 +2928,7 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
                       "model_answer": "ideal 10/10 response to this specific question"
                     }}
                     """
-                    resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                    resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
                     if resp and resp.text:
                         match = re.search(r'\{.*\}', resp.text, re.DOTALL)
                         if match:
@@ -3040,7 +3040,7 @@ def evaluate_interview_turn(session_id: str, student_answer: str):
                 3. Keep it crisp, realistic, and domain-authentic.
                 Return JSON: {{"next_question": "text"}}
                 """
-                resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
                 if resp and resp.text:
                     match = re.search(r'\{.*\}', resp.text, re.DOTALL)
                     if match:
@@ -3245,7 +3245,7 @@ def agent_synthesize_resume_dossier(name: str, track: str, resume_raw: str, skil
               "soft_skills": ["Soft skills"]
             }}
             """
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
             if resp and resp.text:
                 match = re.search(r'\{.*\}', resp.text, re.DOTALL)
                 if match:
@@ -3431,7 +3431,7 @@ def agent_generate_ai_portfolio_theme(track_name: str, tech_skills: list) -> dic
             - "metric_1_text": Metric 1 label and value string e.g. "Color Grade Precision: 99.4%"
             - "metric_2_text": Metric 2 label and value string e.g. "Render Timeline Sync: 100%"
             """
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
             if resp and resp.text:
                 match = re.search(r'\{.*\}', resp.text, re.DOTALL)
                 if match:
@@ -3722,7 +3722,7 @@ def generate_dynamic_ai_portfolio(student_id: str) -> str:
                 Synthesize a punchy 2-sentence executive recruiter summary showcasing practical technical drive, system reliability, and problem-solving impact.
                 Return strictly text without quotes.
                 """
-                resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
                 if resp and resp.text:
                     ai_summary = resp.text.strip().replace('"', '')
             except Exception as ai_ex:
@@ -4080,7 +4080,7 @@ def generate_mcqs_for_track(track_name: str, count: int = 5) -> list:
             
             Return strictly a JSON list containing EXACTLY {target} question objects.
             """
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
             if resp and resp.text:
                 match = re.search(r'\[.*\]', resp.text, re.DOTALL)
                 if match:
@@ -4213,7 +4213,7 @@ def agent_verify_and_extract_direct_job_url(title: str, company: str, location: 
             - Return strictly a JSON object: {{"direct_job_url": "https://..."}}
             """
             resp = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.5-flash",
                 contents=verify_prompt,
                 config=types.GenerateContentConfig(
                     tools=[{"google_search": {}}],
@@ -4274,7 +4274,7 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
     # --- STEP 1: Autonomous Web Crawling Agent with Gemini Google Search Grounding ---
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
-        models_to_try = ["gemini-2.5-flash"]
+        models_to_try = ["gemini-3.5-flash"]
         for m_name in models_to_try:
             if raw_crawled:
                 break
@@ -4351,7 +4351,7 @@ def live_internet_crawler_search(track: str, skills: list = None, location: str 
             from google import genai
             client = genai.Client(api_key=gemini_key)
             syn_prompt = f"Generate 8 realistic active hiring vacancies in India/Global for course track '{track}' and skills '{skills_text}'. Return strictly a JSON list of objects with keys (title, company, location, disclosed_salary, ai_estimated_salary, type, exp, is_fresher_eligible, skills, description, source, apply_url, student_fit_insight, ai_crawl_reasoning, ai_match_breakdown)."
-            syn_resp = client.models.generate_content(model="gemini-2.5-flash", contents=syn_prompt)
+            syn_resp = client.models.generate_content(model="gemini-3.5-flash", contents=syn_prompt)
             if syn_resp and syn_resp.text:
                 m_syn = re.search(r'\[\s*\{.*\}\s*\]', syn_resp.text, re.DOTALL)
                 if m_syn:
@@ -4588,7 +4588,7 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
     if genai and gemini_key:
         try:
             genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel("gemini-2.5-flash")
+            model = genai.GenerativeModel("gemini-3.5-flash")
             strategy_prompt = f"""
             Analyze candidate profile and generate a dynamic job search strategy & 5 domain-exact placement vacancies.
 
@@ -4776,7 +4776,7 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
     if genai and gemini_key and len(crawled_pool) > 0:
         try:
             genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel("gemini-2.5-flash")
+            model = genai.GenerativeModel("gemini-3.5-flash")
             samples = [{"idx": i, "title": j["role_title"], "skills": j.get("required_skills", ""), "desc": j.get("description", "")[:120]} for i, j in enumerate(crawled_pool[:25])]
             
             prompt = f"""
@@ -5140,7 +5140,7 @@ def agentic_synthesize_course(raw_input: str, branch_id: str = "BR-NANGLOI"):
                 - "options": list of 4 choices e.g. ["A) ...", "B) ...", "C) ...", "D) ..."]
                 - "correct_answer": full text string matching the correct choice
             """
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = client.models.generate_content(model="gemini-3.5-flash", contents=prompt)
             if resp and resp.text:
                 match = re.search(r'\{.*\}', resp.text, re.DOTALL)
                 if match:
