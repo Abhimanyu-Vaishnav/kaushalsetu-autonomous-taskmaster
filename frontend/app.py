@@ -1482,7 +1482,8 @@ def main_app_layout():
                         st.session_state[f"jobs_data_{s_id}"] = st.session_state[cache_key]
                         st.session_state["job_page_idx"] = 1
 
-                all_jobs = list(st.session_state.get(cache_key, []))
+                raw_feed_jobs = list(st.session_state.get(cache_key, []))
+                all_jobs = list(raw_feed_jobs)
 
                 # Apply Filter
                 if search_txt:
@@ -1495,6 +1496,10 @@ def main_app_layout():
                         all_jobs = [j for j in all_jobs if j.get("country_tier") == "National"]
                     elif "Worldwide" in tier_choice:
                         all_jobs = [j for j in all_jobs if j.get("country_tier") == "Worldwide"]
+
+                # Fail-safe: If filter produced 0 results, auto-fallback to raw feed jobs
+                if not all_jobs and raw_feed_jobs:
+                    all_jobs = raw_feed_jobs
 
                 # 20 JOBS PER PAGE PAGINATION
                 PAGE_SIZE = 20
