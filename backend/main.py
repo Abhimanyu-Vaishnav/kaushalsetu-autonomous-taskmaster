@@ -4615,7 +4615,7 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
 
     # 3. Live RSS & Global API Ingestion with Strict Domain Filtering
     try:
-        jbc_url = f"https://jobicy.com/api/v2/remote-jobs?count=40&industry={rss_query_tag}"
+        jbc_url = "https://jobicy.com/api/v2/remote-jobs?count=50"
         req = urllib.request.Request(jbc_url, headers=headers)
         with urllib.request.urlopen(req, timeout=3, context=ctx) as resp:
             data = json.loads(resp.read().decode())
@@ -4658,11 +4658,14 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
                 t_title = str(item.get("title", "")).strip()
                 t_desc = strip_tags(item.get("description", ""))
                 combined_job_str = (t_title + " " + t_desc).lower()
-
-                if domain_cat != "SOFTWARE" and any(bad in combined_job_str for bad in [".net", "c#", "backend developer", "react developer", "database administrator"]):
+                if any(bad in combined_job_str for bad in ["steuerberater", "praktikum", "gesucht", "all genders welcome", "(m/w/d)"]):
                     continue
 
-                if any(k in combined_job_str for k in domain_kw) or domain_cat == "SOFTWARE":
+                if domain_cat != "SOFTWARE" and any(bad in combined_job_str for bad in [".net", "c#", "backend developer", "react developer", "database administrator", "software developer", "kotlin", "c++"]):
+                    continue
+
+                kw_matches = sum(1 for k in domain_kw if k in combined_job_str)
+                if (domain_cat == "SOFTWARE" and kw_matches >= 1) or (domain_cat != "SOFTWARE" and kw_matches >= 1):
                     tier_tag = "Local" if idx % 2 == 0 else "National"
                     crawled_pool.append({
                         "id": f"JOB-ABN-{uuid.uuid4().hex[:6].upper()}",
