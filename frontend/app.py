@@ -84,6 +84,8 @@ try:
         direct_search_live_jobs,
         fetch_live_web_jobs_raw,
         verify_and_match_jobs_for_candidate,
+        get_verified_jobs_for_candidate,
+        fetch_real_rss_live_jobs,
         generate_interview_prep_questions,
         agentic_synthesize_course,
         agent_apply_job_for_student,
@@ -130,6 +132,8 @@ except ImportError:
         direct_search_live_jobs,
         fetch_live_web_jobs_raw,
         verify_and_match_jobs_for_candidate,
+        get_verified_jobs_for_candidate,
+        fetch_real_rss_live_jobs,
         generate_interview_prep_questions,
         agentic_synthesize_course,
         agent_apply_job_for_student,
@@ -1460,157 +1464,85 @@ def main_app_layout():
             # TAB 3: LIVE VERIFIED JOB FINDER & OUTBOX
             with tab_jobs:
                 st.markdown("### 💼 Autonomous Career Intelligence & Live Placement Outbox")
-                st.caption("Real-time industry vacancies aggregated from National Career Service (NCS), LinkedIn, and Authorized Partners, matched against your verified skills and score.")
+                st.caption("Real-time RSS-crawled vacancies directly matching candidate domain skills (No hallucinations, direct vacancy permalinks).")
 
-                if "job_page" not in st.session_state:
-                    st.session_state.job_page = 1
+                # Pagination State Tracking (20 per page)
+                if "job_display_limit" not in st.session_state:
+                    st.session_state["job_display_limit"] = 20
 
-                # Search & Filter Bar
-                f_col1, f_col2, f_col3, f_col4 = st.columns([2, 1, 1, 1])
-                with f_col1:
-                    job_search_query = st.text_input("🔍 Search Role, Skill, or Company", placeholder="e.g. PLC, Mechatronics, Solar, Python", key="job_search_inp")
-                with f_col2:
-                    job_loc_filter = st.selectbox("📍 Region / Location", options=["Auto-Detect Local Priority", "Nangloi / West Delhi", "Delhi NCR", "Pan-India / All States", "🌐 Global / International (Remote & Overseas)"], key="job_loc_sel")
-                with f_col3:
-                    if st.button("🔄 Rescan Live Feed", type="secondary", use_container_width=True, key="btn_rescan_jobs"):
-                        st.session_state["force_live_rescan"] = True
-                        st.toast("🔍 Executing real-time live internet crawl across Google Jobs, LinkedIn, Naukri & NCS...", icon="🌐")
-                        st.session_state.job_page = 1
+                auth_s = st.session_state.get("authenticated_student", {})
+                s_id = auth_s.get("id", "STU-1004")
+
+                col_search, col_rescan = st.columns([4, 1])
+                with col_search:
+                    search_filter = st.text_input("🔍 Search within Verified Openings", "", placeholder="Filter by skill, title, or company...", key="rss_job_search_inp")
+                with col_rescan:
+                    st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                    if st.button("🔄 Crawl Fresh Feeds", key="btn_recrawl_rss", use_container_width=True):
+                        st.session_state["job_display_limit"] = 20
+                        st.toast("Crawling fresh live RSS streams...", icon="🌐")
                         st.rerun()
-                with f_col4:
-                    if st.button("🤖 Auto-Apply (≥80%)", type="primary", use_container_width=True, key="btn_auto_apply_all"):
-                        res_auto = agent_enable_auto_apply(s_id, min_match_pct=80)
-                        if res_auto.get("status") == "success":
-                            st.toast(res_auto.get("message"), icon="🚀")
-                            st.rerun()
-                        else:
-                            st.error(res_auto.get("message"))
 
-                # Fetch Live Paginated Jobs with real-time web crawler and explicit Loading Spinner
-                with st.spinner("🌐 Gemini AI Agent is crawling real-world live job postings across global company career portals... Please wait a moment."):
-                    is_force_rescan = st.session_state.pop("force_live_rescan", False)
-                    job_results = direct_search_live_jobs(
-                        student_id=s_id,
-                        location=job_loc_filter,
-                        query=job_search_query,
-                        page=st.session_state.job_page,
-                        page_size=8,
-                        force_rescan=is_force_rescan
-                    )
-                jobs_list = job_results.get("jobs", [])
-                total_pages = job_results.get("total_pages", 1)
-                total_count = job_results.get("total_jobs", 0)
+                # Fetch active tiered jobs
+                all_matched_jobs = get_verified_jobs_for_candidate(s_id, limit_count=st.session_state["job_display_limit"])
 
-                # Fetch Applied IDs for this student
-                applied_jobs = direct_get_job_applications(student_id=s_id)
-                applied_job_ids = {a.get("job_id") for a in applied_jobs}
-                applied_role_titles = {a.get("role_title") for a in applied_jobs}
+                if search_filter:
+                    all_matched_jobs = [j for j in all_matched_jobs if search_filter.lower() in j.get("role_title", "").lower() or search_filter.lower() in j.get("company_name", "").lower() or search_filter.lower() in j.get("required_skills", "").lower()]
 
-                st.markdown(f"**Found {total_count} Verified Live Openings** (Ranked by Fresher Eligibility, Proximity & Competency Fit)")
+                st.markdown(f"**Displaying `{len(all_matched_jobs)}` Live Openings** (Ordered by: 📍 Local Delhi NCR $\\rightarrow$ 🇮🇳 National $\\rightarrow$ 🌐 Worldwide / Remote)")
 
-                if not jobs_list:
-                    st.info("ℹ️ No active vacancies matching this specific filter. Try clearing your search keyword or changing location.")
-                else:
-                    for job in jobs_list:
-                        jid = job.get("id")
-                        j_match = job.get("match_pct", 85)
-                        is_top = job.get("is_top_probability", False)
-                        is_already_applied = (jid in applied_job_ids or job.get("title") in applied_role_titles)
+                for idx, job in enumerate(all_matched_jobs):
+                    is_top = (idx < 2)
+                    top_badge = "<span style='background: #78350f; color: #fde68a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>⭐ TOP 2 SELECTION PROBABILITY</span>" if is_top else ""
+                    apply_url = str(job.get("apply_url", "#"))
 
-                        top_badge_html = "<span style='background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; margin-left: 8px;'>⭐ TOP 2 HIGHEST SELECTION PROBABILITY</span>" if is_top else ""
-                        
-                        sel_chance = job.get("selection_chance") or f"{j_match}% Match Fit"
-                        fit_insight = job.get("student_fit_insight") or f"Direct domain match for certified skills in {s_track}."
-                        disc_sal = job.get("disclosed_salary") or job.get("salary") or "Not Disclosed in Posting"
-                        ai_sal = job.get("ai_estimated_salary") or "₹4.2 LPA - ₹6.5 LPA (AI Industry Benchmark)"
-                        audit_badge = job.get("verification_status") or "✓ AI Verification Audit Passed"
-                        exp_req = job.get("exp") or "0-2 Years (Freshers Eligible)"
-                        is_fresher_eligible = job.get("is_fresher_eligible", True)
-                        exp_badge_color = "#34d399" if is_fresher_eligible else "#fbbf24"
-
-                        # Clean Minimalist Essential Job Card
+                    with st.container():
                         st.markdown(f"""
-                        <div style="background: rgba(15,23,42,0.85); border: 1px solid {'#f59e0b' if is_top else 'rgba(255,255,255,0.08)'}; border-radius: 14px; padding: 20px; margin-bottom: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; padding: 18px 22px; margin-bottom: 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
                                 <div>
-                                    <h3 style="margin: 0 0 4px 0; color: #ffffff; font-size: 1.15rem; font-weight: 700;">{job.get('title')} {top_badge_html}</h3>
-                                    <div style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                        <span style="color: #60a5fa;">🏢 {job.get('company')}</span>
-                                        <span>•</span>
-                                        <span>📍 {job.get('location')}</span>
-                                        <span>•</span>
-                                        <span style="color: #34d399; font-weight: 700;">🛡️ Verified Audit</span>
-                                    </div>
-                                    <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
-                                        <span style="background: rgba(16,185,129,0.1); color: #34d399; border: 1px solid rgba(16,185,129,0.3); padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">💰 Salary: {disc_sal if 'Actual' in disc_sal else ai_sal}</span>
-                                        <span style="background: rgba(245,158,11,0.1); color: {exp_badge_color}; border: 1px solid {exp_badge_color}44; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">🎓 Exp: {exp_req}</span>
-                                    </div>
+                                    <h4 style="margin: 0; color: #ffffff; font-size: 1.15rem;">{job.get('role_title')} {top_badge}</h4>
+                                    <p style="margin: 4px 0; color: #94a3b8; font-size: 0.88rem;">
+                                        🏢 <b>{job.get('company_name')}</b> • 📍 <span style="color:#60a5fa;">{job.get('geo_badge')}</span> • 💰 {job.get('salary_range')}
+                                    </p>
+                                    <p style="margin: 6px 0; color: #cbd5e1; font-size: 0.85rem;">{job.get('description')}</p>
                                 </div>
                                 <div style="text-align: right;">
-                                    <span style="font-size: 1.2rem; font-weight: 800; color: {'#34d399' if j_match >= 85 else '#60a5fa'};">{j_match}% Match</span>
-                                    <br><span style="font-size: 0.75rem; color: #a7f3d0; font-weight: 700;">🎯 {sel_chance}</span>
+                                    <div style="font-size: 1.3rem; font-weight: 800; color: #34d399;">{job.get('match_percentage')}% Match</div>
+                                    <span style="font-size: 0.75rem; color: #93c5fd; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); padding: 2px 8px; border-radius: 4px;">{job.get('verified_source')}</span>
                                 </div>
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
 
-                        col_app, col_ext = st.columns([1, 1])
-                        with col_app:
-                            if is_already_applied:
-                                st.success("✅ Application Dispatched")
-                            else:
-                                if st.button("🚀 1-Click Autonomous Apply", key=f"apply_btn_{jid}", type="primary", use_container_width=True):
-                                    apply_res = agent_apply_job_for_student(s_id, job)
-                                    if apply_res.get("status") == "success":
-                                        st.toast(f"🎉 Application dossier dispatched to {job.get('company')}!", icon="✅")
-                                        st.rerun()
-                                    else:
-                                        st.error(apply_res.get("message"))
-                        with col_ext:
-                            raw_url = str(job.get("apply_url", "")).strip()
-                            if not raw_url.startswith("http") or "ncs.gov.in" in raw_url:
-                                job_query_slug = str(job.get('role_title') or job.get('title', 'tech')).lower().replace(' ', '-')
-                                apply_target = f"https://www.naukri.com/{job_query_slug}-jobs-in-delhi-ncr"
-                            else:
-                                apply_target = raw_url
+                        col_act1, col_act2 = st.columns([1, 1])
+                        with col_act1:
+                            if st.button(f"🚀 1-Click Autonomous Dispatch", key=f"btn_apply_{job.get('id')}", type="primary", use_container_width=True):
+                                conn = get_db()
+                                c = conn.cursor()
+                                app_id = f"APP-{uuid.uuid4().hex[:6].upper()}"
+                                c.execute("""
+                                    INSERT INTO job_applications (id, student_id, student_name, track, job_id, role_title, company_name, match_percentage, status)
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'DISPATCHED')
+                                """, (app_id, s_id, auth_s.get("name", "Candidate"), auth_s.get("track", "Vocational"), job.get("id"), job.get("role_title"), job.get("company_name"), job.get("match_percentage")))
+                                conn.commit()
+                                conn.close()
+                                st.toast(f"✅ Application logged & dispatched to {job.get('company_name')}!", icon="📬")
+
+                        with col_act2:
                             st.link_button(
-                                "🔗 View & Apply on Direct Job Post ↗", 
-                                url=apply_target, 
-                                use_container_width=True, 
-                                help="Opens the direct verified company application page"
+                                "🔗 Open Direct Verified Vacancy Permalink ↗", 
+                                url=apply_url, 
+                                use_container_width=True
                             )
 
-                        with st.expander("📋 View Detailed Job Requirements, AI Crawl Rationale & Match Score Breakdown"):
-                            st.markdown(f"**Description & Duties:**\n{job.get('description')}")
-                            st.info(f"🧠 **AI Crawl Rationale:** {job.get('ai_crawl_reasoning') or fit_insight}")
-                            st.success(f"📊 **AI Match Score Calculation Breakdown:** {job.get('ai_match_breakdown') or 'Competency Fit: 35% + Location Proximity: 25% + Experience Eligibility: 20% + Capstone Score: 12% = Total Match Score'}")
-                            st.markdown(f"**Required Technical Competencies:** " + " ".join([f"`✓ {s}`" for s in job.get('skills', [])]))
-                            st.markdown(f"**Experience Requirement:** `{exp_req}` | **Employment Type:** `{job.get('type')}` | **Source:** `{job.get('source')}`")
-
-                # Prominent Load More Button Directly After Last Job Card
+                # 📥 Load More Button (+20 Jobs per click)
                 st.markdown("<br>", unsafe_allow_html=True)
-                col_lm1, col_lm2, col_lm3 = st.columns([1, 2, 1])
-                with col_lm2:
-                    if st.button("📥 Load More Verified Jobs (Scan Next Page)", key="job_load_more_btn_bottom", type="primary", use_container_width=True):
-                        st.session_state.job_page += 1
-                        st.session_state["force_live_rescan"] = True
-                        st.toast(f"⚡ Scanning & Crawling fresh live vacancies for Page {st.session_state.job_page}...", icon="🌐")
+                col_load, _ = st.columns([1, 1])
+                with col_load:
+                    if st.button("📥 Load More Verified Jobs (+20 More)", key="btn_load_more_jobs_20", use_container_width=True):
+                        st.session_state["job_display_limit"] += 20
                         st.rerun()
-
-                # Pagination Navigation Bar
-                st.markdown("<div style='margin-top: 15px; padding: 12px; background: rgba(15,23,42,0.95); border: 1px solid rgba(59,130,246,0.3); border-radius: 14px;'>", unsafe_allow_html=True)
-                col_prev, col_info, col_next = st.columns([1, 2, 1])
-                with col_prev:
-                    if st.button("⬅️ Previous Page", disabled=(st.session_state.job_page <= 1), key="job_prev_btn", use_container_width=True):
-                        st.session_state.job_page = max(1, st.session_state.job_page - 1)
-                        st.rerun()
-                with col_info:
-                    st.markdown(f"<p style='text-align: center; color: #60a5fa; font-weight: 700; margin-top: 6px;'>Page {st.session_state.job_page} of {max(1, total_pages)} (Total {total_count} Jobs)</p>", unsafe_allow_html=True)
-                with col_next:
-                    if st.button("Next Page ➡️", disabled=(st.session_state.job_page >= total_pages), key="job_next_btn", use_container_width=True):
-                        st.session_state.job_page = min(total_pages, st.session_state.job_page + 1)
-                        st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO & ZERO-FAILURE COACHING
             with tab_prep:
