@@ -4534,12 +4534,14 @@ def dynamic_ai_job_synthesis_and_match(student_id: str):
         score = student.get("assessment_score", 85.0)
         grade = student.get("assessment_grade", "Grade A")
         name = student.get("name", "Candidate")
+        loc = student.get("branch_center") or student.get("city") or student.get("location") or student.get("branch_name") or "Delhi NCR"
     else:
         track = "Civil Infrastructure & CAD Diagnostics"
         skills = "AutoCAD, Structural Diagnostics, Blueprint Analysis, BIM"
         score = 85.0
         grade = "Grade A"
         name = "Candidate"
+        loc = "Delhi NCR"
 
     # Strict dynamic Gemini 2.5 Flash Prompt
     prompt = f"""
@@ -4547,19 +4549,20 @@ def dynamic_ai_job_synthesis_and_match(student_id: str):
     Analyze this candidate's verified profile:
     - Candidate Name: {name}
     - Specialized Course / Vocational Track: "{track}"
+    - Registered Center / Home Location: "{loc}"
     - Verified Candidate Skills: "{skills}"
     - Assessment Performance: {score}% ({grade})
 
     TASK:
-    Generate 8 to 12 STRICTLY RELEVANT, real-world industry job openings tailored SPECIFICALLY to this candidate's exact course ("{track}").
+    Generate 8 to 12 STRICTLY RELEVANT, real-world industry job openings tailored SPECIFICALLY to this candidate's exact course ("{track}") and home location ("{loc}").
     
     CRITICAL RULES:
     1. STRICT DOMAIN ISOLATION: Zero cross-domain mismatch allowed. If track is Civil/CAD, ONLY generate Civil Engineering, CAD Designer, Structural Estimator, or Site Planning roles. NEVER output Hindi teaching, Coding, Nursing, or Culinary roles. If track is Hindi PhD/Teaching, ONLY generate Professor, Lecturer, Content SME, or Tutoring roles.
-    2. GEO-TIERING: Provide a balanced mix:
-       - 4 Local Hub Openings (Delhi NCR, Noida, Gurugram, Nangloi Center)
-       - 4 National India Openings (Bengaluru, Mumbai, Pune, Hyderabad)
-       - 2 Worldwide / Remote Openings (Global Infrastructure Consultancies)
-    3. EXPLAINABLE AI REASONING (ai_match_reason): Clearly explain in simple, human terms WHY this job matches their profile (e.g. "Because your course is {track} and you have skills in {skills}, which matches this role's requirement for blueprint modeling...").
+    2. GEO-TIERING & AUTO LOCATION MATCH:
+       - 4 Local Hub Openings in/around candidate's home region ("{loc}")
+       - 4 National India Openings (Bengaluru, Mumbai, Pune, Hyderabad, Delhi NCR)
+       - 2 Worldwide / Remote Openings (Global Consultancies / Remote Streams)
+    3. EXPLAINABLE AI REASONING (ai_match_reason): Clearly explain in simple, human terms WHY this job matches their profile and location (e.g. "Because your course is {track} and registered center is {loc}, this local opening directly matches...").
     4. DIRECT REALISTIC APPLICATION URLS: Use targeted search URLs matching the role and location on verified portals (e.g., https://www.naukri.com/cad-designer-jobs-in-delhi-ncr or https://www.foundit.in/srp/results?query=cad+designer).
 
     OUTPUT FORMAT: Return ONLY a valid JSON array of objects with the following keys:
@@ -4568,16 +4571,16 @@ def dynamic_ai_job_synthesis_and_match(student_id: str):
         "id": "JOB-AUTO-01",
         "role_title": "Junior CAD Engineer & Structural Draftsman",
         "company_name": "Larsen & Toubro (L&T) Construction",
-        "location": "Noida / Delhi NCR",
+        "location": "{loc}",
         "country_tier": "Local",
-        "geo_badge": "📍 Local Center Match (Delhi NCR)",
+        "geo_badge": "📍 Local Center Match ({loc})",
         "salary_range": "₹4.8 LPA - ₹7.2 LPA",
         "job_type": "Full-Time On-Site",
         "required_skills": "AutoCAD, 3D Modeling, Structural Analysis",
         "description": "Prepare detailed structural CAD drawings, verify site blueprints, and assist senior project engineers in civil infrastructure layouts.",
         "match_percentage": 94,
         "is_top_probability": true,
-        "ai_match_reason": "Your track in {track} and proven skills in AutoCAD & structural analysis directly align with L&T's requirement for entry-level draftsman.",
+        "ai_match_reason": "Your track in {track} and registered location at {loc} directly align with L&T's requirement for entry-level draftsman.",
         "apply_url": "https://www.naukri.com/cad-designer-jobs-in-delhi-ncr",
         "verified_source": "National Infrastructure Career Network"
       }}
@@ -4596,31 +4599,31 @@ def dynamic_ai_job_synthesis_and_match(student_id: str):
     except Exception as e:
         print(f"Gemini Job Intelligence Fallback: {e}")
 
-    # Dynamic deterministic generator based on actual track
+    # Dynamic deterministic generator based on actual track and detected location
     clean_slug = track.lower().replace(" ", "-").replace("&", "and")
     return [
         {
             "id": f"JOB-DYN-{uuid.uuid4().hex[:6].upper()}",
             "role_title": f"Junior {track} Specialist",
             "company_name": "Regional Enterprise Partner",
-            "location": "Delhi NCR Center Hub",
+            "location": f"{loc} Hub",
             "country_tier": "Local",
-            "geo_badge": "📍 Local Center Match (Delhi NCR)",
+            "geo_badge": f"📍 Local Center Match ({loc})",
             "salary_range": "₹5.0 LPA - ₹8.0 LPA",
             "job_type": "Full-Time",
             "required_skills": skills,
             "description": f"Core operations and diagnostic review role specialized for candidates trained in {track}.",
             "match_percentage": 94,
             "is_top_probability": True,
-            "ai_match_reason": f"Your course specialization in {track} and verified hands-on skills in {skills} directly satisfy this opening's primary prerequisites.",
-            "apply_url": f"https://www.naukri.com/{clean_slug}-jobs-in-delhi-ncr",
+            "ai_match_reason": f"Your course specialization in {track} and registered location at {loc} directly satisfy this opening's primary prerequisites.",
+            "apply_url": f"https://www.naukri.com/{clean_slug}-jobs",
             "verified_source": "Verified Corporate Feed"
         },
         {
             "id": f"JOB-DYN-{uuid.uuid4().hex[:6].upper()}",
             "role_title": f"{track} Technical Consultant",
             "company_name": "Tata Advanced Advisory",
-            "location": "Gurugram / Noida (India)",
+            "location": "Bengaluru / Noida (India)",
             "country_tier": "National",
             "geo_badge": "🇮🇳 National Opening (India)",
             "salary_range": "₹6.2 LPA - ₹9.5 LPA",
@@ -4630,7 +4633,7 @@ def dynamic_ai_job_synthesis_and_match(student_id: str):
             "match_percentage": 90,
             "is_top_probability": True,
             "ai_match_reason": f"Matches certified competency requirements and practical coursework in {track}.",
-            "apply_url": f"https://www.foundit.in/srp/results?query={clean_slug}&locations=Delhi+NCR",
+            "apply_url": f"https://www.foundit.in/srp/results?query={clean_slug}",
             "verified_source": "National Partner Network"
         },
         {
