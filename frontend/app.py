@@ -55,107 +55,59 @@ try:
     from backend.database import DB_PATH, get_db, init_complete_db
 except ImportError:
     from database import DB_PATH, get_db, init_complete_db
-try:
-    from backend.main import (
-        direct_get_agent_logs,
-        direct_delete_agent_log,
-        direct_clear_all_agent_logs,
-        direct_create_student,
-        direct_update_student,
-        direct_delete_student,
-        direct_get_students,
-        direct_add_student,
-        direct_create_course,
-        direct_get_courses,
-        direct_update_course,
-        direct_delete_course,
-        direct_get_placement_ledger,
-        direct_dispatch_placement,
-        direct_reset_database,
-        direct_student_login,
-        direct_get_institutes,
-        direct_get_branches,
-        direct_create_institute,
-        direct_create_branch,
-        direct_evaluate_and_dispatch_exam,
-        direct_simulate_candidate_loop,
-        direct_get_exam_for_student,
-        generate_dynamic_ai_portfolio,
-        direct_search_and_match_jobs,
-        direct_search_live_jobs,
-        fetch_live_web_jobs_raw,
-        verify_and_match_jobs_for_candidate,
-        get_verified_jobs_for_candidate,
-        dynamic_ai_job_synthesis_and_match,
-        fetch_real_rss_live_jobs,
-        generate_interview_prep_questions,
-        agentic_synthesize_course,
-        agent_apply_job_for_student,
-        agent_schedule_interview,
-        direct_get_job_applications,
-        direct_verify_cryptographic_seal,
-        agent_enable_auto_apply,
-        agent_evaluate_interview_answer,
-        agent_refine_candidate_interview_answer,
-        agent_generate_alternative_question,
-        start_or_get_interview_session,
-        evaluate_interview_turn,
-        direct_retake_exam_for_student,
-        direct_get_student_by_id,
-        normalize_dob
-    )
-except ImportError:
-    from main import (
-        direct_get_agent_logs,
-        direct_delete_agent_log,
-        direct_clear_all_agent_logs,
-        direct_create_student,
-        direct_update_student,
-        direct_delete_student,
-        direct_get_students,
-        direct_add_student,
-        direct_create_course,
-        direct_get_courses,
-        direct_update_course,
-        direct_delete_course,
-        direct_get_placement_ledger,
-        direct_dispatch_placement,
-        direct_reset_database,
-        direct_student_login,
-        direct_get_institutes,
-        direct_get_branches,
-        direct_create_institute,
-        direct_create_branch,
-        direct_evaluate_and_dispatch_exam,
-        direct_simulate_candidate_loop,
-        direct_get_exam_for_student,
-        generate_dynamic_ai_portfolio,
-        direct_search_and_match_jobs,
-        direct_search_live_jobs,
-        fetch_live_web_jobs_raw,
-        verify_and_match_jobs_for_candidate,
-        get_verified_jobs_for_candidate,
-        dynamic_ai_job_synthesis_and_match,
-        fetch_real_rss_live_jobs,
-        generate_interview_prep_questions,
-        agentic_synthesize_course,
-        agent_apply_job_for_student,
-        agent_schedule_interview,
-        direct_get_job_applications,
-        direct_verify_cryptographic_seal,
-        agent_enable_auto_apply,
-        agent_evaluate_interview_answer,
-        agent_refine_candidate_interview_answer,
-        agent_generate_alternative_question,
-        start_or_get_interview_session,
-        evaluate_interview_turn,
-        direct_retake_exam_for_student,
-        direct_get_student_by_id,
-        normalize_dob
-    )
 
-if 'dynamic_ai_job_synthesis_and_match' not in globals() or dynamic_ai_job_synthesis_and_match is None:
-    dynamic_ai_job_synthesis_and_match = globals().get('get_verified_jobs_for_candidate')
+try:
+    import backend.main as _bmain
+except ImportError:
+    import main as _bmain
+
+# Safely extract backend functions with fallback guards
+direct_get_agent_logs = getattr(_bmain, "direct_get_agent_logs", None)
+direct_delete_agent_log = getattr(_bmain, "direct_delete_agent_log", None)
+direct_clear_all_agent_logs = getattr(_bmain, "direct_clear_all_agent_logs", None)
+direct_create_student = getattr(_bmain, "direct_create_student", None)
+direct_update_student = getattr(_bmain, "direct_update_student", None)
+direct_delete_student = getattr(_bmain, "direct_delete_student", None)
+direct_get_students = getattr(_bmain, "direct_get_students", None)
+direct_add_student = getattr(_bmain, "direct_add_student", None)
+direct_create_course = getattr(_bmain, "direct_create_course", None)
+direct_get_courses = getattr(_bmain, "direct_get_courses", None)
+direct_update_course = getattr(_bmain, "direct_update_course", None)
+direct_delete_course = getattr(_bmain, "direct_delete_course", None)
+direct_get_placement_ledger = getattr(_bmain, "direct_get_placement_ledger", None)
+direct_dispatch_placement = getattr(_bmain, "direct_dispatch_placement", None)
+direct_reset_database = getattr(_bmain, "direct_reset_database", None)
+direct_student_login = getattr(_bmain, "direct_student_login", None)
+direct_get_institutes = getattr(_bmain, "direct_get_institutes", None)
+direct_get_branches = getattr(_bmain, "direct_get_branches", None)
+direct_create_institute = getattr(_bmain, "direct_create_institute", None)
+direct_create_branch = getattr(_bmain, "direct_create_branch", None)
+direct_evaluate_and_dispatch_exam = getattr(_bmain, "direct_evaluate_and_dispatch_exam", None)
+direct_simulate_candidate_loop = getattr(_bmain, "direct_simulate_candidate_loop", None)
+direct_get_exam_for_student = getattr(_bmain, "direct_get_exam_for_student", None)
+generate_dynamic_ai_portfolio = getattr(_bmain, "generate_dynamic_ai_portfolio", None)
+direct_search_and_match_jobs = getattr(_bmain, "direct_search_and_match_jobs", None)
+direct_search_live_jobs = getattr(_bmain, "direct_search_live_jobs", None)
+fetch_live_web_jobs_raw = getattr(_bmain, "fetch_live_web_jobs_raw", None)
+verify_and_match_jobs_for_candidate = getattr(_bmain, "verify_and_match_jobs_for_candidate", None)
+get_verified_jobs_for_candidate = getattr(_bmain, "get_verified_jobs_for_candidate", None)
+dynamic_ai_job_synthesis_and_match = getattr(_bmain, "dynamic_ai_job_synthesis_and_match", get_verified_jobs_for_candidate)
+fetch_real_rss_live_jobs = getattr(_bmain, "fetch_real_rss_live_jobs", get_verified_jobs_for_candidate)
+generate_interview_prep_questions = getattr(_bmain, "generate_interview_prep_questions", None)
+agentic_synthesize_course = getattr(_bmain, "agentic_synthesize_course", None)
+agent_apply_job_for_student = getattr(_bmain, "agent_apply_job_for_student", None)
+agent_schedule_interview = getattr(_bmain, "agent_schedule_interview", None)
+direct_get_job_applications = getattr(_bmain, "direct_get_job_applications", None)
+direct_verify_cryptographic_seal = getattr(_bmain, "direct_verify_cryptographic_seal", None)
+agent_enable_auto_apply = getattr(_bmain, "agent_enable_auto_apply", None)
+agent_evaluate_interview_answer = getattr(_bmain, "agent_evaluate_interview_answer", None)
+agent_refine_candidate_interview_answer = getattr(_bmain, "agent_refine_candidate_interview_answer", None)
+agent_generate_alternative_question = getattr(_bmain, "agent_generate_alternative_question", None)
+start_or_get_interview_session = getattr(_bmain, "start_or_get_interview_session", None)
+evaluate_interview_turn = getattr(_bmain, "evaluate_interview_turn", None)
+direct_retake_exam_for_student = getattr(_bmain, "direct_retake_exam_for_student", None)
+direct_get_student_by_id = getattr(_bmain, "direct_get_student_by_id", None)
+normalize_dob = getattr(_bmain, "normalize_dob", None)
 
 try:
     init_complete_db()
