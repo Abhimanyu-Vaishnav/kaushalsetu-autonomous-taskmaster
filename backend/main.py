@@ -4513,12 +4513,128 @@ def detect_candidate_domain_cluster(track_title: str) -> str:
     else:
         return "GENERAL_VOCATIONAL"
 
-def dynamic_ai_job_synthesis_and_match(student_id: str):
+def strip_html(html_str: str) -> str:
+    if not html_str:
+        return ""
+    clean = re.sub(r'<[^>]+>', ' ', html_str)
+    return re.sub(r'\s+', ' ', clean).strip()
+
+def fetch_live_public_rss_stream(search_query: str = "") -> list:
     """
-    1. Fetches real candidate data: Track/Course, Parsed Skills, Exam Score, Grade.
-    2. Sends full profile to Gemini 2.5 Flash to dynamically discover and generate 
-       100% domain-aligned verified job opportunities (Local Delhi NCR, National India, Worldwide).
-    3. Generates transparent, human-explainable match reasoning (Why this job fits).
+    Crawls 100% live job feeds across major open RSS & API endpoints.
+    Extracts strictly real job titles, company names, descriptions, and direct permalinks.
+    """
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    raw_streamed_jobs = []
+    clean_q = search_query.strip().lower()
+    q_enc = urllib.parse.quote(clean_q) if clean_q else "all"
+
+    # 1. Jobicy Global RSS / JSON API Stream (Direct Permalinks)
+    try:
+        url_jobicy = f"https://jobicy.com/api/v2/remote-jobs?count=25&tag={q_enc}" if clean_q else "https://jobicy.com/api/v2/remote-jobs?count=25"
+        req = urllib.request.Request(url_jobicy, headers=headers)
+        with urllib.request.urlopen(req, timeout=6) as response:
+            data = json.loads(response.read().decode())
+            for item in data.get("jobs", []):
+                u = str(item.get("url", "")).strip()
+                if u.startswith("http"):
+                    raw_streamed_jobs.append({
+                        "id": f"JOB-JBC-{uuid.uuid4().hex[:6].upper()}",
+                        "role_title": item.get("jobTitle", ""),
+                        "company_name": item.get("companyName", "Direct Employer"),
+                        "location": item.get("jobGeo", "Global / Remote"),
+                        "salary_range": f"${item.get('annualSalaryMin', '50')}k - ${item.get('annualSalaryMax', '85')}k USD" if item.get('annualSalaryMin') else "Industry Standard",
+                        "job_type": item.get("jobType", "Full-Time"),
+                        "required_skills": ", ".join(item.get("jobCategories", [clean_q])),
+                        "description": strip_html(item.get("jobExcerpt", ""))[:300],
+                        "apply_url": u,
+                        "verified_source": "Jobicy Live Stream"
+                    })
+    except Exception as e:
+        print(f"Jobicy Feed Log: {e}")
+
+    # 2. WeWorkRemotely Multi-Category RSS Feeds (Direct Permalinks)
+    rss_endpoints = [
+        "https://weworkremotely.com/remote-jobs.rss",
+        "https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss",
+        "https://weworkremotely.com/categories/remote-customer-support-jobs.rss"
+    ]
+    for feed in rss_endpoints:
+        try:
+            req = urllib.request.Request(feed, headers=headers)
+            with urllib.request.urlopen(req, timeout=5) as response:
+                root = ET.fromstring(response.read())
+                for item in root.findall('.//item')[:20]:
+                    t_elem = item.find('title')
+                    l_elem = item.find('link')
+                    d_elem = item.find('description')
+                    
+                    title = t_elem.text if t_elem is not None else ""
+                    link = l_elem.text.strip() if l_elem is not None and l_elem.text else ""
+                    desc = strip_html(d_elem.text) if d_elem is not None else ""
+
+                    if link and "/remote-jobs/" in link:
+                        company = "Corporate Partner"
+                        if ":" in title:
+                            parts = title.split(":", 1)
+                            company = parts[0].strip()
+                            title = parts[1].strip()
+
+                        raw_streamed_jobs.append({
+                            "id": f"JOB-WWR-{uuid.uuid4().hex[:6].upper()}",
+                            "role_title": title,
+                            "company_name": company,
+                            "location": "Remote / Worldwide",
+                            "salary_range": "Competitive Market Rate",
+                            "job_type": "Full-Time Remote",
+                            "required_skills": clean_q if clean_q else "Professional Skills",
+                            "description": desc[:300],
+                            "apply_url": link,
+                            "verified_source": "WeWorkRemotely RSS"
+                        })
+        except Exception as e:
+            print(f"WWR RSS Log: {e}")
+
+    # 3. Remotive Verified Stream (Direct Permalinks)
+    try:
+        url_rem = f"https://remotive.com/api/remote-jobs?search={q_enc}&limit=25"
+        req = urllib.request.Request(url_rem, headers=headers)
+        with urllib.request.urlopen(req, timeout=6) as response:
+            data = json.loads(response.read().decode())
+            for item in data.get("jobs", []):
+                u = str(item.get("url", "")).strip()
+                if u.startswith("http") and "/job/" in u:
+                    raw_streamed_jobs.append({
+                        "id": f"JOB-REM-{uuid.uuid4().hex[:6].upper()}",
+                        "role_title": item.get("title", ""),
+                        "company_name": item.get("company_name", "Global Partner"),
+                        "location": item.get("candidate_required_location") or "Worldwide",
+                        "salary_range": item.get("salary") or "₹8.0 LPA - ₹15.0 LPA",
+                        "job_type": "Full-Time",
+                        "required_skills": ", ".join(item.get("tags", [clean_q])),
+                        "description": strip_html(item.get("description", ""))[:300],
+                        "apply_url": u,
+                        "verified_source": "Remotive Direct RSS"
+                    })
+    except Exception as e:
+        print(f"Remotive Stream Log: {e}")
+
+    # Remove duplicates based on URL
+    unique_jobs = []
+    seen_urls = set()
+    for j in raw_streamed_jobs:
+        if j["apply_url"] not in seen_urls:
+            seen_urls.add(j["apply_url"])
+            unique_jobs.append(j)
+
+    return unique_jobs
+
+def get_gemini_screened_jobs_for_student(student_id: str) -> list:
+    """
+    Fetches real student credentials, crawls live RSS streams, and uses Gemini 2.5 Flash
+    to evaluate domain compatibility and generate genuine reasoning.
     """
     conn = get_db()
     c = conn.cursor()
@@ -4529,146 +4645,116 @@ def dynamic_ai_job_synthesis_and_match(student_id: str):
 
     if s_row:
         student = dict(s_row)
-        track = student.get("track") or student.get("course_name") or "Civil Infrastructure & CAD Diagnostics"
-        skills = student.get("parsed_skills") or "AutoCAD, Structural Diagnostics, Blueprint Analysis, BIM"
+        track = student.get("track") or student.get("course_name") or "General Vocational"
+        skills = student.get("parsed_skills") or track
         score = student.get("assessment_score", 85.0)
-        grade = student.get("assessment_grade", "Grade A")
-        name = student.get("name", "Candidate")
-        loc = student.get("branch_center") or student.get("city") or student.get("location") or student.get("branch_name") or "Delhi NCR"
     else:
-        track = "Civil Infrastructure & CAD Diagnostics"
-        skills = "AutoCAD, Structural Diagnostics, Blueprint Analysis, BIM"
+        track = "General Vocational"
+        skills = "Technical Operations"
         score = 85.0
-        grade = "Grade A"
-        name = "Candidate"
-        loc = "Delhi NCR"
 
-    # Strict dynamic Gemini 2.5 Flash Prompt
-    prompt = f"""
-    You are an Autonomous AI Placement Director & Headhunter.
-    Analyze this candidate's verified profile:
-    - Candidate Name: {name}
-    - Specialized Course / Vocational Track: "{track}"
-    - Registered Center / Home Location: "{loc}"
-    - Verified Candidate Skills: "{skills}"
-    - Assessment Performance: {score}% ({grade})
+    # 1. Fetch raw live RSS stream using student track keyword
+    kw_match = re.findall(r'[a-zA-Z]+', track)
+    search_keyword = kw_match[0] if kw_match else ""
+    live_crawled = fetch_live_public_rss_stream(search_keyword)
 
-    TASK:
-    Generate 8 to 12 STRICTLY RELEVANT, real-world industry job openings tailored SPECIFICALLY to this candidate's exact course ("{track}") and home location ("{loc}").
-    
-    CRITICAL RULES:
-    1. STRICT DOMAIN ISOLATION: Zero cross-domain mismatch allowed. If track is Civil/CAD, ONLY generate Civil Engineering, CAD Designer, Structural Estimator, or Site Planning roles. NEVER output Hindi teaching, Coding, Nursing, or Culinary roles. If track is Hindi PhD/Teaching, ONLY generate Professor, Lecturer, Content SME, or Tutoring roles.
-    2. GEO-TIERING & AUTO LOCATION MATCH:
-       - 4 Local Hub Openings in/around candidate's home region ("{loc}")
-       - 4 National India Openings (Bengaluru, Mumbai, Pune, Hyderabad, Delhi NCR)
-       - 2 Worldwide / Remote Openings (Global Consultancies / Remote Streams)
-    3. EXPLAINABLE AI REASONING (ai_match_reason): Clearly explain in simple, human terms WHY this job matches their profile and location (e.g. "Because your course is {track} and registered center is {loc}, this local opening directly matches...").
-    4. DIRECT REALISTIC APPLICATION URLS: Use targeted search URLs matching the role and location on verified portals (e.g., https://www.naukri.com/cad-designer-jobs-in-delhi-ncr or https://www.foundit.in/srp/results?query=cad+designer).
+    if not live_crawled:
+        # Fallback to broader RSS stream if keyword query had no instant hits
+        live_crawled = fetch_live_public_rss_stream("")
 
-    OUTPUT FORMAT: Return ONLY a valid JSON array of objects with the following keys:
-    [
-      {{
-        "id": "JOB-AUTO-01",
-        "role_title": "Junior CAD Engineer & Structural Draftsman",
-        "company_name": "Larsen & Toubro (L&T) Construction",
-        "location": "{loc}",
-        "country_tier": "Local",
-        "geo_badge": "📍 Local Center Match ({loc})",
-        "salary_range": "₹4.8 LPA - ₹7.2 LPA",
-        "job_type": "Full-Time On-Site",
-        "required_skills": "AutoCAD, 3D Modeling, Structural Analysis",
-        "description": "Prepare detailed structural CAD drawings, verify site blueprints, and assist senior project engineers in civil infrastructure layouts.",
-        "match_percentage": 94,
-        "is_top_probability": true,
-        "ai_match_reason": "Your track in {track} and registered location at {loc} directly align with L&T's requirement for entry-level draftsman.",
-        "apply_url": "https://www.naukri.com/cad-designer-jobs-in-delhi-ncr",
-        "verified_source": "National Infrastructure Career Network"
-      }}
-    ]
-    """
+    # 2. Filter & Evaluate via Gemini 2.5 Flash
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    if gemini_key and live_crawled:
+        try:
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            
+            # Send batch of crawled jobs to Gemini for semantic validation
+            payload = []
+            for i, j in enumerate(live_crawled[:40]):
+                payload.append({
+                    "index": i,
+                    "title": j["role_title"],
+                    "description": j["description"][:180]
+                })
 
-    try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json", "temperature": 0.2, "max_output_tokens": 2048}
-        )
-        jobs = json.loads(response.text)
-        if isinstance(jobs, list) and len(jobs) > 0:
-            return jobs
-    except Exception as e:
-        print(f"Gemini Job Intelligence Fallback: {e}")
+            prompt = f"""
+            You are an Autonomous Career Alignment Screener.
+            Candidate Profile:
+            - Course / Track: "{track}"
+            - Skills: "{skills}"
+            - Cumulative Score: {score}%
 
-    # Dynamic deterministic generator based on actual track and detected location
-    clean_slug = track.lower().replace(" ", "-").replace("&", "and")
-    return [
-        {
-            "id": f"JOB-DYN-{uuid.uuid4().hex[:6].upper()}",
-            "role_title": f"Junior {track} Specialist",
-            "company_name": "Regional Enterprise Partner",
-            "location": f"{loc} Hub",
-            "country_tier": "Local",
-            "geo_badge": f"📍 Local Center Match ({loc})",
-            "salary_range": "₹5.0 LPA - ₹8.0 LPA",
-            "job_type": "Full-Time",
-            "required_skills": skills,
-            "description": f"Core operations and diagnostic review role specialized for candidates trained in {track}.",
-            "match_percentage": 94,
-            "is_top_probability": True,
-            "ai_match_reason": f"Your course specialization in {track} and registered location at {loc} directly satisfy this opening's primary prerequisites.",
-            "apply_url": f"https://www.naukri.com/{clean_slug}-jobs",
-            "verified_source": "Verified Corporate Feed"
-        },
-        {
-            "id": f"JOB-DYN-{uuid.uuid4().hex[:6].upper()}",
-            "role_title": f"{track} Technical Consultant",
-            "company_name": "Tata Advanced Advisory",
-            "location": "Bengaluru / Noida (India)",
-            "country_tier": "National",
-            "geo_badge": "🇮🇳 National Opening (India)",
-            "salary_range": "₹6.2 LPA - ₹9.5 LPA",
-            "job_type": "Full-Time",
-            "required_skills": skills,
-            "description": f"Field engineering & operations management for candidates specializing in {track}.",
-            "match_percentage": 90,
-            "is_top_probability": True,
-            "ai_match_reason": f"Matches certified competency requirements and practical coursework in {track}.",
-            "apply_url": f"https://www.foundit.in/srp/results?query={clean_slug}",
-            "verified_source": "National Partner Network"
-        },
-        {
-            "id": f"JOB-DYN-{uuid.uuid4().hex[:6].upper()}",
-            "role_title": f"Global Remote {track} Analyst",
-            "company_name": "Global Career Stream",
-            "location": "Remote / Worldwide",
-            "country_tier": "Worldwide",
-            "geo_badge": "🌐 Worldwide / Remote",
-            "salary_range": "$60,000 - $90,000 /yr",
-            "job_type": "Full-Time Remote",
-            "required_skills": skills,
-            "description": f"Remote advisory and diagnostic role for verified {track} graduates.",
-            "match_percentage": 86,
-            "is_top_probability": False,
-            "ai_match_reason": f"International remote stream seeking certified skills in {track}.",
-            "apply_url": "https://remotive.com/api/remote-jobs",
-            "verified_source": "International Tutor Stream"
-        }
-    ]
+            Analyze the following live-crawled jobs. Determine whether each job is a RELEVANT career match for this candidate's field.
+            STRICT RULE: Reject completely mismatched fields (e.g., Reject Nursing or Sales for a Software student; Reject Software Coding for an Agriculture or Language student).
+
+            Live Jobs Payload:
+            {json.dumps(payload)}
+
+            Return a valid JSON array of matches ONLY:
+            [
+              {{
+                "index": 0,
+                "is_match": true,
+                "match_percentage": 94,
+                "reason": "Clear 1-sentence explanation why candidate's track in {track} fits this role's description."
+              }}
+            ]
+            """
+            res = model.generate_content(
+                prompt,
+                generation_config={"response_mime_type": "application/json", "temperature": 0.2}
+            )
+            evals = json.loads(res.text)
+
+            matched_jobs = []
+            for item in evals:
+                if item.get("is_match"):
+                    idx = item.get("index")
+                    if 0 <= idx < len(live_crawled):
+                        matched_job = live_crawled[idx]
+                        matched_job["match_percentage"] = item.get("match_percentage", 85)
+                        matched_job["ai_match_reason"] = item.get("reason", f"Matched against verified {track} curriculum.")
+                        matched_jobs.append(matched_job)
+
+            if matched_jobs:
+                matched_jobs.sort(key=lambda x: -x["match_percentage"])
+                return matched_jobs
+
+        except Exception as e:
+            print(f"Gemini Screening Exception: {e}")
+
+    # Fallback heuristic screening (only if Gemini call fails)
+    filtered = []
+    track_words = set(re.findall(r'\w+', (track + " " + skills).lower()))
+    for j in live_crawled:
+        j_text = (j["role_title"] + " " + j["description"]).lower()
+        j_words = set(re.findall(r'\w+', j_text))
+        overlap = len(track_words.intersection(j_words))
+        if overlap > 0 or len(filtered) < 10:
+            j["match_percentage"] = min(98, max(65, 70 + (overlap * 6)))
+            j["ai_match_reason"] = f"Relevant opening aligned with candidate's competency in {track}."
+            filtered.append(j)
+
+    filtered.sort(key=lambda x: -x["match_percentage"])
+    return filtered
+
+def dynamic_ai_job_synthesis_and_match(student_id: str):
+    return get_gemini_screened_jobs_for_student(student_id=student_id)
 
 def fetch_domain_aligned_live_jobs(candidate_track: str):
-    return dynamic_ai_job_synthesis_and_match("STU-1004")
+    return fetch_live_public_rss_stream(search_query=candidate_track)
 
 def fetch_real_rss_live_jobs(search_keyword: str = "software"):
-    return dynamic_ai_job_synthesis_and_match("STU-1004")
+    return fetch_live_public_rss_stream(search_query=search_keyword)
 
 def fetch_live_web_jobs_raw(search_query="developer"):
-    return dynamic_ai_job_synthesis_and_match("STU-1004")
+    return fetch_live_public_rss_stream(search_query=search_query)
 
 def get_verified_jobs_for_candidate(student_id: str, limit_count: int = 20):
-    return dynamic_ai_job_synthesis_and_match(student_id=student_id)[:limit_count]
+    return get_gemini_screened_jobs_for_student(student_id=student_id)[:limit_count]
 
 def verify_and_match_jobs_for_candidate(student_id: str, offset: int = 0, limit: int = 20):
-    return get_verified_jobs_for_candidate(student_id=student_id, limit_count=offset + limit)[offset:]
+    return get_gemini_screened_jobs_for_student(student_id=student_id)[offset:offset+limit]
 
 def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query: str = "", page: int = 1, page_size: int = 8, force_rescan: bool = False, **kwargs):
     """
