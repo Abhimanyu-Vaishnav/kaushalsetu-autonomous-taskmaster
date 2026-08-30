@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import math
 import streamlit as st
 import streamlit.components.v1 as components
 import requests
@@ -1466,9 +1467,10 @@ def main_app_layout():
                 st.markdown("### 💼 Autonomous Career Intelligence & Live Placement Outbox")
                 st.caption("Real-time RSS-crawled vacancies directly matching candidate domain skills (No hallucinations, direct vacancy permalinks).")
 
-                # Pagination State Tracking (20 per page)
-                if "job_display_limit" not in st.session_state:
-                    st.session_state["job_display_limit"] = 20
+                # Pagination State Tracking (Page-by-page & Page size)
+                if "job_page_num" not in st.session_state:
+                    st.session_state["job_page_num"] = 1
+                page_size = 10
 
                 auth_s = st.session_state.get("authenticated_student", {})
                 s_id = auth_s.get("id", "STU-1004")
@@ -1479,21 +1481,30 @@ def main_app_layout():
                 with col_rescan:
                     st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
                     if st.button("🔄 Crawl Fresh Feeds", key="btn_recrawl_rss", use_container_width=True):
-                        st.session_state["job_display_limit"] = 20
+                        st.session_state["job_page_num"] = 1
                         st.toast("Crawling fresh live RSS streams...", icon="🌐")
                         st.rerun()
 
                 # Fetch active tiered jobs
-                all_matched_jobs = get_verified_jobs_for_candidate(s_id, limit_count=st.session_state["job_display_limit"])
+                all_matched_jobs = get_verified_jobs_for_candidate(s_id, limit_count=100)
 
                 if search_filter:
                     all_matched_jobs = [j for j in all_matched_jobs if search_filter.lower() in j.get("role_title", "").lower() or search_filter.lower() in j.get("company_name", "").lower() or search_filter.lower() in j.get("required_skills", "").lower()]
 
-                st.markdown(f"**Displaying `{len(all_matched_jobs)}` Live Openings** (Ordered by: 📍 Local Delhi NCR $\\rightarrow$ 🇮🇳 National $\\rightarrow$ 🌐 Worldwide / Remote)")
+                total_jobs_count = len(all_matched_jobs)
+                total_pages = max(1, math.ceil(total_jobs_count / page_size))
+                current_page = max(1, min(st.session_state["job_page_num"], total_pages))
+                st.session_state["job_page_num"] = current_page
 
-                for idx, job in enumerate(all_matched_jobs):
-                    is_top = (idx < 2)
-                    top_badge = "<span style='background: #78350f; color: #fde68a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>⭐ TOP 2 SELECTION PROBABILITY</span>" if is_top else ""
+                start_idx = (current_page - 1) * page_size
+                end_idx = start_idx + page_size
+                page_jobs = all_matched_jobs[start_idx:end_idx]
+
+                st.markdown(f"**Found `{total_jobs_count}` Verified Live Openings** — Showing Page **{current_page} of {total_pages}** ({len(page_jobs)} jobs on this page)")
+
+                for idx, job in enumerate(page_jobs):
+                    is_top = (current_page == 1 and idx < 2)
+                    top_badge = "<span style='background: #78350f; color: #fde68a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>⭐ TOP SELECTION PROBABILITY</span>" if is_top else ""
                     apply_url = str(job.get("apply_url", "#"))
 
                     with st.container():
@@ -1536,13 +1547,20 @@ def main_app_layout():
                                 use_container_width=True
                             )
 
-                # 📥 Load More Button (+20 Jobs per click)
-                st.markdown("<br>", unsafe_allow_html=True)
-                col_load, _ = st.columns([1, 1])
-                with col_load:
-                    if st.button("📥 Load More Verified Jobs (+20 More)", key="btn_load_more_jobs_20", use_container_width=True):
-                        st.session_state["job_display_limit"] += 20
+                # Pagination Controls
+                st.markdown("<div style='margin-top: 20px; padding: 12px; background: rgba(15,23,42,0.95); border: 1px solid rgba(59,130,246,0.3); border-radius: 14px;'>", unsafe_allow_html=True)
+                col_prev, col_info, col_next = st.columns([1, 2, 1])
+                with col_prev:
+                    if st.button("⬅️ Previous Page", disabled=(current_page <= 1), key="job_prev_page_btn", use_container_width=True):
+                        st.session_state["job_page_num"] = max(1, current_page - 1)
                         st.rerun()
+                with col_info:
+                    st.markdown(f"<p style='text-align: center; color: #60a5fa; font-weight: 700; margin-top: 6px;'>Page {current_page} of {total_pages} ({total_jobs_count} Verified Jobs Total)</p>", unsafe_allow_html=True)
+                with col_next:
+                    if st.button("Next Page ➡️", disabled=(current_page >= total_pages), key="job_next_page_btn", use_container_width=True):
+                        st.session_state["job_page_num"] = min(total_pages, current_page + 1)
+                        st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO & ZERO-FAILURE COACHING
             with tab_prep:
