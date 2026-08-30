@@ -4655,6 +4655,9 @@ def dynamic_ai_job_synthesis_and_match(student_id: str):
 def fetch_domain_aligned_live_jobs(candidate_track: str):
     return dynamic_ai_job_synthesis_and_match("STU-1004")
 
+def fetch_real_rss_live_jobs(search_keyword: str = "software"):
+    return dynamic_ai_job_synthesis_and_match("STU-1004")
+
 def fetch_live_web_jobs_raw(search_query="developer"):
     return dynamic_ai_job_synthesis_and_match("STU-1004")
 
