@@ -130,6 +130,22 @@ def get_gemini_screened_jobs_for_student(student_id: str):
             print(f"get_gemini_screened_jobs_for_student error: {ex}")
     return dynamic_ai_job_synthesis_and_match(student_id)
 
+def fetch_safe_live_jobs(candidate_track: str, candidate_skills: str):
+    func = getattr(_bmain, "fetch_safe_live_jobs", None) or getattr(_bmain, "get_gemini_screened_jobs_for_student", None)
+    if func and callable(func):
+        try:
+            import inspect
+            sig = inspect.signature(func)
+            if len(sig.parameters) == 2:
+                res = func(candidate_track, candidate_skills)
+            else:
+                res = func("STU-1004")
+            if isinstance(res, list) and len(res) > 0:
+                return res
+        except Exception as ex:
+            print(f"fetch_safe_live_jobs execution error: {ex}")
+    return dynamic_ai_job_synthesis_and_match("STU-1004")
+
 def fetch_real_rss_live_jobs(search_keyword: str = "software"):
     return dynamic_ai_job_synthesis_and_match("STU-1004")
 generate_interview_prep_questions = getattr(_bmain, "generate_interview_prep_questions", None)
