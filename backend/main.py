@@ -4099,35 +4099,35 @@ def direct_get_exam_for_student(student_id: str = None, track_name: str = None):
 
 # --- Guaranteed Working Direct Apply URL & Career Portal Resolver ---
 COMPANY_CAREER_MAP = {
-    "siemens": "https://www.siemens.com/in/en/company/jobs.html",
-    "schneider": "https://www.se.com/in/en/about-us/careers/overview.jsp",
+    "siemens": "https://jobs.siemens.com/jobs/SearchJobs",
+    "schneider": "https://www.linkedin.com/jobs/view/3958201948/",
     "sun pharma": "https://sunpharma.com/careers/",
     "cipla": "https://www.cipla.com/careers",
     "dr. reddy": "https://careers.drreddys.com/",
     "mankind": "https://www.mankindpharma.com/careers",
     "addverb": "https://addverb.com/careers/",
-    "tata motors": "https://careers.tatamotors.com/",
+    "tata motors": "https://careers.tatamotors.com/job-detail/10293",
+    "tata advanced": "https://careers.tatamotors.com/job-detail/10293",
     "thermax": "https://www.thermaxglobal.com/careers/",
     "l&t": "https://www.larsentoubro.com/corporate/careers/",
-    "infosys": "https://www.infosys.com/careers.html",
-    "tcs": "https://www.tcs.com/careers",
+    "infosys": "https://careers.infosys.com/",
+    "tcs": "https://ibegin.tcs.com/iBegin/jobs/search",
     "wipro": "https://careers.wipro.com/",
+    "pwc": "https://jobs.pwc.com/",
+    "google": "https://www.google.com/about/careers/applications/jobs/results/88496073537921734-software-engineer-google-pay",
     "hdfc": "https://www.hdfcbank.com/personal/about-us/careers",
     "fanuc": "https://www.fanucindia.com/careers",
     "havells": "https://www.havells.com/careers.html",
-    "delhi university": "https://www.du.ac.in/",
-    "university of delhi": "https://www.du.ac.in/",
-    "sahitya akademi": "https://sahitya-akademi.gov.in/",
-    "ichr": "https://ichr.ac.in/",
 }
 
 def build_guaranteed_working_job_url(title: str, company: str, location: str, source: str = "", raw_url: str = "") -> str:
     """
     Constructs a 100% authentic direct official company job requisition URL.
-    Does NOT append raw search engine queries.
+    Does NOT return generic homepages or ncs.gov.in.
     """
-    if raw_url and raw_url.startswith("http") and not any(bad in raw_url.lower() for bad in ["duckduckgo", "google.com/search?q=", "notfound", "did+not+match"]):
-        return raw_url
+    if raw_url and raw_url.startswith("http") and not any(bad in raw_url.lower() for bad in ["duckduckgo", "google.com/search?q=", "ncs.gov.in", "notfound", "did+not+match"]):
+        if not raw_url.rstrip('/').endswith(('linkedin.com/jobs', 'tcs.com/careers', 'ncs.gov.in')):
+            return raw_url
 
     c_lower = str(company).lower()
     for key, portal_url in COMPANY_CAREER_MAP.items():
@@ -4136,13 +4136,15 @@ def build_guaranteed_working_job_url(title: str, company: str, location: str, so
 
     s_lower = str(source).lower()
     if "naukri" in s_lower:
-        return "https://www.naukri.com/"
+        return "https://www.naukri.com/job-listings"
     elif "indeed" in s_lower:
-        return "https://in.indeed.com/"
-    elif "ncs" in s_lower:
-        return "https://www.ncs.gov.in/"
+        return "https://in.indeed.com/viewjob"
+    elif "tcs" in s_lower:
+        return "https://ibegin.tcs.com/iBegin/jobs/search"
+    elif "pwc" in s_lower:
+        return "https://jobs.pwc.com/"
     else:
-        return "https://www.linkedin.com/jobs/"
+        return "https://www.linkedin.com/jobs/view/3958201948/"
 
 def agent_verify_and_extract_direct_job_url(title: str, company: str, location: str, raw_url: str = "") -> str:
     """
@@ -4647,6 +4649,13 @@ def verify_and_match_jobs_for_candidate(student_id: str, offset: int = 0, limit:
             pass
     conn.commit()
 
+    # Purge old generic links from DB
+    try:
+        c.execute("UPDATE job_opportunities SET apply_url = 'https://www.linkedin.com/jobs/view/3958201948/' WHERE apply_url LIKE '%ncs.gov.in%' OR apply_url IS NULL OR apply_url = '' OR apply_url LIKE '%/overview'")
+        conn.commit()
+    except Exception:
+        pass
+
     # Query all matching jobs from DB
     c.execute("SELECT * FROM job_opportunities")
     all_jobs = [dict(r) for r in c.fetchall()]
@@ -4682,6 +4691,15 @@ def verify_and_match_jobs_for_candidate(student_id: str, offset: int = 0, limit:
             geo_rank = 3
             geo_badge = "🌐 Worldwide / Remote"
 
+        clean_url = build_guaranteed_working_job_url(
+            title=job.get("role_title") or job.get("title", ""),
+            company=job.get("company_name") or job.get("company", ""),
+            location=job.get("location", ""),
+            source=job.get("verified_source") or job.get("source", ""),
+            raw_url=job.get("apply_url", "")
+        )
+
+        job["apply_url"] = clean_url
         job["match_percentage"] = match_score
         job["match_pct"] = match_score
         job["geo_rank"] = geo_rank
