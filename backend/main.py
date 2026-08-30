@@ -2142,76 +2142,84 @@ def direct_simulate_candidate_loop(score_type: str = "TOP"):
         return {"status": "error", "message": str(e)}
 
 def direct_get_exam_for_student(student_id: str = None, track_name: str = None):
-    """Returns verified exam data with instant fallback MCQs if course is not in DB."""
-    default_mcqs = [
-        {
-            "question": "What is the primary protocol used for real-time sensor telemetry in automated control units?",
-            "options": ["A) HTTP/1.1", "B) MQTT / Modbus", "C) FTP", "D) SMTP"],
-            "correct_option": 1,
-            "correct_answer": "B) MQTT / Modbus"
-        },
-        {
-            "question": "When diagnosing an unexpected PLC voltage drop across an inductive load, the first safety check is:",
-            "options": ["A) Replace MCU", "B) Verify Flyback Diode / Ground Continuity", "C) Overclock Clock Cycle", "D) Re-flash Firmware"],
-            "correct_option": 1,
-            "correct_answer": "B) Verify Flyback Diode / Ground Continuity"
-        },
-        {
-            "question": "In closed-loop PID control architectures, the 'Integral' term primarily functions to eliminate:",
-            "options": ["A) Steady-state error", "B) Overshoot", "C) High-frequency noise", "D) Derivative kick"],
-            "correct_option": 0,
-            "correct_answer": "A) Steady-state error"
-        }
-    ]
-    default_capstone = "Design and document a fail-safe sensor telemetry pipeline handling intermittent disconnections."
-
+    """Returns verified exam data adhering strictly to course's configured default MCQ count."""
+    target_count = 10
+    t_name = str(track_name or "Vocational Track").strip()
     try:
         conn = get_db()
         c = conn.cursor()
-        t_name = str(track_name or "").strip()
-        c.execute("SELECT * FROM courses WHERE title LIKE ? OR course_name LIKE ? LIMIT 1", (f"%{t_name}%", f"%{t_name}%"))
-        row = c.fetchone()
+        c_id = None
+        if student_id:
+            c.execute("SELECT course_id, track, course_name FROM students WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (student_id, student_id))
+            s_row = c.fetchone()
+            if s_row:
+                s_dict = dict(s_row)
+                c_id = s_dict.get("course_id")
+                t_name = s_dict.get("track") or s_dict.get("course_name") or t_name
+        
+        row = None
+        if c_id:
+            c.execute("SELECT * FROM courses WHERE UPPER(id) = UPPER(?)", (c_id,))
+            row = c.fetchone()
+        if not row and t_name:
+            c.execute("SELECT * FROM courses WHERE title LIKE ? OR course_name LIKE ? ORDER BY created_at DESC LIMIT 1", (f"%{t_name}%", f"%{t_name}%"))
+            row = c.fetchone()
+        if not row:
+            c.execute("SELECT * FROM courses ORDER BY created_at DESC LIMIT 1")
+            row = c.fetchone()
         conn.close()
 
         if row:
             c_dict = dict(row)
+            target_count = int(c_dict.get("default_mcq_count") or c_dict.get("num_mcqs_config") or 10)
             parsed_mcqs = None
-        c_dict = dict(row) if row else {}
-        parsed_mcqs = None
-        if isinstance(c_dict.get("mcqs"), str) and c_dict["mcqs"].startswith("["):
-            try:
-                parsed_mcqs = json.loads(c_dict["mcqs"])
-            except Exception:
-                pass
-        res_exam = {
-            "course_id": c_dict.get("id", "CRS-DEFAULT") if row else "CRS-DEFAULT",
-            "exam_id": c_dict.get("id", "CRS-DEFAULT") if row else "CRS-DEFAULT",
-            "course_title": (c_dict.get("title") or c_dict.get("course_name") or "Vocational Track") if row else (t_name or "Vocational Track"),
-            "mcqs": parsed_mcqs if (row and parsed_mcqs) else default_mcqs,
-            "practical_task": c_dict.get("capstone") if row else default_capstone,
-            "capstone": c_dict.get("capstone") if row else default_capstone
-        }
+            if isinstance(c_dict.get("mcqs"), str) and c_dict["mcqs"].startswith("["):
+                try:
+                    parsed_mcqs = json.loads(c_dict["mcqs"])
+                except Exception:
+                    pass
+            elif isinstance(c_dict.get("mcqs"), list):
+                parsed_mcqs = c_dict["mcqs"]
+            
+            if parsed_mcqs and isinstance(parsed_mcqs, list) and len(parsed_mcqs) > 0:
+                if len(parsed_mcqs) >= target_count:
+                    final_mcqs = parsed_mcqs[:target_count]
+                else:
+                    needed = target_count - len(parsed_mcqs)
+                    extra = generate_mcqs_for_track(t_name, count=needed)
+                    final_mcqs = parsed_mcqs + extra
+            else:
+                final_mcqs = generate_mcqs_for_track(t_name, count=target_count)
+
+            return {
+                "course_id": c_dict.get("id", "CRS-MAIN"),
+                "exam_id": c_dict.get("id", "CRS-MAIN"),
+                "course_title": c_dict.get("title") or c_dict.get("course_name") or t_name,
+                "mcqs": final_mcqs[:target_count],
+                "capstone": c_dict.get("capstone") or f"Execute comprehensive practical diagnostic inspection for {t_name}.",
+                "practical_task": c_dict.get("capstone") or f"Execute comprehensive practical diagnostic inspection for {t_name}."
+            }
+    except Exception as e:
+        print(f"[EXAM FETCH NOTICE] {e}")
+
+    final_mcqs = generate_mcqs_for_track(t_name, count=target_count)
+    res_exam = {
+        "course_id": "CRS-VOCATIONAL-MAIN",
+        "exam_id": "CRS-VOCATIONAL-MAIN",
+        "course_title": t_name,
+        "mcqs": final_mcqs[:target_count],
+        "capstone": f"Execute comprehensive practical diagnostic inspection for {t_name}.",
+        "practical_task": f"Execute comprehensive practical diagnostic inspection for {t_name}."
+    }
+    try:
         record_agent_activity_log(
             action_type="MCQ_ASSESSMENT_GENERATION",
-            description=f"Autonomous Agent generated {len(res_exam['mcqs'])} multimodal evaluation MCQs for student '{student_id or 'Active User'}' ({t_name or 'Default Track'}).",
+            description=f"Autonomous Agent generated {len(res_exam['mcqs'])} multimodal evaluation MCQs for candidate '{student_id or 'Active User'}'.",
             student_id=str(student_id or "")
         )
-        return res_exam
     except Exception:
-        res_exam = {
-            "course_id": "CRS-DEFAULT",
-            "exam_id": "CRS-DEFAULT",
-            "course_title": track_name or "Vocational Track",
-            "mcqs": default_mcqs,
-            "practical_task": default_capstone,
-            "capstone": default_capstone
-        }
-        record_agent_activity_log(
-            action_type="MCQ_ASSESSMENT_GENERATION",
-            description=f"Autonomous Agent generated {len(default_mcqs)} multimodal evaluation MCQs for candidate '{student_id or 'Active User'}'.",
-            student_id=str(student_id or "")
-        )
-        return res_exam
+        pass
+    return res_exam
 
 def direct_get_student_by_id(student_id: str):
     """Fetches real-time student record cleanly by ID."""
@@ -4031,76 +4039,7 @@ def generate_mcqs_for_track(track_name: str, count: int = 5) -> list:
         result.append(item)
     return result[:target]
 
-def direct_get_exam_for_student(student_id: str = None, track_name: str = None):
-    """Returns verified exam questions adhering strictly to course's target MCQ count."""
-    target_count = 5
-    t_name = str(track_name or "Vocational Diagnostic").strip()
-    
-    try:
-        conn = get_db()
-        c = conn.cursor()
-        
-        c_id = None
-        if student_id:
-            c.execute("SELECT course_id, track, course_name FROM students WHERE UPPER(id) = UPPER(?) OR UPPER(student_id) = UPPER(?)", (student_id, student_id))
-            s_row = c.fetchone()
-            if s_row:
-                s_dict = dict(s_row)
-                c_id = s_dict.get("course_id")
-                t_name = s_dict.get("track") or s_dict.get("course_name") or t_name
-                
-        row = None
-        if c_id:
-            c.execute("SELECT * FROM courses WHERE UPPER(id) = UPPER(?)", (c_id,))
-            row = c.fetchone()
-        if not row and t_name:
-            c.execute("SELECT * FROM courses WHERE title LIKE ? OR course_name LIKE ? ORDER BY created_at DESC LIMIT 1", (f"%{t_name}%", f"%{t_name}%"))
-            row = c.fetchone()
-            
-        conn.close()
-
-        if row:
-            c_dict = dict(row)
-            target_count = int(c_dict.get("default_mcq_count") or c_dict.get("num_mcqs_config") or 5)
-            parsed_mcqs = None
-            if isinstance(c_dict.get("mcqs"), str) and c_dict["mcqs"].startswith("["):
-                try:
-                    parsed_mcqs = json.loads(c_dict["mcqs"])
-                except Exception:
-                    pass
-            elif isinstance(c_dict.get("mcqs"), list):
-                parsed_mcqs = c_dict["mcqs"]
-                
-            if parsed_mcqs and isinstance(parsed_mcqs, list) and len(parsed_mcqs) > 0:
-                if len(parsed_mcqs) >= target_count:
-                    final_mcqs = parsed_mcqs[:target_count]
-                else:
-                    needed = target_count - len(parsed_mcqs)
-                    extra = generate_mcqs_for_track(t_name, count=needed)
-                    final_mcqs = parsed_mcqs + extra
-            else:
-                final_mcqs = generate_mcqs_for_track(t_name, count=target_count)
-
-            return {
-                "course_id": c_dict.get("id", "CRS-MAIN"),
-                "exam_id": c_dict.get("id", "CRS-MAIN"),
-                "course_title": c_dict.get("title") or c_dict.get("course_name") or t_name,
-                "mcqs": final_mcqs[:target_count],
-                "capstone": c_dict.get("capstone") or f"Execute comprehensive practical diagnostic inspection for {t_name}.",
-                "practical_task": c_dict.get("capstone") or f"Execute comprehensive practical diagnostic inspection for {t_name}."
-            }
-    except Exception as e:
-        print(f"[EXAM FETCH NOTICE] {e}")
-
-    final_mcqs = generate_mcqs_for_track(t_name, count=target_count)
-    return {
-        "course_id": "CRS-VOCATIONAL-MAIN",
-        "exam_id": "CRS-VOCATIONAL-MAIN",
-        "course_title": t_name,
-        "mcqs": final_mcqs,
-        "capstone": f"Execute comprehensive practical diagnostic inspection for {t_name}.",
-        "practical_task": f"Execute comprehensive practical diagnostic inspection for {t_name}."
-    }
+# direct_get_exam_for_student is defined earlier at line 2144 with full course lookup and exact default_mcq_count scaling.
 
 # --- Guaranteed Working Direct Apply URL & Career Portal Resolver ---
 COMPANY_CAREER_MAP = {

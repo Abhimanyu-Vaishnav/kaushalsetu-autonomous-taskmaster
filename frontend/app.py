@@ -2223,37 +2223,76 @@ def main_app_layout():
         
         if mcqs and st.session_state.get("mcq_step", 0) < len(mcqs):
             cur_idx = min(st.session_state.get("mcq_step", 0), len(mcqs) - 1)
-            prog_val = min(1.0, max(0.0, float(cur_idx + 1) / float(len(mcqs))))
-            st.progress(prog_val, text=f"Question {cur_idx + 1} of {len(mcqs)}")
-            
-            q_item = mcqs[cur_idx]
+            total_mcqs_count = len(mcqs)
+            ans_dict = st.session_state.get("mcq_answers_dict", {})
+            answered_count = len(ans_dict)
+            prog_val = min(1.0, max(0.0, float(cur_idx + 1) / float(total_mcqs_count)))
+
+            # IMPRESSIVE INTERACTIVE QUESTION NAVIGATION PALETTE
             st.markdown(f"""
-            <div style="background: rgba(15,23,42,0.95); border-left: 5px solid #3b82f6; border-radius: 12px; padding: 18px 20px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
-                <div style="font-size: 0.8rem; font-weight: 800; color: #38bdf8; letter-spacing: 1px; margin-bottom: 6px;">🎯 MULTIMODAL THEORY QUESTION {cur_idx + 1} OF {len(mcqs)}</div>
-                <h3 style="color: #f8fafc; font-size: 1.1rem; font-weight: 700; margin: 0; line-height: 1.5;">{q_item['question']}</h3>
+            <div style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 14px 18px; margin-bottom: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+                    <div>
+                        <span style="font-size: 0.82rem; font-weight: 800; color: #38bdf8; letter-spacing: 0.5px;">🎯 THEORY EVALUATION EXAM</span>
+                        <span style="font-size: 0.78rem; color: #94a3b8; margin-left: 8px;">({answered_count} of {total_mcqs_count} Answered)</span>
+                    </div>
+                    <span style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 0.75rem; font-weight: 700; padding: 2px 10px; border-radius: 6px;">
+                        QUESTION {cur_idx + 1} OF {total_mcqs_count}
+                    </span>
+                </div>
             </div>
             """, unsafe_allow_html=True)
-            
-            saved_ans = st.session_state.get("mcq_answers_dict", {}).get(cur_idx, None)
+
+            st.progress(prog_val, text=f"Exam Progress: Question {cur_idx + 1} of {total_mcqs_count} ({int(prog_val * 100)}% Completed)")
+
+            # Clickable Question Pill Grid Navigator
+            pill_cols = st.columns(min(15, total_mcqs_count))
+            for i in range(total_mcqs_count):
+                with pill_cols[i % len(pill_cols)]:
+                    is_ans = i in ans_dict
+                    is_curr = (i == cur_idx)
+                    btn_label = f"✓ Q{i+1}" if is_ans else f"Q{i+1}"
+                    btn_type = "primary" if is_curr else "secondary"
+                    if st.button(btn_label, key=f"q_nav_pill_{i}", use_container_width=True, type=btn_type):
+                        st.session_state["mcq_step"] = i
+                        st.rerun()
+
+            st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
+            q_item = mcqs[cur_idx]
+
+            # IMPRESSIVE QUESTION DISPLAY CARD
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%); border-left: 5px solid #3b82f6; border-radius: 12px; padding: 20px 24px; border: 1px solid rgba(59, 130, 246, 0.3); margin-bottom: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.78rem; font-weight: 800; color: #60a5fa; letter-spacing: 1px;">QUESTION #{cur_idx + 1}</span>
+                    <span style="font-size: 0.75rem; color: #a7f3d0; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 8px; border-radius: 4px;">Verified Assessment Spec</span>
+                </div>
+                <h3 style="color: #ffffff; font-size: 1.15rem; font-weight: 700; margin: 0; line-height: 1.55;">{q_item['question']}</h3>
+            </div>
+            """, unsafe_allow_html=True)
+
+            saved_ans = ans_dict.get(cur_idx, None)
             st.markdown('<div class="mcq-radio-container">', unsafe_allow_html=True)
             sel_ans = st.radio("Select Correct Option:", q_item["options"], index=saved_ans if saved_ans is not None else 0, key=f"q_radio_{cur_idx}", label_visibility="collapsed")
             st.markdown('</div>', unsafe_allow_html=True)
-            
+
             col_nb1, col_nb2 = st.columns(2)
             with col_nb1:
-                if st.button("⬅️ Previous Question", disabled=(cur_idx == 0)):
+                if st.button("⬅️ Previous Question", disabled=(cur_idx == 0), key=f"btn_prev_q_{cur_idx}", use_container_width=True):
+                    st.session_state.setdefault("mcq_answers_dict", {})[cur_idx] = q_item["options"].index(sel_ans)
                     st.session_state["mcq_step"] = max(0, cur_idx - 1)
                     st.rerun()
             with col_nb2:
-                if cur_idx < len(mcqs) - 1:
-                    if st.button("Next Question ➡️", type="primary"):
+                if cur_idx < total_mcqs_count - 1:
+                    if st.button("Next Question ➡️", type="primary", key=f"btn_next_q_{cur_idx}", use_container_width=True):
                         st.session_state.setdefault("mcq_answers_dict", {})[cur_idx] = q_item["options"].index(sel_ans)
                         st.session_state["mcq_step"] = cur_idx + 1
                         st.rerun()
                 else:
-                    if st.button("Save MCQs & Proceed to Capstone 🎯", type="primary"):
+                    if st.button("Save MCQs & Proceed to Capstone 🎯", type="primary", key="btn_save_all_mcqs", use_container_width=True):
                         st.session_state.setdefault("mcq_answers_dict", {})[cur_idx] = q_item["options"].index(sel_ans)
-                        st.session_state["mcq_step"] = len(mcqs)
+                        st.session_state["mcq_step"] = total_mcqs_count
+                        st.toast("✅ Objective Theory MCQs Completed & Saved!", icon="🎉")
                         st.rerun()
                         
         if st.session_state.get("mcq_step", 0) >= len(mcqs):
