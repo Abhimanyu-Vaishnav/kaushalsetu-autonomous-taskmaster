@@ -1462,77 +1462,91 @@ def main_app_layout():
             with tab_jobs:
                 auth_s = st.session_state.get("authenticated_student", {})
                 s_id = auth_s.get("id", "STU-1004")
-                s_track = auth_s.get("track") or auth_s.get("course_name") or "Vocational Track"
+                s_track = auth_s.get("track") or auth_s.get("course_name") or "Bio-Tech & Genetic Telemetry Analytics"
+                s_skills = auth_s.get("parsed_skills", "") or s_track
                 s_name = auth_s.get("name", "Candidate")
 
                 st.markdown("### 💼 Autonomous Career Intelligence & Verified Placement Outbox")
-                st.caption(f"Real-time RSS stream screened by Gemini 2.5 Flash for: **{s_name}** (`{s_track}`)")
+                st.caption(f"Real-time domain matching for **{s_name}** | Course: **{s_track}**")
 
-                # Filter Controls
-                col_srch, col_btn = st.columns([4, 1])
+                col_srch, col_tier, col_ref = st.columns([3, 2, 2])
                 with col_srch:
-                    text_filter = st.text_input("🔍 Live Search in Streamed Openings", "", placeholder="Filter by title, company, or skill...", key="rss_job_search_inp")
-                with col_btn:
+                    search_term = st.text_input("🔍 Live Filter", "", placeholder="Filter by title, skill, or company...", key="rss_job_search_inp")
+                with col_tier:
+                    tier_filter = st.selectbox("📍 Location Tier", ["All Tiers", "📍 Local Delhi NCR", "🇮🇳 National (India)", "🌐 Worldwide / Remote"], key="rss_job_geo_inp")
+                with col_ref:
                     st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-                    if st.button("🔄 Rescan RSS Feeds", key="btn_recrawl_rss", use_container_width=True):
-                        st.session_state[f"rss_jobs_{s_id}"] = None
-                        st.session_state["job_page_num"] = 1
+                    if st.button("🔄 Rescan Intelligence Engine", key="btn_recrawl_rss", use_container_width=True):
+                        st.session_state[f"jobs_feed_{s_id}"] = None
+                        st.session_state["job_page_idx"] = 1
                         st.rerun()
 
-                # State-cached RSS Stream Fetch
-                session_key = f"rss_jobs_{s_id}"
-                if session_key not in st.session_state or st.session_state[session_key] is None:
-                    with st.spinner(f"🌐 Ingesting live RSS feeds & executing Gemini semantic verification for {s_track}..."):
-                        st.session_state[session_key] = get_gemini_screened_jobs_for_student(s_id)
-                        st.session_state["job_page_num"] = 1
+                cache_key = f"jobs_feed_{s_id}"
+                if cache_key not in st.session_state or st.session_state[cache_key] is None:
+                    with st.spinner(f"🔍 Discovering 20+ verified domain openings for {s_track}..."):
+                        st.session_state[cache_key] = fetch_safe_live_jobs(s_track, s_skills)
+                        st.session_state["job_page_idx"] = 1
 
-                all_live_jobs = st.session_state.get(session_key, [])
+                all_openings = st.session_state.get(cache_key, [])
 
-                # Text Filter
-                if text_filter:
-                    all_live_jobs = [j for j in all_live_jobs if text_filter.lower() in j.get("role_title", "").lower() or text_filter.lower() in j.get("company_name", "").lower() or text_filter.lower() in j.get("description", "").lower()]
+                # Filters
+                if search_term:
+                    all_openings = [j for j in all_openings if search_term.lower() in j.get("role_title", "").lower() or search_term.lower() in j.get("company_name", "").lower() or search_term.lower() in j.get("description", "").lower()]
 
-                # 20 JOBS PER PAGE PAGINATION
-                PAGE_SIZE = 20
-                total_count = len(all_live_jobs)
-                total_pages = max(1, (total_count + PAGE_SIZE - 1) // PAGE_SIZE)
+                if tier_filter != "All Tiers":
+                    if "Local" in tier_filter:
+                        all_openings = [j for j in all_openings if j.get("country_tier") == "Local"]
+                    elif "National" in tier_filter:
+                        all_openings = [j for j in all_openings if j.get("country_tier") == "National"]
+                    elif "Worldwide" in tier_filter:
+                        all_openings = [j for j in all_openings if j.get("country_tier") == "Worldwide"]
 
-                if "job_page_num" not in st.session_state:
-                    st.session_state["job_page_num"] = 1
+                # Pagination: 20 per page
+                PER_PAGE = 20
+                total_len = len(all_openings)
+                total_pgs = max(1, (total_len + PER_PAGE - 1) // PER_PAGE)
+                if "job_page_idx" not in st.session_state:
+                    st.session_state["job_page_idx"] = 1
 
-                current_page = min(st.session_state["job_page_num"], total_pages)
-                start_pos = (current_page - 1) * PAGE_SIZE
-                end_pos = min(start_pos + PAGE_SIZE, total_count)
-                current_slice = all_live_jobs[start_pos:end_pos]
+                curr_pg = min(st.session_state["job_page_idx"], total_pgs)
+                start_p = (curr_pg - 1) * PER_PAGE
+                end_p = min(start_p + PER_PAGE, total_len)
+                paged_jobs = all_openings[start_p:end_p]
 
-                st.markdown(f"**Showing `{len(current_slice)}` of `{total_count}` Live RSS Openings** — *(Page {current_page} of {total_pages})*")
+                st.markdown(f"**Showing `{len(paged_jobs)}` of `{total_len}` Domain-Verified Openings** — *(Page {curr_pg} of {total_pgs})*")
 
-                if not current_slice:
-                    st.info("No active openings matched the current criteria. Click 'Rescan RSS Feeds' to refresh live streams.")
+                if not paged_jobs:
+                    st.info("No active openings matched the current criteria. Click 'Rescan Intelligence Engine' to refresh live streams.")
                 else:
-                    for idx, job in enumerate(current_slice):
-                        is_top = (idx < 2 and current_page == 1)
+                    for idx, job in enumerate(paged_jobs):
+                        is_top = job.get("is_top_probability", (idx < 2 and curr_pg == 1))
                         top_pill = "<span style='background: #78350f; color: #fde68a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>⭐ TOP SELECTION PROBABILITY</span>" if is_top else ""
-                        pct = job.get("match_percentage", 88)
-                        color_pct = "#34d399" if pct >= 85 else "#60a5fa"
+                        pct = job.get("match_percentage", 90)
 
-                        card_html = f"""<div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(59, 130, 246, 0.28); border-radius: 12px; padding: 18px 22px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                        # Sanitize URL to ensure it is never a root homepage
+                        raw_url = str(job.get("apply_url", "")).strip()
+                        if not raw_url.startswith("http") or raw_url.endswith("/homepage") or raw_url == "https://ncs.gov.in" or raw_url == "https://ncs.gov.in/":
+                            track_slug = s_track.lower().replace(" ", "-")
+                            direct_link = f"https://www.naukri.com/{track_slug}-jobs-in-delhi-ncr"
+                        else:
+                            direct_link = raw_url
+
+                        card_html = f"""<div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 18px 22px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
         <div style="flex: 1; min-width: 280px;">
             <h4 style="margin: 0; color: #ffffff; font-size: 1.18rem;">{job.get('role_title')} {top_pill}</h4>
             <p style="margin: 4px 0; color: #94a3b8; font-size: 0.88rem;">
                 🏢 <b style="color: #f1f5f9;">{job.get('company_name')}</b> • 📍 <span style="color:#60a5fa;">{job.get('location')}</span> • 💰 <span style="color:#34d399; font-weight:600;">{job.get('salary_range')}</span>
             </p>
-            <p style="margin: 6px 0; color: #cbd5e1; font-size: 0.85rem; line-height: 1.4;">{job.get('description')}</p>
-            
+            <p style="margin: 6px 0; color: #cbd5e1; font-size: 0.85rem;">{job.get('description')}</p>
             <div style="background: rgba(30, 41, 59, 0.6); border-left: 3px solid #8b5cf6; border-radius: 0 6px 6px 0; padding: 6px 10px; margin-top: 8px;">
                 <span style="font-size: 0.8rem; font-weight: 700; color: #c084fc;">🤖 Gemini Fit Analysis:</span>
-                <span style="font-size: 0.8rem; color: #e2e8f0;"> {job.get('ai_match_reason', 'Matches curriculum competencies.')}</span>
+                <span style="font-size: 0.8rem; color: #e2e8f0;"> {job.get('ai_match_reason')}</span>
             </div>
         </div>
         <div style="text-align: right; min-width: 120px;">
-            <div style="font-size: 1.45rem; font-weight: 800; color: {color_pct};">{pct}% Match</div>
-            <span style="font-size: 0.72rem; color: #93c5fd; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">{job.get('verified_source', 'Live Stream')}</span>
+            <div style="font-size: 1.45rem; font-weight: 800; color: #34d399;">{pct}% Match</div>
+            <span style="font-size: 0.72rem; color: #93c5fd; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); padding: 2px 6px; border-radius: 4px;">{job.get('verified_source')}</span>
         </div>
     </div>
 </div>"""
@@ -1540,7 +1554,7 @@ def main_app_layout():
 
                         col_a, col_b = st.columns([1, 1])
                         with col_a:
-                            if st.button("🚀 1-Click Autonomous Application Dispatch", key=f"apply_{job.get('id')}_{idx}", type="primary", use_container_width=True):
+                            if st.button("🚀 1-Click Autonomous Application Dispatch", key=f"btn_apply_{job.get('id')}_{idx}", type="primary", use_container_width=True):
                                 conn = get_db()
                                 c = conn.cursor()
                                 app_id = f"APP-{uuid.uuid4().hex[:6].upper()}"
@@ -1550,22 +1564,22 @@ def main_app_layout():
                                 """, (app_id, s_id, s_name, s_track, job.get("id"), job.get("role_title"), job.get("company_name"), pct))
                                 conn.commit()
                                 conn.close()
-                                st.toast(f"✅ Application dossier dispatched to {job.get('company_name')}!", icon="📬")
+                                st.toast(f"✅ Application dispatched to {job.get('company_name')}!", icon="📬")
                         with col_b:
-                            st.link_button("🔗 Open Direct Verified Vacancy Permalink ↗", url=job.get("apply_url", "https://naukri.com"), use_container_width=True)
+                            st.link_button("🔗 Open Direct Verified Vacancy Permalink ↗", url=direct_link, use_container_width=True)
 
-                # Pagination Controls
+                # Pagination Footer
                 st.markdown("<br>", unsafe_allow_html=True)
-                col_p, col_i, col_n = st.columns([1, 2, 1])
-                with col_p:
-                    if st.button("⬅ Previous 20 Jobs", disabled=(current_page <= 1), key="btn_prev_20_jobs", use_container_width=True):
-                        st.session_state["job_page_num"] = max(1, current_page - 1)
+                col_prev, col_txt, col_next = st.columns([1, 2, 1])
+                with col_prev:
+                    if st.button("⬅ Previous 20 Jobs", disabled=(curr_pg <= 1), key="btn_prev_20_jobs", use_container_width=True):
+                        st.session_state["job_page_idx"] = max(1, curr_pg - 1)
                         st.rerun()
-                with col_i:
-                    st.markdown(f"<p style='text-align:center; margin-top:8px; color:#94a3b8; font-weight:600;'>Page {current_page} of {total_pages} ({total_count} Live Openings Streamed)</p>", unsafe_allow_html=True)
-                with col_n:
-                    if st.button("Next 20 Jobs ➡", disabled=(current_page >= total_pages), key="btn_next_20_jobs", use_container_width=True):
-                        st.session_state["job_page_num"] = min(total_pages, current_page + 1)
+                with col_txt:
+                    st.markdown(f"<p style='text-align:center; margin-top:8px; color:#94a3b8; font-weight:600;'>Page {curr_pg} of {total_pgs} ({total_len} Total Jobs)</p>", unsafe_allow_html=True)
+                with col_next:
+                    if st.button("Next 20 Jobs ➡", disabled=(curr_pg >= total_pgs), key="btn_next_20_jobs", use_container_width=True):
+                        st.session_state["job_page_idx"] = min(total_pgs, curr_pg + 1)
                         st.rerun()
 
             # TAB 4: AI INTERVIEW PREPARATION STUDIO & ZERO-FAILURE COACHING
