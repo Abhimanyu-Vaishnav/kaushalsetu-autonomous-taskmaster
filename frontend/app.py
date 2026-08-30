@@ -1518,32 +1518,29 @@ def main_app_layout():
                         pct_color = "#34d399" if match_pct >= 85 else "#60a5fa"
                         apply_url = str(job.get("apply_url", "https://naukri.com"))
 
-                        st.markdown(f"""
-                        <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 14px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
-                                <div style="flex: 1; min-width: 280px;">
-                                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
-                                        <h4 style="margin: 0; color: #ffffff; font-size: 1.22rem; font-weight: 700;">{job.get('role_title')}</h4>
-                                        {top_badge}
-                                    </div>
-                                    <p style="margin: 4px 0 8px 0; color: #94a3b8; font-size: 0.9rem;">
-                                        🏢 <b style="color: #f8fafc;">{job.get('company_name')}</b> • 📍 <span style="color: #60a5fa;">{job.get('location')}</span> • 💰 <span style="color: #34d399; font-weight: 700;">{job.get('salary_range')}</span> • 🏷️ <span style="color: #cbd5e1;">{job.get('job_type', 'Full-Time')}</span>
-                                    </p>
-                                    <p style="margin: 8px 0; color: #e2e8f0; font-size: 0.88rem; line-height: 1.5;">{job.get('description')}</p>
-                                    
-                                    <!-- EXPLAINABLE AI COMPATIBILITY REASONING -->
-                                    <div style="background: rgba(30, 41, 59, 0.6); border-left: 3px solid #8b5cf6; border-radius: 0 8px 8px 0; padding: 8px 12px; margin-top: 10px;">
-                                        <span style="font-size: 0.82rem; font-weight: 700; color: #c084fc;">🤖 AI Selection Analysis:</span>
-                                        <span style="font-size: 0.82rem; color: #cbd5e1;"> {job.get('ai_match_reason', 'Matches certified competency requirements.')}</span>
-                                    </div>
-                                </div>
-                                <div style="text-align: right; min-width: 130px;">
-                                    <div style="font-size: 1.6rem; font-weight: 800; color: {pct_color};">{match_pct}% Match</div>
-                                    <span style="font-size: 0.75rem; color: #93c5fd; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-top: 4px;">{job.get('verified_source', 'Career Network')}</span>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        card_html = f"""<div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 14px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+        <div style="flex: 1; min-width: 280px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                <h4 style="margin: 0; color: #ffffff; font-size: 1.22rem; font-weight: 700;">{job.get('role_title')}</h4>
+                {top_badge}
+            </div>
+            <p style="margin: 4px 0 8px 0; color: #94a3b8; font-size: 0.9rem;">
+                🏢 <b style="color: #f8fafc;">{job.get('company_name')}</b> • 📍 <span style="color: #60a5fa;">{job.get('location')}</span> • 💰 <span style="color: #34d399; font-weight: 700;">{job.get('salary_range')}</span> • 🏷️ <span style="color: #cbd5e1;">{job.get('job_type', 'Full-Time')}</span>
+            </p>
+            <p style="margin: 8px 0; color: #e2e8f0; font-size: 0.88rem; line-height: 1.5;">{job.get('description')}</p>
+            <div style="background: rgba(30, 41, 59, 0.6); border-left: 3px solid #8b5cf6; border-radius: 0 8px 8px 0; padding: 8px 12px; margin-top: 10px;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #c084fc;">🤖 AI Selection Analysis:</span>
+                <span style="font-size: 0.82rem; color: #cbd5e1;"> {job.get('ai_match_reason', 'Matches certified competency requirements.')}</span>
+            </div>
+        </div>
+        <div style="text-align: right; min-width: 130px;">
+            <div style="font-size: 1.6rem; font-weight: 800; color: {pct_color};">{match_pct}% Match</div>
+            <span style="font-size: 0.75rem; color: #93c5fd; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); padding: 3px 8px; border-radius: 4px; display: inline-block; margin-top: 4px;">{job.get('verified_source', 'Career Network')}</span>
+        </div>
+    </div>
+</div>"""
+                        st.markdown(card_html, unsafe_allow_html=True)
 
                         col_act1, col_act2 = st.columns([1, 1])
                         with col_act1:
