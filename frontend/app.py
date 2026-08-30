@@ -1485,38 +1485,62 @@ def main_app_layout():
                 raw_feed_jobs = list(st.session_state.get(cache_key, []))
                 all_jobs = list(raw_feed_jobs)
 
-                # Apply Filter
-                if search_txt:
-                    all_jobs = [j for j in all_jobs if search_txt.lower() in j.get("role_title", "").lower() or search_txt.lower() in j.get("company_name", "").lower() or search_txt.lower() in j.get("description", "").lower()]
+                # Loose, Typo-Tolerant Smart AI Filtering
+                if search_txt and search_txt.strip():
+                    st_kw_list = [w.lower().strip() for w in re.findall(r'[a-zA-Z0-9]+', search_txt) if len(w) >= 2]
+                    if st_kw_list:
+                        filtered = []
+                        for j in all_jobs:
+                            text_corpus = f"{j.get('role_title', '')} {j.get('company_name', '')} {j.get('description', '')} {j.get('required_skills', '')}".lower()
+                            if any(kw in text_corpus for kw in st_kw_list):
+                                filtered.append(j)
+                        if filtered:
+                            all_jobs = filtered
 
                 if tier_choice != "All Tiers":
                     if "Local" in tier_choice:
-                        all_jobs = [j for j in all_jobs if j.get("country_tier") == "Local"]
+                        loc_filtered = [j for j in all_jobs if j.get("country_tier") == "Local" or any(loc_kw in str(j.get("location","")).lower() for loc_kw in ["delhi", "ncr", "noida", "gurugram", "local"])]
+                        if loc_filtered:
+                            all_jobs = loc_filtered
                     elif "National" in tier_choice:
-                        all_jobs = [j for j in all_jobs if j.get("country_tier") == "National"]
+                        nat_filtered = [j for j in all_jobs if j.get("country_tier") == "National" or any(loc_kw in str(j.get("location","")).lower() for loc_kw in ["bengaluru", "pune", "mumbai", "hyderabad", "india", "national"])]
+                        if nat_filtered:
+                            all_jobs = nat_filtered
                     elif "Worldwide" in tier_choice:
-                        all_jobs = [j for j in all_jobs if j.get("country_tier") == "Worldwide"]
+                        world_filtered = [j for j in all_jobs if j.get("country_tier") == "Worldwide" or any(loc_kw in str(j.get("location","")).lower() for loc_kw in ["remote", "global", "worldwide"])]
+                        if world_filtered:
+                            all_jobs = world_filtered
 
-                # Fail-safe: If filter produced 0 results, auto-fallback to raw feed jobs
+                # Fail-Safe: Never show 0 jobs if raw feed has opportunities
                 if not all_jobs and raw_feed_jobs:
                     all_jobs = raw_feed_jobs
+                    st.info(f"ℹ️ **AI Smart Assist**: Showing all domain-matched opportunities for **{s_track}**.")
 
-                # 20 JOBS PER PAGE PAGINATION
-                PAGE_SIZE = 20
-                total_len = len(all_jobs)
-                total_pgs = max(1, (total_len + PAGE_SIZE - 1) // PAGE_SIZE)
+                # Dynamic Page Size State (Defaults to 20 jobs, expandable via 'Load More')
+                if "job_page_size" not in st.session_state:
+                    st.session_state["job_page_size"] = 20
                 if "job_page_idx" not in st.session_state:
                     st.session_state["job_page_idx"] = 1
+
+                PAGE_SIZE = st.session_state["job_page_size"]
+                total_len = len(all_jobs)
+                total_pgs = max(1, (total_len + PAGE_SIZE - 1) // PAGE_SIZE)
 
                 curr_pg = min(st.session_state["job_page_idx"], total_pgs)
                 start_p = (curr_pg - 1) * PAGE_SIZE
                 end_p = min(start_p + PAGE_SIZE, total_len)
                 paged_jobs = all_jobs[start_p:end_p]
 
-                st.markdown(f"**Showing `{len(paged_jobs)}` of `{total_len}` Domain-Verified Openings** — *(Page {curr_pg} of {total_pgs})*")
+                col_stat, col_expand = st.columns([3, 1])
+                with col_stat:
+                    st.markdown(f"**Showing `{len(paged_jobs)}` of `{total_len}` Domain-Verified Openings** — *(Page {curr_pg} of {total_pgs})*")
+                with col_expand:
+                    if total_len > PAGE_SIZE and st.button("📥 Load 20 More Jobs", key="btn_load_more_jobs", use_container_width=True):
+                        st.session_state["job_page_size"] += 20
+                        st.rerun()
 
                 if not paged_jobs:
-                    st.info("No openings match the current search filter. Clear the search text or click 'Rescan Intelligence Engine'.")
+                    st.info("No active openings matched the current criteria. Click 'Rescan Intelligence Engine'.")
                 else:
                     for idx, job in enumerate(paged_jobs):
                         is_top = (idx < 2 and curr_pg == 1)
