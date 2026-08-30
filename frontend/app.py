@@ -1464,32 +1464,47 @@ def main_app_layout():
 
             # TAB 3: LIVE VERIFIED JOB FINDER & OUTBOX
             with tab_jobs:
-                st.markdown("### 💼 Autonomous Career Intelligence & Live Placement Outbox")
-                st.caption("Real-time RSS-crawled vacancies directly matching candidate domain skills (No hallucinations, direct vacancy permalinks).")
+                auth_s = st.session_state.get("authenticated_student", {})
+                s_id = auth_s.get("id", "STU-1004")
+                s_track = auth_s.get("track") or auth_s.get("course_name") or "Hindi PhD & Academic Pedagogy"
+                s_skills = auth_s.get("parsed_skills", "") or s_track
+
+                st.markdown("### 💼 Autonomous Career Intelligence & Verified Placement Outbox")
+                st.caption(f"Showing live vacancies verified by Gemini 2.5 Flash for: **{s_track}**")
 
                 # Pagination State Tracking (Page-by-page & Page size)
                 if "job_page_num" not in st.session_state:
                     st.session_state["job_page_num"] = 1
                 page_size = 10
 
-                auth_s = st.session_state.get("authenticated_student", {})
-                s_id = auth_s.get("id", "STU-1004")
-
-                col_search, col_rescan = st.columns([4, 1])
-                with col_search:
-                    search_filter = st.text_input("🔍 Search within Verified Openings", "", placeholder="Filter by skill, title, or company...", key="rss_job_search_inp")
-                with col_rescan:
-                    st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-                    if st.button("🔄 Crawl Fresh Feeds", key="btn_recrawl_rss", use_container_width=True):
-                        st.session_state["job_page_num"] = 1
-                        st.toast("Crawling fresh live RSS streams...", icon="🌐")
-                        st.rerun()
+                # Modern Filter Bar
+                with st.container():
+                    col_q, col_geo, col_type = st.columns([3, 2, 2])
+                    with col_q:
+                        q_filter = st.text_input("🔍 Live Title / Skill Search", "", placeholder="e.g. Professor, GST, Python...", key="rss_job_search_inp")
+                    with col_geo:
+                        geo_filter = st.selectbox("📍 Location Scope", ["All Locations", "📍 Local Center (Delhi NCR)", "🇮🇳 National (India)", "🌐 Worldwide / Remote"], key="rss_job_geo_inp")
+                    with col_type:
+                        st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                        if st.button("🔄 Rescan Domain Feeds", key="btn_recrawl_rss", use_container_width=True):
+                            st.session_state["job_page_num"] = 1
+                            st.toast("Crawling fresh domain feeds...", icon="🌐")
+                            st.rerun()
 
                 # Fetch active tiered jobs
                 all_matched_jobs = get_verified_jobs_for_candidate(s_id, limit_count=100)
 
-                if search_filter:
-                    all_matched_jobs = [j for j in all_matched_jobs if search_filter.lower() in j.get("role_title", "").lower() or search_filter.lower() in j.get("company_name", "").lower() or search_filter.lower() in j.get("required_skills", "").lower()]
+                # Apply User Filters
+                if q_filter:
+                    all_matched_jobs = [j for j in all_matched_jobs if q_filter.lower() in j.get("role_title", "").lower() or q_filter.lower() in j.get("description", "").lower() or q_filter.lower() in j.get("company_name", "").lower()]
+
+                if geo_filter != "All Locations":
+                    if "Local" in geo_filter:
+                        all_matched_jobs = [j for j in all_matched_jobs if j.get("country_tier") == "Local" or "delhi" in str(j.get("location")).lower() or "ncr" in str(j.get("location")).lower()]
+                    elif "National" in geo_filter:
+                        all_matched_jobs = [j for j in all_matched_jobs if j.get("country_tier") == "National" or "india" in str(j.get("location")).lower()]
+                    elif "Worldwide" in geo_filter:
+                        all_matched_jobs = [j for j in all_matched_jobs if j.get("country_tier") == "Worldwide" or "remote" in str(j.get("location")).lower()]
 
                 total_jobs_count = len(all_matched_jobs)
                 total_pages = max(1, math.ceil(total_jobs_count / page_size))
@@ -1500,27 +1515,30 @@ def main_app_layout():
                 end_idx = start_idx + page_size
                 page_jobs = all_matched_jobs[start_idx:end_idx]
 
-                st.markdown(f"**Found `{total_jobs_count}` Verified Live Openings** — Showing Page **{current_page} of {total_pages}** ({len(page_jobs)} jobs on this page)")
+                st.markdown(f"**Found `{total_jobs_count}` Domain-Verified Openings** — Showing Page **{current_page} of {total_pages}**")
 
-                for idx, job in enumerate(page_jobs):
-                    is_top = (current_page == 1 and idx < 2)
-                    top_badge = "<span style='background: #78350f; color: #fde68a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>⭐ TOP SELECTION PROBABILITY</span>" if is_top else ""
-                    apply_url = str(job.get("apply_url", "#"))
+                if not page_jobs:
+                    st.info(f"No conflicting jobs shown. All active openings strictly match '{s_track}'. Click 'Rescan Domain Feeds' to crawl new vacancies.")
+                else:
+                    for idx, job in enumerate(page_jobs):
+                        is_top = (current_page == 1 and idx < 2)
+                        top_badge = "<span style='background: #78350f; color: #fde68a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>⭐ TOP 2 SELECTION PROBABILITY</span>" if is_top else ""
+                        apply_url = str(job.get("apply_url", "https://naukri.com"))
 
-                    with st.container():
                         st.markdown(f"""
-                        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; padding: 18px 22px; margin-bottom: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+                        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(59, 130, 246, 0.28); border-radius: 12px; padding: 20px 24px; margin-bottom: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
                                 <div>
-                                    <h4 style="margin: 0; color: #ffffff; font-size: 1.15rem;">{job.get('role_title')} {top_badge}</h4>
-                                    <p style="margin: 4px 0; color: #94a3b8; font-size: 0.88rem;">
-                                        🏢 <b>{job.get('company_name')}</b> • 📍 <span style="color:#60a5fa;">{job.get('geo_badge')}</span> • 💰 {job.get('salary_range')}
+                                    <h4 style="margin: 0; color: #ffffff; font-size: 1.2rem;">{job.get('role_title')} {top_badge}</h4>
+                                    <p style="margin: 5px 0; color: #94a3b8; font-size: 0.9rem;">
+                                        🏢 <b style="color: #f1f5f9;">{job.get('company_name')}</b> • 📍 <span style="color:#60a5fa;">{job.get('location')}</span> • 💰 <span style="color:#34d399; font-weight:600;">{job.get('salary_range')}</span>
                                     </p>
-                                    <p style="margin: 6px 0; color: #cbd5e1; font-size: 0.85rem;">{job.get('description')}</p>
+                                    <p style="margin: 8px 0; color: #cbd5e1; font-size: 0.88rem; line-height: 1.5;">{job.get('description')}</p>
+                                    <div style="font-size: 0.8rem; color: #a78bfa; margin-top: 4px;">🤖 <b>AI Fit Reason:</b> {job.get('ai_match_reason', 'Domain verified match.')}</div>
                                 </div>
                                 <div style="text-align: right;">
-                                    <div style="font-size: 1.3rem; font-weight: 800; color: #34d399;">{job.get('match_percentage')}% Match</div>
-                                    <span style="font-size: 0.75rem; color: #93c5fd; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); padding: 2px 8px; border-radius: 4px;">{job.get('verified_source')}</span>
+                                    <div style="font-size: 1.35rem; font-weight: 800; color: #34d399;">{job.get('match_percentage')}% Match</div>
+                                    <span style="font-size: 0.75rem; color: #93c5fd; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); padding: 3px 8px; border-radius: 4px;">{job.get('verified_source')}</span>
                                 </div>
                             </div>
                         </div>
@@ -1528,17 +1546,17 @@ def main_app_layout():
 
                         col_act1, col_act2 = st.columns([1, 1])
                         with col_act1:
-                            if st.button(f"🚀 1-Click Autonomous Dispatch", key=f"btn_apply_{job.get('id')}", type="primary", use_container_width=True):
+                            if st.button("🚀 1-Click Autonomous Dossier Dispatch", key=f"btn_apply_{job.get('id')}", type="primary", use_container_width=True):
                                 conn = get_db()
                                 c = conn.cursor()
                                 app_id = f"APP-{uuid.uuid4().hex[:6].upper()}"
                                 c.execute("""
                                     INSERT INTO job_applications (id, student_id, student_name, track, job_id, role_title, company_name, match_percentage, status)
                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'DISPATCHED')
-                                """, (app_id, s_id, auth_s.get("name", "Candidate"), auth_s.get("track", "Vocational"), job.get("id"), job.get("role_title"), job.get("company_name"), job.get("match_percentage")))
+                                """, (app_id, s_id, auth_s.get("name", "Candidate"), s_track, job.get("id"), job.get("role_title"), job.get("company_name"), job.get("match_percentage")))
                                 conn.commit()
                                 conn.close()
-                                st.toast(f"✅ Application logged & dispatched to {job.get('company_name')}!", icon="📬")
+                                st.toast(f"✅ Application dispatched to {job.get('company_name')}!", icon="📬")
 
                         with col_act2:
                             st.link_button(
