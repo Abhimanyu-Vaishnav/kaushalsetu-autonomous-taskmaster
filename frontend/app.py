@@ -1470,30 +1470,29 @@ def main_app_layout():
                         st.session_state["job_page_idx"] = 1
                         st.rerun()
 
-                # Cache Fetch
-                state_key = f"jobs_data_{s_id}"
-                if state_key not in st.session_state or st.session_state[state_key] is None:
-                    with st.spinner(f"🌐 Ingesting live RSS feeds & screening domain compatibility for {s_track}..."):
-                        st.session_state[state_key] = get_verified_jobs_with_gemini(s_id)
+                cache_key = f"jobs_feed_{s_id}"
+                if cache_key not in st.session_state or not st.session_state[cache_key]:
+                    with st.spinner(f"🔍 Discovering 20+ verified domain openings for {s_track}..."):
+                        st.session_state[cache_key] = get_verified_jobs_with_gemini(s_id)
                         st.session_state["job_page_idx"] = 1
 
-                all_openings = st.session_state.get(state_key, [])
+                all_jobs = list(st.session_state.get(cache_key, []))
 
-                # Filters
+                # Apply Filter
                 if search_txt:
-                    all_openings = [j for j in all_openings if search_txt.lower() in j.get("role_title", "").lower() or search_txt.lower() in j.get("company_name", "").lower() or search_txt.lower() in j.get("description", "").lower()]
+                    all_jobs = [j for j in all_jobs if search_txt.lower() in j.get("role_title", "").lower() or search_txt.lower() in j.get("company_name", "").lower() or search_txt.lower() in j.get("description", "").lower()]
 
                 if tier_choice != "All Tiers":
                     if "Local" in tier_choice:
-                        all_openings = [j for j in all_openings if j.get("country_tier") == "Local"]
+                        all_jobs = [j for j in all_jobs if j.get("country_tier") == "Local"]
                     elif "National" in tier_choice:
-                        all_openings = [j for j in all_openings if j.get("country_tier") == "National"]
+                        all_jobs = [j for j in all_jobs if j.get("country_tier") == "National"]
                     elif "Worldwide" in tier_choice:
-                        all_openings = [j for j in all_openings if j.get("country_tier") == "Worldwide"]
+                        all_jobs = [j for j in all_jobs if j.get("country_tier") == "Worldwide"]
 
-                # Pagination Math (20 jobs per page)
+                # 20 JOBS PER PAGE PAGINATION
                 PAGE_SIZE = 20
-                total_len = len(all_openings)
+                total_len = len(all_jobs)
                 total_pgs = max(1, (total_len + PAGE_SIZE - 1) // PAGE_SIZE)
                 if "job_page_idx" not in st.session_state:
                     st.session_state["job_page_idx"] = 1
@@ -1501,12 +1500,12 @@ def main_app_layout():
                 curr_pg = min(st.session_state["job_page_idx"], total_pgs)
                 start_p = (curr_pg - 1) * PAGE_SIZE
                 end_p = min(start_p + PAGE_SIZE, total_len)
-                paged_jobs = all_openings[start_p:end_p]
+                paged_jobs = all_jobs[start_p:end_p]
 
                 st.markdown(f"**Showing `{len(paged_jobs)}` of `{total_len}` Domain-Verified Openings** — *(Page {curr_pg} of {total_pgs})*")
 
                 if not paged_jobs:
-                    st.info("No active openings matched the filter. Click 'Rescan Intelligence Engine'.")
+                    st.info("No openings match the current search filter. Clear the search text or click 'Rescan Intelligence Engine'.")
                 else:
                     for idx, job in enumerate(paged_jobs):
                         is_top = (idx < 2 and curr_pg == 1)
@@ -1550,7 +1549,7 @@ def main_app_layout():
                         with col_b:
                             st.link_button("🔗 Open Direct Verified Vacancy Permalink ↗", url=job.get("apply_url"), use_container_width=True)
 
-                # Pagination Footer
+                # Pagination Controls
                 st.markdown("<br>", unsafe_allow_html=True)
                 col_prev, col_txt, col_next = st.columns([1, 2, 1])
                 with col_prev:
