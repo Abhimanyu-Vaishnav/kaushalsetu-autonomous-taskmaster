@@ -448,6 +448,7 @@ def direct_update_course(course_id: str, payload: dict):
         capstone = payload.get("capstone") or payload.get("course_description") or ""
         desc = payload.get("course_description") or payload.get("curriculum_summary") or title
         skills = payload.get("core_skills") or payload.get("skills") or []
+        mcq_count = int(payload.get("default_mcq_count") or payload.get("num_mcqs_config") or 10)
 
         modules_json = json.dumps(modules) if isinstance(modules, (list, dict)) else str(modules)
         mcqs_json = json.dumps(mcqs) if isinstance(mcqs, (list, dict)) else str(mcqs)
@@ -455,11 +456,27 @@ def direct_update_course(course_id: str, payload: dict):
 
         conn = get_db()
         c = conn.cursor()
+        c.execute("PRAGMA table_info(courses)")
+        existing_cols = [dict(r)["name"] for r in c.fetchall()]
+        if "updated_at" not in existing_cols:
+            try:
+                c.execute("ALTER TABLE courses ADD COLUMN updated_at TEXT DEFAULT ''")
+                conn.commit()
+            except Exception:
+                pass
+        if "default_mcq_count" not in existing_cols:
+            try:
+                c.execute("ALTER TABLE courses ADD COLUMN default_mcq_count INTEGER DEFAULT 10")
+                conn.commit()
+            except Exception:
+                pass
+
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         c.execute("""
             UPDATE courses 
-            SET title = ?, topic = ?, modules = ?, mcqs = ?, capstone = ?, course_description = ?, curriculum_summary = ?, curriculum_sections = ?, core_skills = ?, updated_at = CURRENT_TIMESTAMP
+            SET title = ?, course_name = ?, topic = ?, modules = ?, mcqs = ?, capstone = ?, course_description = ?, curriculum_summary = ?, curriculum_sections = ?, core_skills = ?, default_mcq_count = ?, updated_at = ?
             WHERE id = ?
-        """, (title, topic, modules_json, mcqs_json, capstone, desc, desc, modules_json, skills_json, str(course_id)))
+        """, (title, title, topic, modules_json, mcqs_json, capstone, desc, desc, modules_json, skills_json, mcq_count, now_str, str(course_id)))
         conn.commit()
         conn.close()
         try:

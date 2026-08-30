@@ -165,6 +165,18 @@ def init_complete_db():
         except Exception:
             pass
 
+    if "updated_at" not in cols:
+        try:
+            c.execute("ALTER TABLE courses ADD COLUMN updated_at TEXT DEFAULT ''")
+        except Exception:
+            pass
+
+    if "default_mcq_count" not in cols:
+        try:
+            c.execute("ALTER TABLE courses ADD COLUMN default_mcq_count INTEGER DEFAULT 10")
+        except Exception:
+            pass
+
     # Ensure other tables exist cleanly
     c.execute("""
         CREATE TABLE IF NOT EXISTS institutes (
