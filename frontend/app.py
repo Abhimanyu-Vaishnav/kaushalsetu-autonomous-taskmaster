@@ -154,6 +154,9 @@ except ImportError:
         normalize_dob
     )
 
+if 'dynamic_ai_job_synthesis_and_match' not in globals() or dynamic_ai_job_synthesis_and_match is None:
+    dynamic_ai_job_synthesis_and_match = globals().get('get_verified_jobs_for_candidate')
+
 try:
     init_complete_db()
 except Exception:
