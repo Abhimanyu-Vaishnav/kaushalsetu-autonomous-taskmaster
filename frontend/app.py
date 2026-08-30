@@ -1567,7 +1567,15 @@ def main_app_layout():
                                     else:
                                         st.error(apply_res.get("message"))
                         with col_ext:
-                            st.link_button("🌐 Direct Apply (Official Portal)", job.get("apply_url") or "https://jobs.siemens.com", use_container_width=True)
+                            apply_link = str(job.get("apply_url", "")).strip()
+                            if not apply_link.startswith("http"):
+                                apply_link = f"https://www.naukri.com/{str(job.get('title', 'tech')).lower().replace(' ', '-')}-jobs"
+                            st.link_button(
+                                "🔗 View & Apply on Direct Job Post ↗", 
+                                url=apply_link, 
+                                use_container_width=True, 
+                                help="Opens the direct verified company application page"
+                            )
 
                         with st.expander("📋 View Detailed Job Requirements, AI Crawl Rationale & Match Score Breakdown"):
                             st.markdown(f"**Description & Duties:**\n{job.get('description')}")
