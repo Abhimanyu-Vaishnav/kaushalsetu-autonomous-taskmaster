@@ -90,61 +90,34 @@ direct_search_and_match_jobs = getattr(_bmain, "direct_search_and_match_jobs", N
 direct_search_live_jobs = getattr(_bmain, "direct_search_live_jobs", None)
 fetch_live_web_jobs_raw = getattr(_bmain, "fetch_live_web_jobs_raw", None)
 verify_and_match_jobs_for_candidate = getattr(_bmain, "verify_and_match_jobs_for_candidate", None)
-def dynamic_ai_job_synthesis_and_match(student_id: str):
-    func = getattr(_bmain, "dynamic_ai_job_synthesis_and_match", None) or getattr(_bmain, "get_verified_jobs_for_candidate", None)
+def get_verified_jobs_with_gemini(student_id: str):
+    func = getattr(_bmain, "get_verified_jobs_with_gemini", None) or getattr(_bmain, "get_gemini_screened_jobs_for_student", None) or getattr(_bmain, "dynamic_ai_job_synthesis_and_match", None)
     if func and callable(func):
         try:
             res = func(student_id)
             if isinstance(res, list) and len(res) > 0:
                 return res
         except Exception as ex:
-            print(f"dynamic_ai_job_synthesis_and_match execution error: {ex}")
-    return [
-        {
-            "id": "JOB-FALLBACK-01",
-            "role_title": "Vocational Specialist & Industry Trainee",
-            "company_name": "Regional Partner Enterprise",
-            "location": "Delhi NCR",
-            "country_tier": "Local",
-            "geo_badge": "📍 Local Center Match (Delhi NCR)",
-            "salary_range": "₹5.0 LPA - ₹8.0 LPA",
-            "job_type": "Full-Time",
-            "required_skills": "Core Domain Competencies",
-            "description": "Technical operations, diagnostic review, and field project management.",
-            "match_percentage": 92,
-            "is_top_probability": True,
-            "ai_match_reason": "Verified domain compatibility.",
-            "apply_url": "https://www.naukri.com",
-            "verified_source": "Career Network"
-        }
-    ]
+            print(f"get_verified_jobs_with_gemini execution error: {ex}")
+    crawl_func = getattr(_bmain, "crawl_active_rss_and_web_jobs", None)
+    if crawl_func and callable(crawl_func):
+        return crawl_func("AI & Machine Learning Operations", "Python, MLOps")
+    return []
+
+def dynamic_ai_job_synthesis_and_match(student_id: str):
+    return get_verified_jobs_with_gemini(student_id)
 
 def get_gemini_screened_jobs_for_student(student_id: str):
-    func = getattr(_bmain, "get_gemini_screened_jobs_for_student", None) or getattr(_bmain, "dynamic_ai_job_synthesis_and_match", None)
-    if func and callable(func):
-        try:
-            res = func(student_id)
-            if isinstance(res, list) and len(res) > 0:
-                return res
-        except Exception as ex:
-            print(f"get_gemini_screened_jobs_for_student error: {ex}")
-    return dynamic_ai_job_synthesis_and_match(student_id)
+    return get_verified_jobs_with_gemini(student_id)
 
 def fetch_safe_live_jobs(candidate_track: str, candidate_skills: str):
-    func = getattr(_bmain, "fetch_safe_live_jobs", None) or getattr(_bmain, "get_gemini_screened_jobs_for_student", None)
-    if func and callable(func):
+    crawl_func = getattr(_bmain, "crawl_active_rss_and_web_jobs", None) or getattr(_bmain, "fetch_safe_live_jobs", None)
+    if crawl_func and callable(crawl_func):
         try:
-            import inspect
-            sig = inspect.signature(func)
-            if len(sig.parameters) == 2:
-                res = func(candidate_track, candidate_skills)
-            else:
-                res = func("STU-1004")
-            if isinstance(res, list) and len(res) > 0:
-                return res
+            return crawl_func(candidate_track, candidate_skills)
         except Exception as ex:
-            print(f"fetch_safe_live_jobs execution error: {ex}")
-    return dynamic_ai_job_synthesis_and_match("STU-1004")
+            print(f"fetch_safe_live_jobs error: {ex}")
+    return get_verified_jobs_with_gemini("STU-ADB833")
 
 def fetch_real_rss_live_jobs(search_keyword: str = "software"):
     return dynamic_ai_job_synthesis_and_match("STU-1004")
@@ -1477,80 +1450,73 @@ def main_app_layout():
             # TAB 3: LIVE VERIFIED JOB FINDER & OUTBOX
             with tab_jobs:
                 auth_s = st.session_state.get("authenticated_student", {})
-                s_id = auth_s.get("id", "STU-1004")
-                s_track = auth_s.get("track") or auth_s.get("course_name") or "Bio-Tech & Genetic Telemetry Analytics"
-                s_skills = auth_s.get("parsed_skills", "") or s_track
+                s_id = auth_s.get("id", "STU-ADB833")
+                s_track = auth_s.get("track") or auth_s.get("course_name") or "AI & Machine Learning Operations"
                 s_name = auth_s.get("name", "Candidate")
 
                 st.markdown("### 💼 Autonomous Career Intelligence & Verified Placement Outbox")
-                st.caption(f"Real-time domain matching for **{s_name}** | Course: **{s_track}**")
+                st.caption(f"Real-time RSS stream & Gemini evaluation for **{s_name}** | Course: **{s_track}**")
 
+                # Filter Controls
                 col_srch, col_tier, col_ref = st.columns([3, 2, 2])
                 with col_srch:
-                    search_term = st.text_input("🔍 Live Filter", "", placeholder="Filter by title, skill, or company...", key="rss_job_search_inp")
+                    search_txt = st.text_input("🔍 Live Filter", "", placeholder="Filter by title, company, or skill...", key="rss_job_search_inp")
                 with col_tier:
-                    tier_filter = st.selectbox("📍 Location Tier", ["All Tiers", "📍 Local Delhi NCR", "🇮🇳 National (India)", "🌐 Worldwide / Remote"], key="rss_job_geo_inp")
+                    tier_choice = st.selectbox("📍 Location Tier", ["All Tiers", "📍 Local Center (Delhi NCR)", "🇮🇳 National (India)", "🌐 Worldwide / Remote"], key="rss_job_geo_inp")
                 with col_ref:
                     st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
                     if st.button("🔄 Rescan Intelligence Engine", key="btn_recrawl_rss", use_container_width=True):
-                        st.session_state[f"jobs_feed_{s_id}"] = None
+                        st.session_state[f"jobs_data_{s_id}"] = None
                         st.session_state["job_page_idx"] = 1
                         st.rerun()
 
-                cache_key = f"jobs_feed_{s_id}"
-                if cache_key not in st.session_state or st.session_state[cache_key] is None:
-                    with st.spinner(f"🔍 Discovering 20+ verified domain openings for {s_track}..."):
-                        st.session_state[cache_key] = fetch_safe_live_jobs(s_track, s_skills)
+                # Cache Fetch
+                state_key = f"jobs_data_{s_id}"
+                if state_key not in st.session_state or st.session_state[state_key] is None:
+                    with st.spinner(f"🌐 Ingesting live RSS feeds & screening domain compatibility for {s_track}..."):
+                        st.session_state[state_key] = get_verified_jobs_with_gemini(s_id)
                         st.session_state["job_page_idx"] = 1
 
-                all_openings = st.session_state.get(cache_key, [])
+                all_openings = st.session_state.get(state_key, [])
 
                 # Filters
-                if search_term:
-                    all_openings = [j for j in all_openings if search_term.lower() in j.get("role_title", "").lower() or search_term.lower() in j.get("company_name", "").lower() or search_term.lower() in j.get("description", "").lower()]
+                if search_txt:
+                    all_openings = [j for j in all_openings if search_txt.lower() in j.get("role_title", "").lower() or search_txt.lower() in j.get("company_name", "").lower() or search_txt.lower() in j.get("description", "").lower()]
 
-                if tier_filter != "All Tiers":
-                    if "Local" in tier_filter:
+                if tier_choice != "All Tiers":
+                    if "Local" in tier_choice:
                         all_openings = [j for j in all_openings if j.get("country_tier") == "Local"]
-                    elif "National" in tier_filter:
+                    elif "National" in tier_choice:
                         all_openings = [j for j in all_openings if j.get("country_tier") == "National"]
-                    elif "Worldwide" in tier_filter:
+                    elif "Worldwide" in tier_choice:
                         all_openings = [j for j in all_openings if j.get("country_tier") == "Worldwide"]
 
-                # Pagination: 20 per page
-                PER_PAGE = 20
+                # Pagination Math (20 jobs per page)
+                PAGE_SIZE = 20
                 total_len = len(all_openings)
-                total_pgs = max(1, (total_len + PER_PAGE - 1) // PER_PAGE)
+                total_pgs = max(1, (total_len + PAGE_SIZE - 1) // PAGE_SIZE)
                 if "job_page_idx" not in st.session_state:
                     st.session_state["job_page_idx"] = 1
 
                 curr_pg = min(st.session_state["job_page_idx"], total_pgs)
-                start_p = (curr_pg - 1) * PER_PAGE
-                end_p = min(start_p + PER_PAGE, total_len)
+                start_p = (curr_pg - 1) * PAGE_SIZE
+                end_p = min(start_p + PAGE_SIZE, total_len)
                 paged_jobs = all_openings[start_p:end_p]
 
                 st.markdown(f"**Showing `{len(paged_jobs)}` of `{total_len}` Domain-Verified Openings** — *(Page {curr_pg} of {total_pgs})*")
 
                 if not paged_jobs:
-                    st.info("No active openings matched the current criteria. Click 'Rescan Intelligence Engine' to refresh live streams.")
+                    st.info("No active openings matched the filter. Click 'Rescan Intelligence Engine'.")
                 else:
                     for idx, job in enumerate(paged_jobs):
-                        is_top = job.get("is_top_probability", (idx < 2 and curr_pg == 1))
-                        top_pill = "<span style='background: #78350f; color: #fde68a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>⭐ TOP SELECTION PROBABILITY</span>" if is_top else ""
+                        is_top = (idx < 2 and curr_pg == 1)
+                        top_badge = "<span style='background: #78350f; color: #fde68a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;'>⭐ TOP SELECTION PROBABILITY</span>" if is_top else ""
                         pct = job.get("match_percentage", 90)
-
-                        # Sanitize URL to ensure it is never a root homepage
-                        raw_url = str(job.get("apply_url", "")).strip()
-                        if not raw_url.startswith("http") or raw_url.endswith("/homepage") or raw_url == "https://ncs.gov.in" or raw_url == "https://ncs.gov.in/":
-                            track_slug = s_track.lower().replace(" ", "-")
-                            direct_link = f"https://www.naukri.com/{track_slug}-jobs-in-delhi-ncr"
-                        else:
-                            direct_link = raw_url
 
                         card_html = f"""<div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 18px 22px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
         <div style="flex: 1; min-width: 280px;">
-            <h4 style="margin: 0; color: #ffffff; font-size: 1.18rem;">{job.get('role_title')} {top_pill}</h4>
+            <h4 style="margin: 0; color: #ffffff; font-size: 1.18rem;">{job.get('role_title')} {top_badge}</h4>
             <p style="margin: 4px 0; color: #94a3b8; font-size: 0.88rem;">
                 🏢 <b style="color: #f1f5f9;">{job.get('company_name')}</b> • 📍 <span style="color:#60a5fa;">{job.get('location')}</span> • 💰 <span style="color:#34d399; font-weight:600;">{job.get('salary_range')}</span>
             </p>
@@ -1562,7 +1528,7 @@ def main_app_layout():
         </div>
         <div style="text-align: right; min-width: 120px;">
             <div style="font-size: 1.45rem; font-weight: 800; color: #34d399;">{pct}% Match</div>
-            <span style="font-size: 0.72rem; color: #93c5fd; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); padding: 2px 6px; border-radius: 4px;">{job.get('verified_source')}</span>
+            <span style="font-size: 0.72rem; color: #93c5fd; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">{job.get('verified_source')}</span>
         </div>
     </div>
 </div>"""
@@ -1582,7 +1548,7 @@ def main_app_layout():
                                 conn.close()
                                 st.toast(f"✅ Application dispatched to {job.get('company_name')}!", icon="📬")
                         with col_b:
-                            st.link_button("🔗 Open Direct Verified Vacancy Permalink ↗", url=direct_link, use_container_width=True)
+                            st.link_button("🔗 Open Direct Verified Vacancy Permalink ↗", url=job.get("apply_url"), use_container_width=True)
 
                 # Pagination Footer
                 st.markdown("<br>", unsafe_allow_html=True)
