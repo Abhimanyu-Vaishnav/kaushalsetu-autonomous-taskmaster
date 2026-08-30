@@ -4684,10 +4684,19 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
     blacklist_kw = [str(k).lower() for k in ai_strategy.get("blacklist_keywords", [])]
 
     crawled_pool = []
+
+    # 3. Add Curated AI Placements Stream FIRST so exact domain roles take highest priority!
+    curated_items = ai_strategy.get("curated_placements", [])
+    for c_item in curated_items:
+        if isinstance(c_item, dict):
+            if "id" not in c_item:
+                c_item["id"] = f"JOB-AI-{uuid.uuid4().hex[:6].upper()}"
+            crawled_pool.append(c_item)
+
     ctx = ssl._create_unverified_context()
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
 
-    # 3. Dynamic Live Feed Parsing with Gemini AI Filter Rules
+    # 4. Dynamic Live Feed Parsing with Strict Title/Tag Keyword Matching
     try:
         jbc_url = "https://jobicy.com/api/v2/remote-jobs?count=50"
         req = urllib.request.Request(jbc_url, headers=headers)
@@ -4698,14 +4707,14 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
                 t_title = str(item.get("jobTitle", "")).strip()
                 t_desc = strip_tags(item.get("jobExcerpt", ""))
                 cats_str = ", ".join(item.get("jobCategories", []))
-                title_skills_str = (t_title + " " + cats_str + " " + t_desc).lower()
+                title_skills_only = (t_title + " " + cats_str).lower()
 
                 # Filter out cross-domain blacklist matches if non-tech
-                if blacklist_kw and any(bad in title_skills_str for bad in blacklist_kw):
-                    if not any(k in title_skills_str for k in domain_kw):
+                if blacklist_kw and any(bad in title_skills_only for bad in blacklist_kw):
+                    if not any(k in title_skills_only for k in domain_kw):
                         continue
 
-                is_domain_match = any(k in title_skills_str for k in domain_kw) if domain_kw else True
+                is_domain_match = any(k in title_skills_only for k in domain_kw) if domain_kw else False
                 if is_domain_match:
                     tier_tag = "Local" if idx % 3 == 0 else ("National" if idx % 3 == 1 else "Worldwide")
                     loc_tag = "Delhi NCR / Noida" if tier_tag == "Local" else ("Bengaluru / Mumbai" if tier_tag == "National" else item.get("jobGeo", "Global Remote"))
@@ -4735,16 +4744,16 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
                 t_title = str(item.get("title", "")).strip()
                 t_desc = strip_tags(item.get("description", ""))
                 tags_str = ", ".join(item.get("tags", []))
-                title_skills_str = (t_title + " " + tags_str + " " + t_desc).lower()
+                title_skills_only = (t_title + " " + tags_str).lower()
 
-                if any(bad in title_skills_str for bad in ["steuerberater", "praktikum", "gesucht", "all genders welcome", "(m/w/d)"]):
+                if any(bad in title_skills_only for bad in ["steuerberater", "praktikum", "gesucht", "all genders welcome", "(m/w/d)"]):
                     continue
 
-                if blacklist_kw and any(bad in title_skills_str for bad in blacklist_kw):
-                    if not any(k in title_skills_str for k in domain_kw):
+                if blacklist_kw and any(bad in title_skills_only for bad in blacklist_kw):
+                    if not any(k in title_skills_only for k in domain_kw):
                         continue
 
-                is_domain_match = any(k in title_skills_str for k in domain_kw) if domain_kw else True
+                is_domain_match = any(k in title_skills_only for k in domain_kw) if domain_kw else False
                 if is_domain_match:
                     tier_tag = "Local" if idx % 2 == 0 else "National"
                     crawled_pool.append({
@@ -4763,15 +4772,7 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
     except Exception as e:
         print(f"Arbeitnow live feed notice: {e}")
 
-    # Add Curated AI Placements Stream
-    curated_items = ai_strategy.get("curated_placements", [])
-    for c_item in curated_items:
-        if isinstance(c_item, dict):
-            if "id" not in c_item:
-                c_item["id"] = f"JOB-AI-{uuid.uuid4().hex[:6].upper()}"
-            crawled_pool.append(c_item)
-
-    # 4. Gemini 2.5 Flash Final Screening & Explainable AI Match Reasoning
+    # 5. Gemini 2.5 Flash Final Screening & Explainable AI Match Reasoning
     if genai and gemini_key and len(crawled_pool) > 0:
         try:
             genai.configure(api_key=gemini_key)
@@ -4816,6 +4817,7 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
 
     # Sort descending by match percentage
     crawled_pool.sort(key=lambda x: -x.get("match_percentage", 80))
+    return crawled_pool
     return crawled_pool
     return crawled_pool
 
