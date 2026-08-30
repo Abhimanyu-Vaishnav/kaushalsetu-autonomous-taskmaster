@@ -4626,10 +4626,11 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
                 combined_job_str = (t_title + " " + t_desc).lower()
 
                 # Filter out cross-domain mismatched jobs
-                if domain_cat != "SOFTWARE" and any(bad in combined_job_str for bad in [".net", "c#", "backend developer", "react developer", "database administrator", "devops engineer"]):
+                if domain_cat != "SOFTWARE" and any(bad in combined_job_str for bad in [".net", "c#", "backend developer", "react developer", "database administrator", "devops engineer", "software architect", "product management", "developer relations"]):
                     continue
 
-                if any(k in combined_job_str for k in domain_kw) or domain_cat == "SOFTWARE":
+                is_domain_match = any(k in combined_job_str for k in domain_kw)
+                if (domain_cat == "SOFTWARE") or is_domain_match:
                     tier_tag = "Local" if idx % 3 == 0 else ("National" if idx % 3 == 1 else "Worldwide")
                     loc_tag = "Delhi NCR / Noida" if tier_tag == "Local" else ("Bengaluru / Mumbai" if tier_tag == "National" else item.get("jobGeo", "Global Remote"))
                     crawled_pool.append({
@@ -4661,11 +4662,11 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
                 if any(bad in combined_job_str for bad in ["steuerberater", "praktikum", "gesucht", "all genders welcome", "(m/w/d)"]):
                     continue
 
-                if domain_cat != "SOFTWARE" and any(bad in combined_job_str for bad in [".net", "c#", "backend developer", "react developer", "database administrator", "software developer", "kotlin", "c++"]):
+                if domain_cat != "SOFTWARE" and any(bad in combined_job_str for bad in [".net", "c#", "backend developer", "react developer", "database administrator", "software developer", "kotlin", "c++", "product manager"]):
                     continue
 
-                kw_matches = sum(1 for k in domain_kw if k in combined_job_str)
-                if (domain_cat == "SOFTWARE" and kw_matches >= 1) or (domain_cat != "SOFTWARE" and kw_matches >= 1):
+                is_domain_match = any(k in combined_job_str for k in domain_kw)
+                if (domain_cat == "SOFTWARE") or is_domain_match:
                     tier_tag = "Local" if idx % 2 == 0 else "National"
                     crawled_pool.append({
                         "id": f"JOB-ABN-{uuid.uuid4().hex[:6].upper()}",
