@@ -1546,17 +1546,15 @@ def main_app_layout():
                     all_jobs = raw_feed_jobs
                     st.info(f"ℹ️ **AI Smart Assist**: Showing all domain-matched opportunities for **{s_track}**.")
 
-                # Dynamic Page Size State (Defaults to 20 jobs, expandable via 'Load More')
-                if "job_page_size" not in st.session_state:
-                    st.session_state["job_page_size"] = 20
-                if "job_page_idx" not in st.session_state:
-                    st.session_state["job_page_idx"] = 1
-
-                PAGE_SIZE = st.session_state["job_page_size"]
+                # FIXED 10 JOBS PER PAGE PAGINATION
+                PAGE_SIZE = 10
                 total_len = len(all_jobs)
                 total_pgs = max(1, (total_len + PAGE_SIZE - 1) // PAGE_SIZE)
 
-                curr_pg = min(st.session_state["job_page_idx"], total_pgs)
+                if "job_page_idx" not in st.session_state:
+                    st.session_state["job_page_idx"] = 1
+
+                curr_pg = min(max(1, st.session_state["job_page_idx"]), total_pgs)
                 start_p = (curr_pg - 1) * PAGE_SIZE
                 end_p = min(start_p + PAGE_SIZE, total_len)
                 paged_jobs = all_jobs[start_p:end_p]
@@ -1608,12 +1606,12 @@ def main_app_layout():
                         with col_b:
                             st.link_button("🔗 Open Direct Verified Vacancy Permalink ↗", url=job.get("apply_url"), use_container_width=True)
 
-                # LOAD MORE JOBS BUTTON (Right after the last job card)
-                if total_len > len(paged_jobs):
+                # LOAD NEXT PAGE BUTTON (Right after 10th job card)
+                if curr_pg < total_pgs:
                     st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
-                    if st.button("📥 Load 20 More Live Domain Openings...", key="btn_load_more_jobs_after_list", use_container_width=True):
-                        with st.spinner("⏳ Ingesting & screening 20 more live vacancies..."):
-                            st.session_state["job_page_size"] += 20
+                    if st.button(f"📥 Load 10 More Live Openings (Go to Page {curr_pg + 1} ➡)...", key=f"btn_load_next_page_{curr_pg}", use_container_width=True):
+                        with st.spinner(f"⏳ Loading Page {curr_pg + 1} with 10 more verified domain openings..."):
+                            st.session_state["job_page_idx"] = curr_pg + 1
                             time.sleep(0.3)
                             st.rerun()
 
@@ -1621,13 +1619,13 @@ def main_app_layout():
                 st.markdown("<br>", unsafe_allow_html=True)
                 col_prev, col_txt, col_next = st.columns([1, 2, 1])
                 with col_prev:
-                    if st.button("⬅ Previous 20 Jobs", disabled=(curr_pg <= 1), key="btn_prev_20_jobs", use_container_width=True):
+                    if st.button("⬅ Previous 10 Jobs", disabled=(curr_pg <= 1), key="btn_prev_10_jobs", use_container_width=True):
                         st.session_state["job_page_idx"] = max(1, curr_pg - 1)
                         st.rerun()
                 with col_txt:
                     st.markdown(f"<p style='text-align:center; margin-top:8px; color:#94a3b8; font-weight:600;'>Page {curr_pg} of {total_pgs} ({total_len} Total Jobs)</p>", unsafe_allow_html=True)
                 with col_next:
-                    if st.button("Next 20 Jobs ➡", disabled=(curr_pg >= total_pgs), key="btn_next_20_jobs", use_container_width=True):
+                    if st.button("Next 10 Jobs ➡", disabled=(curr_pg >= total_pgs), key="btn_next_10_jobs", use_container_width=True):
                         st.session_state["job_page_idx"] = min(total_pgs, curr_pg + 1)
                         st.rerun()
 
