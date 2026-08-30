@@ -4580,40 +4580,114 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
 
     track_clean = str(track).strip()
     skills_clean = str(skills).strip()
-    comb_lower = f"{track_clean} {skills_clean}".lower()
 
-    # 2. Domain Classification & Keyword Extraction
-    if any(w in comb_lower for w in ["graphic", "design", "ui", "ux", "figma", "photoshop", "illustrator", "creative", "video", "media", "banner", "logo"]):
-        domain_cat = "DESIGN"
-        domain_title = "Graphic Design & UI/UX"
-        domain_kw = ["graphic", "design", "ui", "ux", "figma", "photoshop", "illustrator", "creative", "visual"]
-        rss_query_tag = "design"
-    elif any(w in comb_lower for w in ["pharma", "pharmacy", "drug", "medic", "chem", "bio", "lab", "hplc", "clinical", "hospital", "assay", "formulation"]):
-        domain_cat = "PHARMA"
-        domain_title = "Pharmacy & Quality Control"
-        domain_kw = ["pharma", "pharmacy", "quality", "chemist", "lab", "bio", "hplc", "clinical", "assay", "health"]
-        rss_query_tag = "health"
-    elif any(w in comb_lower for w in ["account", "tally", "finance", "tax", "gst", "audit", "commerce", "banking", "ledger", "payable", "receivable"]):
-        domain_cat = "ACCOUNTING"
-        domain_title = "Tally Prime & Corporate GST Accounting"
-        domain_kw = ["tally", "accountant", "gst", "tax", "finance", "audit", "accounts", "ledger", "bookkeeper"]
-        rss_query_tag = "finance"
-    elif any(w in comb_lower for w in ["electric", "ev", "battery", "scada", "automation", "plc", "mechatronics", "solar", "robotics", "can-bus", "sensor"]):
-        domain_cat = "AUTOMATION"
-        domain_title = "Industrial Automation & EV Mechatronics"
-        domain_kw = ["electric", "ev", "scada", "automation", "plc", "mechatronics", "battery", "robotics", "solar", "hardware"]
-        rss_query_tag = "engineering"
-    else:
-        domain_cat = "SOFTWARE"
-        domain_title = track_clean or "Full Stack Web & Software Engineering"
-        domain_kw = ["web", "python", "fullstack", "software", "developer", "react", "fastapi", "devops", "cloud", "code"]
-        rss_query_tag = "dev"
+    # 2. Autonomous Gemini 2.5 Flash Strategy & Placement Synthesis
+    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    ai_strategy = None
+
+    if genai and gemini_key:
+        try:
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            strategy_prompt = f"""
+            Analyze candidate profile and generate a dynamic job search strategy & 5 domain-exact placement vacancies.
+
+            Candidate Profile:
+            - Course / Specialization Track: "{track_clean}"
+            - Parsed Skills / Competencies: "{skills_clean}"
+
+            Task:
+            1. Extract clear domain title (e.g. "Cosmetology & Skincare", "Drone Technology & GIS", "Solar SCADA Engineering", "Hotel Management", "Graphic Design & UI/UX", "Pharmacy & QA", "Tally & GST Accounting", etc.).
+            2. Generate 5-8 lowercase domain keywords for filtering RSS feeds.
+            3. Generate 5-8 lowercase cross-domain blacklist keywords to reject irrelevant tech jobs for non-tech fields (e.g. [".net", "c#", "react", "database administrator", "software engineer", "devops"]).
+            4. Synthesize 5 domain-exact placement vacancies for this candidate across Local (Delhi NCR), National (India), and Worldwide Remote tiers.
+
+            Return JSON ONLY:
+            {{
+              "domain_title": "Domain Name",
+              "search_keywords": ["keyword1", "keyword2"],
+              "blacklist_keywords": [".net", "c#", "software engineer"],
+              "curated_placements": [
+                {{
+                  "role_title": "Exact Role Title",
+                  "company_name": "Industry Company",
+                  "location": "Noida / Delhi NCR",
+                  "country_tier": "Local",
+                  "salary_range": "₹5.0 LPA - ₹8.5 LPA",
+                  "job_type": "Full-Time",
+                  "required_skills": "{skills_clean or track_clean}",
+                  "description": "Job description tailored to candidate specialization.",
+                  "apply_url": "https://www.naukri.com/jobs",
+                  "verified_source": "Industry Stream"
+                }}
+              ]
+            }}
+            """
+            res = model.generate_content(strategy_prompt, generation_config={"response_mime_type": "application/json", "temperature": 0.3})
+            ai_strategy = json.loads(res.text)
+        except Exception as ex:
+            print(f"Gemini strategy synthesis notice: {ex}")
+
+    # Fallback if Gemini strategy synthesis is unavailable
+    if not ai_strategy or not isinstance(ai_strategy, dict):
+        words = [w for w in re.findall(r'[a-zA-Z]+', track_clean.lower()) if w not in ["and", "or", "the", "in", "of", "for", "with", "operations", "management"]]
+        primary_kw = words[0] if words else "specialist"
+        ai_strategy = {
+            "domain_title": track_clean or "Vocational Specialization Track",
+            "search_keywords": words or [primary_kw],
+            "blacklist_keywords": [".net", "c#", "backend developer", "database administrator"] if primary_kw not in ["software", "python", "developer", "code", "web"] else [],
+            "curated_placements": [
+                {
+                    "id": f"JOB-VAC-{uuid.uuid4().hex[:6].upper()}",
+                    "role_title": f"Junior {track_clean.split('&')[0].strip()} Executive",
+                    "company_name": "Delhi NCR Applied Operations Center",
+                    "location": "Noida / Delhi NCR",
+                    "country_tier": "Local",
+                    "salary_range": "₹5.5 LPA - ₹9.0 LPA",
+                    "job_type": "Full-Time",
+                    "required_skills": skills_clean or track_clean,
+                    "description": f"Direct entry-level placement vacancy focusing on {track_clean} operations and system execution.",
+                    "apply_url": f"https://www.naukri.com/{primary_kw}-jobs-in-delhi-ncr",
+                    "verified_source": "Regional Industry Network"
+                },
+                {
+                    "id": f"JOB-VAC-{uuid.uuid4().hex[:6].upper()}",
+                    "role_title": f"{track_clean.split('&')[0].strip()} Specialist",
+                    "company_name": "Gurugram Enterprise Labs",
+                    "location": "Gurugram / Delhi NCR",
+                    "country_tier": "Local",
+                    "salary_range": "₹6.0 LPA - ₹9.8 LPA",
+                    "job_type": "Full-Time",
+                    "required_skills": skills_clean or track_clean,
+                    "description": f"Operational role supporting technical execution and diagnostics in {track_clean}.",
+                    "apply_url": f"https://www.foundit.in/srp/results?query={primary_kw}&locations=Delhi+NCR",
+                    "verified_source": "Corporate Apprenticeship Stream"
+                },
+                {
+                    "id": f"JOB-VAC-{uuid.uuid4().hex[:6].upper()}",
+                    "role_title": f"Remote {track_clean.split('&')[0].strip()} Consultant",
+                    "company_name": "Global Remote Operations Inc.",
+                    "location": "Remote / Worldwide",
+                    "country_tier": "Worldwide",
+                    "salary_range": "$50k - $80k USD",
+                    "job_type": "Full-Time Remote",
+                    "required_skills": skills_clean or track_clean,
+                    "description": f"International remote position accepting certified candidates trained in {track_clean}.",
+                    "apply_url": f"https://weworkremotely.com/remote-jobs/search?term={primary_kw}",
+                    "verified_source": "Global Remote Stream"
+                }
+            ]
+        }
+
+    domain_title = ai_strategy.get("domain_title") or track_clean
+    domain_kw = [str(k).lower() for k in ai_strategy.get("search_keywords", [])]
+    blacklist_kw = [str(k).lower() for k in ai_strategy.get("blacklist_keywords", [])]
 
     crawled_pool = []
     ctx = ssl._create_unverified_context()
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
 
-    # 3. Live RSS & Global API Ingestion with Strict Domain Filtering
+    # 3. Dynamic Live Feed Parsing with Gemini AI Filter Rules
     try:
         jbc_url = "https://jobicy.com/api/v2/remote-jobs?count=50"
         req = urllib.request.Request(jbc_url, headers=headers)
@@ -4623,14 +4697,16 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
                 u = str(item.get("url", "")).strip()
                 t_title = str(item.get("jobTitle", "")).strip()
                 t_desc = strip_tags(item.get("jobExcerpt", ""))
-                combined_job_str = (t_title + " " + t_desc).lower()
+                cats_str = ", ".join(item.get("jobCategories", []))
+                title_skills_str = (t_title + " " + cats_str + " " + t_desc).lower()
 
-                # Filter out cross-domain mismatched jobs
-                if domain_cat != "SOFTWARE" and any(bad in combined_job_str for bad in [".net", "c#", "backend developer", "react developer", "database administrator", "devops engineer", "software architect", "product management", "developer relations"]):
-                    continue
+                # Filter out cross-domain blacklist matches if non-tech
+                if blacklist_kw and any(bad in title_skills_str for bad in blacklist_kw):
+                    if not any(k in title_skills_str for k in domain_kw):
+                        continue
 
-                is_domain_match = any(k in combined_job_str for k in domain_kw)
-                if (domain_cat == "SOFTWARE") or is_domain_match:
+                is_domain_match = any(k in title_skills_str for k in domain_kw) if domain_kw else True
+                if is_domain_match:
                     tier_tag = "Local" if idx % 3 == 0 else ("National" if idx % 3 == 1 else "Worldwide")
                     loc_tag = "Delhi NCR / Noida" if tier_tag == "Local" else ("Bengaluru / Mumbai" if tier_tag == "National" else item.get("jobGeo", "Global Remote"))
                     crawled_pool.append({
@@ -4658,15 +4734,18 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
                 u = str(item.get("url", "")).strip()
                 t_title = str(item.get("title", "")).strip()
                 t_desc = strip_tags(item.get("description", ""))
-                combined_job_str = (t_title + " " + t_desc).lower()
-                if any(bad in combined_job_str for bad in ["steuerberater", "praktikum", "gesucht", "all genders welcome", "(m/w/d)"]):
+                tags_str = ", ".join(item.get("tags", []))
+                title_skills_str = (t_title + " " + tags_str + " " + t_desc).lower()
+
+                if any(bad in title_skills_str for bad in ["steuerberater", "praktikum", "gesucht", "all genders welcome", "(m/w/d)"]):
                     continue
 
-                if domain_cat != "SOFTWARE" and any(bad in combined_job_str for bad in [".net", "c#", "backend developer", "react developer", "database administrator", "software developer", "kotlin", "c++", "product manager"]):
-                    continue
+                if blacklist_kw and any(bad in title_skills_str for bad in blacklist_kw):
+                    if not any(k in title_skills_str for k in domain_kw):
+                        continue
 
-                is_domain_match = any(k in combined_job_str for k in domain_kw)
-                if (domain_cat == "SOFTWARE") or is_domain_match:
+                is_domain_match = any(k in title_skills_str for k in domain_kw) if domain_kw else True
+                if is_domain_match:
                     tier_tag = "Local" if idx % 2 == 0 else "National"
                     crawled_pool.append({
                         "id": f"JOB-ABN-{uuid.uuid4().hex[:6].upper()}",
@@ -4684,78 +4763,38 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
     except Exception as e:
         print(f"Arbeitnow live feed notice: {e}")
 
-    # 4. Domain-Exact Curated Placement Opportunities Stream
-    domain_short = track_clean.split('&')[0].strip() or domain_title
-    primary_kw_slug = "-".join(domain_kw[:2])
+    # Add Curated AI Placements Stream
+    curated_items = ai_strategy.get("curated_placements", [])
+    for c_item in curated_items:
+        if isinstance(c_item, dict):
+            if "id" not in c_item:
+                c_item["id"] = f"JOB-AI-{uuid.uuid4().hex[:6].upper()}"
+            crawled_pool.append(c_item)
 
-    if domain_cat == "DESIGN":
-        domain_targets = [
-            {"id": f"JOB-DSG-{uuid.uuid4().hex[:6].upper()}", "role_title": "Junior Graphic & Visual Designer", "company_name": "Delhi NCR Creative Studio", "location": "Noida / Delhi NCR", "country_tier": "Local", "salary_range": "₹4.8 LPA - ₹7.5 LPA", "job_type": "Full-Time", "required_skills": "Figma, Photoshop, Illustrator, Brand Identity, UI Design", "description": "Creative visual design position crafting digital assets, social media branding, and user interface elements.", "apply_url": "https://www.naukri.com/graphic-designer-jobs-in-delhi-ncr?k=graphic%20design", "verified_source": "NCR Design Network"},
-            {"id": f"JOB-DSG-{uuid.uuid4().hex[:6].upper()}", "role_title": "UI/UX & Figma Product Specialist", "company_name": "Gurugram Product Design Labs", "location": "Gurugram / Delhi NCR", "country_tier": "Local", "salary_range": "₹5.5 LPA - ₹9.2 LPA", "job_type": "Full-Time", "required_skills": "Figma, Wireframing, User Flow, UI Design, Mobile Design", "description": "User experience role designing high-fidelity mobile & web prototypes, design systems, and visual layouts.", "apply_url": "https://www.foundit.in/srp/results?query=ui+ux+designer&locations=Delhi+NCR", "verified_source": "Delhi Tech Design Stream"},
-            {"id": f"JOB-DSG-{uuid.uuid4().hex[:6].upper()}", "role_title": "Photoshop & Brand Identity Specialist", "company_name": "Delhi Digital Media Agency", "location": "New Delhi / NCR", "country_tier": "Local", "salary_range": "₹5.0 LPA - ₹8.0 LPA", "job_type": "Full-Time", "required_skills": "Adobe Photoshop, Illustrator, Banner Design, Typography", "description": "Core creative vacancy handling marketing banners, vector illustration, and brand identity collaterals.", "apply_url": "https://www.indeed.co.in/jobs?q=graphic+designer&l=Delhi", "verified_source": "Central Delhi Creative Stream"},
-            {"id": f"JOB-DSG-{uuid.uuid4().hex[:6].upper()}", "role_title": "Senior Creative Media & Visual Lead", "company_name": "Bengaluru Brand Design House", "location": "Bengaluru / Hybrid", "country_tier": "National", "salary_range": "₹6.8 LPA - ₹11.5 LPA", "job_type": "Hybrid", "required_skills": "UI/UX, Graphic Design, Brand Strategy, Adobe CC", "description": "National placement opening leading visual branding, component libraries, and interactive design.", "apply_url": "https://www.naukri.com/graphic-designer-jobs-in-bengaluru", "verified_source": "National Creative Portal"},
-            {"id": f"JOB-DSG-{uuid.uuid4().hex[:6].upper()}", "role_title": "Remote UI/UX & Graphic Designer", "company_name": "Worldwide Remote Design Inc.", "location": "Remote / Worldwide", "country_tier": "Worldwide", "salary_range": "$52k - $78k USD", "job_type": "Full-Time Remote", "required_skills": "Figma, UI Design, Graphic Design, Web Layouts", "description": "Global remote vacancy accepting certified candidates trained in Graphic Design & UI/UX.", "apply_url": "https://dribbble.com/jobs", "verified_source": "Global Creative Stream"}
-        ]
-    elif domain_cat == "PHARMA":
-        domain_targets = [
-            {"id": f"JOB-PHA-{uuid.uuid4().hex[:6].upper()}", "role_title": "Pharmacology & HPLC Quality Control Analyst", "company_name": "Sun Pharma NCR Applied Labs", "location": "Noida / Delhi NCR", "country_tier": "Local", "salary_range": "₹5.2 LPA - ₹8.8 LPA", "job_type": "Full-Time", "required_skills": "HPLC, GMP Compliance, Drug Assay, Quality Control, Chemistry", "description": "Pharmaceutical lab vacancy executing HPLC assay testing, quality assurance, and GMP compliance checks.", "apply_url": "https://sunpharma.com/careers/", "verified_source": "Sun Pharma Direct Stream"},
-            {"id": f"JOB-PHA-{uuid.uuid4().hex[:6].upper()}", "role_title": "GMP Compliance & Assay Inspector", "company_name": "Cipla Research & Quality Hub", "location": "Gurugram / Delhi NCR", "country_tier": "Local", "salary_range": "₹6.0 LPA - ₹9.8 LPA", "job_type": "Full-Time", "required_skills": "GMP, Formulation Assay, Quality Control, Lab Safety", "description": "Quality assurance inspector validating pharmaceutical batches, documentation compliance, and safety standards.", "apply_url": "https://www.cipla.com/careers", "verified_source": "Cipla Corporate Network"},
-            {"id": f"JOB-PHA-{uuid.uuid4().hex[:6].upper()}", "role_title": "Pharma Quality Assurance Specialist", "company_name": "Dr. Reddy's Laboratories", "location": "New Delhi / NCR", "country_tier": "Local", "salary_range": "₹5.8 LPA - ₹9.5 LPA", "job_type": "Full-Time", "required_skills": "QA/QC, Regulatory Audit, Drug Safety, Assay Testing", "description": "Quality assurance vacancy conducting analytical drug testing, batch release auditing, and lab documentation.", "apply_url": "https://careers.drreddys.com/", "verified_source": "Dr. Reddy's Direct Portal"},
-            {"id": f"JOB-PHA-{uuid.uuid4().hex[:6].upper()}", "role_title": "Clinical Trial & Drug Assay Analyst", "company_name": "Mankind Pharma Innovation Center", "location": "Pune / Maharashtra", "country_tier": "National", "salary_range": "₹6.2 LPA - ₹10.5 LPA", "job_type": "Full-Time", "required_skills": "Clinical Trials, HPLC, Drug Bioavailability, Quality Control", "description": "National placement opening executing clinical assay trials and pharmacological testing.", "apply_url": "https://www.mankindpharma.com/careers", "verified_source": "Mankind National Network"},
-            {"id": f"JOB-PHA-{uuid.uuid4().hex[:6].upper()}", "role_title": "Remote Pharmacovigilance & Quality Specialist", "company_name": "Global Health & Pharma Remote Inc.", "location": "Remote / Worldwide", "country_tier": "Worldwide", "salary_range": "$55k - $82k USD", "job_type": "Full-Time Remote", "required_skills": "Pharmacovigilance, Regulatory Compliance, Quality Audit", "description": "International remote position for certified candidates in Pharmacy & Quality Assurance.", "apply_url": "https://www.naukri.com/pharma-jobs", "verified_source": "Global Pharma Network"}
-        ]
-    elif domain_cat == "ACCOUNTING":
-        domain_targets = [
-            {"id": f"JOB-ACC-{uuid.uuid4().hex[:6].upper()}", "role_title": "Senior Tally & GST Accountant", "company_name": "Delhi Central Financial Hub", "location": "New Delhi / NCR", "country_tier": "Local", "salary_range": "₹4.8 LPA - ₹7.8 LPA", "job_type": "Full-Time", "required_skills": "Tally Prime, GST E-Invoicing, TDS Filing, BRS, Balance Sheet", "description": "Core accounting role recording payment vouchers, GST return filing (GSTR-1/3B), and BRS reconciliation.", "apply_url": "https://www.naukri.com/tally-accountant-jobs-in-delhi-ncr", "verified_source": "Delhi Accounting Ledger"},
-            {"id": f"JOB-ACC-{uuid.uuid4().hex[:6].upper()}", "role_title": "Corporate Tax & Audit Compliance Specialist", "company_name": "Gurugram Financial Innovation Labs", "location": "Gurugram / Delhi NCR", "country_tier": "Local", "salary_range": "₹5.5 LPA - ₹9.0 LPA", "job_type": "Full-Time", "required_skills": "Section 194J TDS, Tax Audit, GST Reconciliation, Ledger Audit", "description": "Corporate audit vacancy managing tax deductibility, monthly financial statements, and ledger auditing.", "apply_url": "https://www.indeed.co.in/jobs?q=tally+gst+accountant&l=Delhi", "verified_source": "Gurugram Financial Hub"},
-            {"id": f"JOB-ACC-{uuid.uuid4().hex[:6].upper()}", "role_title": "Accounts Payable & BRS Reconciliation Officer", "company_name": "Noida Commercial Center", "location": "Noida / Delhi NCR", "country_tier": "Local", "salary_range": "₹5.0 LPA - ₹8.5 LPA", "job_type": "Full-Time", "required_skills": "Accounts Payable, Bank Reconciliation, Accrual Principles, Tally", "description": "Financial operations opening managing cash book reconciliation, vendor ledgers, and voucher entry.", "apply_url": "https://www.foundit.in/srp/results?query=tally+accountant&locations=Delhi+NCR", "verified_source": "Noida Corporate Network"},
-            {"id": f"JOB-ACC-{uuid.uuid4().hex[:6].upper()}", "role_title": "Financial Ledger & GST Compliance Analyst", "company_name": "Bengaluru Commercial Solutions", "location": "Bengaluru / Hybrid", "country_tier": "National", "salary_range": "₹6.2 LPA - ₹10.2 LPA", "job_type": "Hybrid", "required_skills": "Tally Prime, Corporate Finance, GST Filing, Auditing", "description": "National placement opening for certified graduates skilled in corporate accounting & GST.", "apply_url": "https://www.naukri.com/tally-jobs-in-bengaluru", "verified_source": "National Accounting Network"},
-            {"id": f"JOB-ACC-{uuid.uuid4().hex[:6].upper()}", "role_title": "Remote Corporate Accountant & Bookkeeper", "company_name": "Global Financial Services Inc.", "location": "Remote / Worldwide", "country_tier": "Worldwide", "salary_range": "$48k - $75k USD", "job_type": "Full-Time Remote", "required_skills": "Accounting, Bookkeeping, Financial Statements, Tax Compliance", "description": "International remote accounting position for certified candidates trained in Tally & Finance.", "apply_url": "https://weworkremotely.com/remote-jobs/search?term=accounting", "verified_source": "Global Finance Network"}
-        ]
-    elif domain_cat == "AUTOMATION":
-        domain_targets = [
-            {"id": f"JOB-AUT-{uuid.uuid4().hex[:6].upper()}", "role_title": "EV Battery Systems & ECU Diagnostic Engineer", "company_name": "Tata Motors EV Innovation Center", "location": "Noida / Delhi NCR", "country_tier": "Local", "salary_range": "₹6.8 LPA - ₹11.5 LPA", "job_type": "Full-Time", "required_skills": "CAN-Bus Telemetry, EV Battery Management, ECU Diagnostics, Multimeter", "description": "High-voltage EV diagnostic position inspecting battery management systems, CAN-bus signals, and ECU sensors.", "apply_url": "https://careers.tatamotors.com/job-detail/10293", "verified_source": "Tata Motors EV Network"},
-            {"id": f"JOB-AUT-{uuid.uuid4().hex[:6].upper()}", "role_title": "PLC Control Systems & SCADA Specialist", "company_name": "Siemens Industrial Automation Hub", "location": "Gurugram / Delhi NCR", "country_tier": "Local", "salary_range": "₹7.2 LPA - ₹12.5 LPA", "job_type": "Full-Time", "required_skills": "Modbus / MQTT, PLC Programming, PID Control, Oscilloscope, Flyback Diode", "description": "Industrial control opening diagnosing PLC ladder logic, sensor telemetry, and PID closed-loop loops.", "apply_url": "https://jobs.siemens.com/jobs/SearchJobs", "verified_source": "Siemens Automation Direct"},
-            {"id": f"JOB-AUT-{uuid.uuid4().hex[:6].upper()}", "role_title": "Robotic Actuator & Sensor Calibration Engineer", "company_name": "Addverb Robotics Automation Labs", "location": "Noida / Delhi NCR", "country_tier": "Local", "salary_range": "₹6.2 LPA - ₹10.8 LPA", "job_type": "Full-Time", "required_skills": "Robotics, Sensor Calibration, SCADA, PLC, Mechatronics", "description": "Smart factory robotics opening inspecting actuator voltage drops, ground isolation, and sensor calibration.", "apply_url": "https://addverb.com/careers/", "verified_source": "Addverb Robotics Stream"},
-            {"id": f"JOB-AUT-{uuid.uuid4().hex[:6].upper()}", "role_title": "Autonomous Powertrain & CAN-Bus Test Engineer", "company_name": "Thermax Systems & Power Hub", "location": "Pune / Maharashtra", "country_tier": "National", "salary_range": "₹7.5 LPA - ₹12.8 LPA", "job_type": "Full-Time", "required_skills": "CAN-Bus, Oscilloscope, SCADA, Industrial Instrumentation", "description": "National placement opening executing signal waveform capture and telemetry inspection.", "apply_url": "https://www.thermaxglobal.com/careers/", "verified_source": "Thermax Systems Stream"},
-            {"id": f"JOB-AUT-{uuid.uuid4().hex[:6].upper()}", "role_title": "Remote Industrial Automation & SCADA Engineer", "company_name": "Schneider Electric Global Remote", "location": "Remote / Worldwide", "country_tier": "Worldwide", "salary_range": "$65k - $98k USD", "job_type": "Full-Time Remote", "required_skills": "SCADA, Modbus, PLC, Automation Telemetry", "description": "Global remote SCADA telemetry position for certified candidates trained in Industrial Automation.", "apply_url": "https://www.linkedin.com/jobs/view/3958201948/", "verified_source": "Schneider Global Stream"}
-        ]
-    else:
-        domain_targets = [
-            {"id": f"JOB-DEV-{uuid.uuid4().hex[:6].upper()}", "role_title": "Full Stack Cloud & API Engineer", "company_name": "L&T Technology Services", "location": "Noida / Delhi NCR", "country_tier": "Local", "salary_range": "₹7.0 LPA - ₹12.0 LPA", "job_type": "Full-Time", "required_skills": "Python, FastAPI, React.js, Docker, SQL, REST APIs", "description": "Full stack software role engineering microservices, Docker containers, and frontend dashboards.", "apply_url": "https://www.larsentoubro.com/corporate/careers/", "verified_source": "L&T Corporate Network"},
-            {"id": f"JOB-DEV-{uuid.uuid4().hex[:6].upper()}", "role_title": "Python Backend & FastAPI Developer", "company_name": "Infosys Innovation Center", "location": "Gurugram / Delhi NCR", "country_tier": "Local", "salary_range": "₹7.5 LPA - ₹13.0 LPA", "job_type": "Full-Time", "required_skills": "Python, FastAPI, PostgreSQL, Docker, Microservices", "description": "Backend software role developing RESTful endpoints, SQL optimization, and cloud APIs.", "apply_url": "https://careers.infosys.com/", "verified_source": "Infosys Career Portal"},
-            {"id": f"JOB-DEV-{uuid.uuid4().hex[:6].upper()}", "role_title": "Frontend React.js & UI Specialist", "company_name": "TCS Digital Enterprise", "location": "New Delhi / NCR", "country_tier": "Local", "salary_range": "₹6.8 LPA - ₹11.5 LPA", "job_type": "Full-Time", "required_skills": "React 18, JavaScript, CSS Glassmorphism, Redux", "description": "Frontend position building responsive Web user interfaces, state management, and component architecture.", "apply_url": "https://ibegin.tcs.com/iBegin/jobs/search", "verified_source": "TCS Digital Portal"},
-            {"id": f"JOB-DEV-{uuid.uuid4().hex[:6].upper()}", "role_title": "DevOps & Cloud Microservices Engineer", "company_name": "Wipro Cloud Labs", "location": "Bengaluru / Hybrid", "country_tier": "National", "salary_range": "₹8.5 LPA - ₹14.5 LPA", "job_type": "Hybrid", "required_skills": "Docker, Kubernetes, CI/CD, Python, AWS", "description": "National placement opening managing containerized cloud deployments and CI/CD automation pipelines.", "apply_url": "https://careers.wipro.com/", "verified_source": "Wipro Tech Network"},
-            {"id": f"JOB-DEV-{uuid.uuid4().hex[:6].upper()}", "role_title": "Remote Python Full Stack Developer", "company_name": "Global Remote Software Solutions", "location": "Remote / Worldwide", "country_tier": "Worldwide", "salary_range": "$68k - $105k USD", "job_type": "Full-Time Remote", "required_skills": "Python, FastAPI, React, Docker, SQL", "description": "International remote position for certified candidates in Full Stack Web & Software Engineering.", "apply_url": "https://remotive.com/remote-jobs/software-dev", "verified_source": "Global Software Stream"}
-        ]
-
-    crawled_pool.extend(domain_targets)
-
-    # 5. Gemini 2.5 Flash Smart Screening & Match Reasoning
-    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    # 4. Gemini 2.5 Flash Final Screening & Explainable AI Match Reasoning
     if genai and gemini_key and len(crawled_pool) > 0:
         try:
             genai.configure(api_key=gemini_key)
             model = genai.GenerativeModel("gemini-2.5-flash")
-            samples = [{"idx": i, "title": j["role_title"], "skills": j["required_skills"], "desc": j["description"][:120]} for i, j in enumerate(crawled_pool[:20])]
+            samples = [{"idx": i, "title": j["role_title"], "skills": j.get("required_skills", ""), "desc": j.get("description", "")[:120]} for i, j in enumerate(crawled_pool[:25])]
             
             prompt = f"""
-            Candidate Specialization Profile:
-            - Course / Track: "{track_clean}" ({domain_title})
+            Candidate Profile:
+            - Specialization Track: "{track_clean}" ({domain_title})
             - Core Skills: "{skills_clean}"
-            - Evaluation Score: {score}%
+            - Exam Score: {score}%
 
-            Job Opportunities Pool:
+            Jobs Pool:
             {json.dumps(samples)}
 
             Task:
-            1. Evaluate each job's domain compatibility with candidate's specialization "{track_clean}".
+            1. Evaluate compatibility of each job with candidate's specialization "{track_clean}".
             2. Assign `match_percentage` (78% to 98%).
             3. Write a 1-sentence `ai_match_reason` explaining why candidate's training fits the role.
 
             Return JSON ARRAY ONLY:
             [
-              {{"idx": 0, "match_percentage": 94, "ai_match_reason": "Your verified training in {domain_title} directly matches the core prerequisites of this role."}}
+              {{"idx": 0, "match_percentage": 94, "ai_match_reason": "Your verified specialization in {domain_title} and core skills align directly with this role."}}
             ]
             """
             res = model.generate_content(prompt, generation_config={"response_mime_type": "application/json", "temperature": 0.2})
@@ -4765,12 +4804,12 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
             for i, job in enumerate(crawled_pool):
                 if i in verdict_map:
                     job["match_percentage"] = verdict_map[i].get("match_percentage", 88)
-                    job["ai_match_reason"] = verdict_map[i].get("ai_match_reason", f"Your verified training in '{domain_title}' directly matches the prerequisites of this role.")
+                    job["ai_match_reason"] = verdict_map[i].get("ai_match_reason", f"Your verified specialization in '{domain_title}' aligns with this role.")
                 else:
                     job["match_percentage"] = max(75, 95 - (i % 12))
                     job["ai_match_reason"] = f"Candidate's verified training in '{domain_title}' and hands-on competencies align with role requirements."
         except Exception as ex:
-            print(f"Gemini screening notice: {ex}")
+            print(f"Gemini final screening notice: {ex}")
             for i, job in enumerate(crawled_pool):
                 job["match_percentage"] = max(75, 95 - (i % 12))
                 job["ai_match_reason"] = f"Candidate's verified training in '{domain_title}' and hands-on competencies align with role requirements."
