@@ -493,7 +493,29 @@ def init_complete_db():
     conn.commit()
     conn.close()
 
+    purge_generic_job_cache()
     restore_database_from_snapshot()
+
+def purge_generic_job_cache():
+    """
+    Permanently purges generic homepages, stale ncs.gov.in URLs, and invalid landing pages from SQLite DB.
+    """
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            DELETE FROM job_opportunities 
+            WHERE apply_url = 'https://ncs.gov.in' 
+               OR apply_url = 'https://ncs.gov.in/' 
+               OR apply_url LIKE '%ncs.gov.in%'
+               OR apply_url LIKE '%linkedin.com/jobs%'
+               OR apply_url IS NULL
+               OR apply_url = ''
+        """)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Purge generic job cache log: {e}")
 
 # Auto-run on import
 init_complete_db()

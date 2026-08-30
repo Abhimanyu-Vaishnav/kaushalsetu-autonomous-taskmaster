@@ -4609,7 +4609,15 @@ def fetch_live_web_jobs_raw(search_query="developer"):
         }
     ]
     raw_jobs.extend(local_partner_jobs)
-    return raw_jobs
+
+    # STRICT FILTER: Discard any job that has generic root URLs or ncs.gov.in
+    valid_jobs = []
+    for j in raw_jobs:
+        u = j.get("apply_url", "").strip().lower()
+        if u and not u.endswith(".gov.in") and not u.endswith(".gov.in/") and "/jobs" != u and u != "https://ncs.gov.in" and "ncs.gov.in" not in u:
+            valid_jobs.append(j)
+            
+    return valid_jobs
 
 def verify_and_match_jobs_for_candidate(student_id: str, offset: int = 0, limit: int = 12):
     """

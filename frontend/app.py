@@ -1567,12 +1567,15 @@ def main_app_layout():
                                     else:
                                         st.error(apply_res.get("message"))
                         with col_ext:
-                            apply_link = str(job.get("apply_url", "")).strip()
-                            if not apply_link.startswith("http"):
-                                apply_link = f"https://www.naukri.com/{str(job.get('title', 'tech')).lower().replace(' ', '-')}-jobs"
+                            raw_url = str(job.get("apply_url", "")).strip()
+                            if not raw_url.startswith("http") or "ncs.gov.in" in raw_url:
+                                job_query_slug = str(job.get('role_title') or job.get('title', 'tech')).lower().replace(' ', '-')
+                                apply_target = f"https://www.naukri.com/{job_query_slug}-jobs-in-delhi-ncr"
+                            else:
+                                apply_target = raw_url
                             st.link_button(
                                 "🔗 View & Apply on Direct Job Post ↗", 
-                                url=apply_link, 
+                                url=apply_target, 
                                 use_container_width=True, 
                                 help="Opens the direct verified company application page"
                             )
