@@ -1467,13 +1467,19 @@ def main_app_layout():
                     st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
                     if st.button("🔄 Rescan Intelligence Engine", key="btn_recrawl_rss", use_container_width=True):
                         st.session_state[f"jobs_data_{s_id}"] = None
+                        st.session_state[f"jobs_feed_{s_id}"] = None
                         st.session_state["job_page_idx"] = 1
+                        try:
+                            st.cache_data.clear()
+                        except Exception:
+                            pass
                         st.rerun()
 
                 cache_key = f"jobs_feed_{s_id}"
                 if cache_key not in st.session_state or not st.session_state[cache_key]:
                     with st.spinner(f"🔍 Discovering 20+ verified domain openings for {s_track}..."):
                         st.session_state[cache_key] = get_verified_jobs_with_gemini(s_id)
+                        st.session_state[f"jobs_data_{s_id}"] = st.session_state[cache_key]
                         st.session_state["job_page_idx"] = 1
 
                 all_jobs = list(st.session_state.get(cache_key, []))

@@ -4704,31 +4704,36 @@ def get_verified_jobs_with_gemini(student_id: str) -> list:
     crawled_pool.sort(key=lambda x: -x.get("match_percentage", 80))
     return crawled_pool
 
-def crawl_active_rss_and_web_jobs(track_name: str, skills_str: str) -> list:
-    return get_verified_jobs_with_gemini("STU-ADB833")
+def crawl_active_rss_and_web_jobs(track_name: str = "", skills_str: str = "") -> list:
+    sid = track_name if str(track_name).startswith("STU-") else ""
+    return get_verified_jobs_with_gemini(student_id=sid)
 
-def dynamic_ai_job_synthesis_and_match(student_id: str):
+def dynamic_ai_job_synthesis_and_match(student_id: str = "STU-1004"):
     return get_verified_jobs_with_gemini(student_id=student_id)
 
-def fetch_safe_live_jobs(candidate_track: str, candidate_skills: str):
-    return get_verified_jobs_with_gemini("STU-ADB833")
+def fetch_safe_live_jobs(candidate_track: str = "", candidate_skills: str = ""):
+    sid = candidate_track if str(candidate_track).startswith("STU-") else ""
+    return get_verified_jobs_with_gemini(student_id=sid)
 
-def get_gemini_screened_jobs_for_student(student_id: str):
+def get_gemini_screened_jobs_for_student(student_id: str = "STU-1004"):
     return get_verified_jobs_with_gemini(student_id=student_id)
 
-def fetch_domain_aligned_live_jobs(candidate_track: str):
-    return get_verified_jobs_with_gemini("STU-ADB833")
+def fetch_domain_aligned_live_jobs(candidate_track: str = ""):
+    sid = candidate_track if str(candidate_track).startswith("STU-") else ""
+    return get_verified_jobs_with_gemini(student_id=sid)
 
 def fetch_real_rss_live_jobs(search_keyword: str = "software"):
-    return get_verified_jobs_with_gemini("STU-ADB833")
+    sid = search_keyword if str(search_keyword).startswith("STU-") else ""
+    return get_verified_jobs_with_gemini(student_id=sid)
 
 def fetch_live_web_jobs_raw(search_query="developer"):
-    return get_verified_jobs_with_gemini("STU-ADB833")
+    sid = search_query if str(search_query).startswith("STU-") else ""
+    return get_verified_jobs_with_gemini(student_id=sid)
 
-def get_verified_jobs_for_candidate(student_id: str, limit_count: int = 20):
+def get_verified_jobs_for_candidate(student_id: str = "STU-1004", limit_count: int = 20):
     return get_verified_jobs_with_gemini(student_id=student_id)[:limit_count]
 
-def verify_and_match_jobs_for_candidate(student_id: str, offset: int = 0, limit: int = 20):
+def verify_and_match_jobs_for_candidate(student_id: str = "STU-1004", offset: int = 0, limit: int = 20):
     return get_verified_jobs_with_gemini(student_id=student_id)[offset:offset+limit]
 
 def direct_search_live_jobs(student_id: str, location: str = "Delhi NCR", query: str = "", page: int = 1, page_size: int = 8, force_rescan: bool = False, **kwargs):
