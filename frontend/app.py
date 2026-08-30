@@ -3676,25 +3676,29 @@ def main_app_layout():
                         st.dataframe(df, use_container_width=True)
                         
                         if st.button("🚀 Commit & Import All Candidates to Branch", type="primary", use_container_width=True):
+                            inst_id_val = sel_inst.get('id', 'INST-ROOT') if isinstance(sel_inst, dict) else 'INST-ROOT'
+                            branch_id_val = sel_branch.get('id', 'BR-MAIN') if isinstance(sel_branch, dict) else 'BR-MAIN'
+                            branch_name_val = sel_branch.get('branch_name', 'Delhi Center') if isinstance(sel_branch, dict) else 'Delhi Center'
                             imported_count = 0
                             for _, row in df.iterrows():
-                                r_b = direct_add_student({
-                                     "institute_id": sel_inst['id'],
-                                     "branch_id": sel_branch['id'],
-                                     "branch_name": sel_branch['branch_name'],
-                                     "full_name": row.get('FullName') or row.get('Name', 'Candidate'),
-                                     "dob": str(row.get('DOB', '2001-01-01')),
-                                     "email": str(row.get('Email', '')),
-                                     "phone": str(row.get('Phone', '')),
-                                     "course_name": str(row.get('CourseName', 'Vocational Track')),
+                                cand_payload = {
+                                     "institute_id": inst_id_val,
+                                     "branch_id": branch_id_val,
+                                     "branch_name": branch_name_val,
+                                     "full_name": row.get('FullName') or row.get('Name') or row.get('full_name') or row.get('student_name') or 'Candidate',
+                                     "dob": str(row.get('DOB') or row.get('dob') or '2001-01-01'),
+                                     "email": str(row.get('Email') or row.get('email') or ''),
+                                     "phone": str(row.get('Phone') or row.get('phone') or ''),
+                                     "course_name": str(row.get('CourseName') or row.get('course_name') or row.get('Track') or row.get('track') or 'Vocational Track'),
                                      "bio": "Bulk imported roster candidate",
                                      "fees_status": "PAID",
                                      "consent": 1
-                                 })
-                                if r_b.get("status") == "success" or r_b.get("success"):
+                                }
+                                r_b = direct_add_student(cand_payload)
+                                if isinstance(r_b, dict) and (r_b.get("status") == "success" or r_b.get("success")):
                                     imported_count += 1
                             st.session_state["csv_uploader_key"] += 1
-                            st.toast(f"✅ Successfully imported {imported_count} candidates into {sel_branch['branch_name']}!", icon="🎉")
+                            st.toast(f"✅ Successfully imported {imported_count} candidates into {branch_name_val}!", icon="🎉")
                             st.rerun()
                     except Exception as ex:
                         st.error(f"Error parsing bulk file: {ex}")

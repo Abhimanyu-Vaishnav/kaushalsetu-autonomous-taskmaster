@@ -567,12 +567,79 @@ def direct_get_students(branch_center: str = None, branch_id: str = None, instit
         return []
 
 def direct_add_student(payload: dict):
+    """Adds or imports a candidate into the SQLite database with full schema mapping."""
     if not isinstance(payload, dict):
         return {"status": "error", "message": "Invalid payload format"}
     try:
-        from database import add_student
+        conn = get_db()
+        c = conn.cursor()
+
+        # Fetch existing columns in students table dynamically
+        c.execute("PRAGMA table_info(students)")
+        cols = {dict(r)["name"] for r in c.fetchall()}
+
+        s_id = str(payload.get("id") or payload.get("student_id") or f"STU-{uuid.uuid4().hex[:6].upper()}").strip()
+        full_name = str(payload.get("full_name") or payload.get("FullName") or payload.get("name") or payload.get("student_name") or "Candidate").strip()
+        dob = str(payload.get("dob") or payload.get("DOB") or "2001-01-01").strip()
+        email = str(payload.get("email") or payload.get("Email") or "").strip()
+        phone = str(payload.get("phone") or payload.get("Phone") or "").strip()
+        track = str(payload.get("course_name") or payload.get("CourseName") or payload.get("track") or "Vocational Track").strip()
+        branch_id = str(payload.get("branch_id") or payload.get("branch") or "BR-MAIN").strip()
+        branch_name = str(payload.get("branch_name") or payload.get("branch_center") or "Delhi Center").strip()
+        institute_id = str(payload.get("institute_id") or "INST-ROOT").strip()
+        course_id = str(payload.get("course_id") or "CRS-MAIN").strip()
+
+        fields = {
+            "id": s_id,
+            "student_id": s_id,
+            "name": full_name,
+            "full_name": full_name,
+            "student_name": full_name,
+            "dob": dob,
+            "email": email,
+            "phone": phone,
+            "track": track,
+            "course_name": track,
+            "branch_id": branch_id,
+            "branch_name": branch_name,
+            "branch_center": branch_name,
+            "institute_id": institute_id,
+            "course_id": course_id,
+            "status_seal": "PENDING",
+            "aggregate_score": 0.0
+        }
+
+        valid_fields = {k: v for k, v in fields.items() if k in cols}
+        col_names = ", ".join(valid_fields.keys())
+        placeholders = ", ".join(["?"] * len(valid_fields))
+
+        c.execute(f"INSERT OR REPLACE INTO students ({col_names}) VALUES ({placeholders})", list(valid_fields.values()))
+        conn.commit()
+        conn.close()
+
+        try:
+            record_agent_activity_log(
+                action_type="STUDENT_IMPORT",
+                description=f"Autonomous Agent imported candidate '{full_name}' ({s_id}) into branch '{branch_name}'.",
+                student_id=s_id,
+                branch_id=branch_id
+            )
+            export_database_snapshot()
+        except Exception:
+            pass
+
+        return {
+            "status": "success",
+            "success": True,
+            "student_id": s_id,
+            "id": s_id,
+            "message": f"Candidate '{full_name}' registered successfully."
+        }
     except Exception as e:
+        print(f"[DIRECT ADD STUDENT ERROR] {e}")
         return {"status": "error", "message": str(e)}
+
+direct_create_student = direct_add_student
 
 def record_agent_activity_log(action_type: str, description: str, student_id: str = "", branch_id: str = "", metadata: dict = None):
     """
