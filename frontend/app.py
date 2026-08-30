@@ -1606,11 +1606,17 @@ def main_app_layout():
                         with col_b:
                             st.link_button("🔗 Open Direct Verified Vacancy Permalink ↗", url=job.get("apply_url"), use_container_width=True)
 
-                        # DIRECTLY AFTER THE LAST JOB CARD (idx == len(paged_jobs) - 1)
-                        if idx == len(paged_jobs) - 1 and curr_pg < total_pgs:
-                            st.markdown("<div style='margin-top: 18px;'></div>", unsafe_allow_html=True)
-                            if st.button(f"📥 Load 10 More Live Openings (Go to Page {curr_pg + 1} of {total_pgs} ➡)...", key=f"btn_load_more_after_card_{curr_pg}", type="primary", use_container_width=True):
-                                with st.spinner(f"⏳ Loading Page {curr_pg + 1} with 10 more verified domain openings..."):
+                        # SHOW LOAD MORE BUTTON ONLY AFTER THE VERY LAST JOB OF THE ENTIRE LIST
+                        is_absolute_last_job = (start_p + idx + 1 == total_len)
+                        if is_absolute_last_job:
+                            st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+                            if st.button("📥 Load 10 More Live Domain Openings...", key=f"btn_load_more_end_{total_len}", type="primary", use_container_width=True):
+                                with st.spinner("⏳ Ingesting & screening 10 more live domain vacancies..."):
+                                    more_jobs = get_verified_jobs_with_gemini(s_id)
+                                    if more_jobs:
+                                        curr_list = st.session_state.get(cache_key, [])
+                                        curr_list.extend(more_jobs[:10])
+                                        st.session_state[cache_key] = curr_list
                                     st.session_state["job_page_idx"] = curr_pg + 1
                                     time.sleep(0.3)
                                     st.rerun()
