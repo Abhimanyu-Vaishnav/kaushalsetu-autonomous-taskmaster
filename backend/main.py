@@ -759,10 +759,13 @@ def direct_clear_all_agent_logs():
         conn = get_db()
         c = conn.cursor()
         c.execute("DELETE FROM agent_activity_logs")
-        c.execute("INSERT INTO agent_activity_logs (action, details) VALUES ('AUDIT_LOG_PURGED', 'Audit ledger cleared by administrator.')")
         conn.commit()
         conn.close()
-        return {"status": "success", "success": True, "message": "All activity logs cleared."}
+        try:
+            export_database_snapshot()
+        except Exception:
+            pass
+        return {"status": "success", "success": True, "message": "All activity logs cleared cleanly."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

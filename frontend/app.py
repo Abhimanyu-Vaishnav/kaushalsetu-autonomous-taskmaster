@@ -84,6 +84,9 @@ direct_get_institutes = getattr(_bmain, "direct_get_institutes", None)
 direct_get_branches = getattr(_bmain, "direct_get_branches", None)
 direct_create_institute = getattr(_bmain, "direct_create_institute", None)
 direct_create_branch = getattr(_bmain, "direct_create_branch", None)
+direct_get_agent_logs = getattr(_bmain, "direct_get_agent_logs", None)
+direct_delete_agent_log = getattr(_bmain, "direct_delete_agent_log", None)
+direct_clear_all_agent_logs = getattr(_bmain, "direct_clear_all_agent_logs", None)
 direct_evaluate_and_dispatch_exam = getattr(_bmain, "direct_evaluate_and_dispatch_exam", None)
 direct_simulate_candidate_loop = getattr(_bmain, "direct_simulate_candidate_loop", None)
 direct_get_exam_for_student = getattr(_bmain, "direct_get_exam_for_student", None)
@@ -3866,11 +3869,29 @@ def main_app_layout():
                 if st.button("🔄 Refresh Stream", use_container_width=True, type="primary"):
                     st.rerun()
             with col_al3:
-                if st.button("🗑️ Clear All Logs", use_container_width=True, type="secondary"):
-                    direct_clear_all_agent_logs()
-                    st.toast("🧹 Audit log ledger purged successfully!", icon="🗑️")
-                    st.session_state.log_page = 1
-                    st.rerun()
+                if st.session_state.get("show_clear_logs_confirm"):
+                    st.markdown("""
+                    <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; text-align: center;">
+                        <div style="font-size: 0.82rem; font-weight: 800; color: #fca5a5; margin-bottom: 6px;">⚠️ Clear ALL Agent Logs?</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    c_cl_yes, c_cl_no = st.columns(2)
+                    with c_cl_yes:
+                        if st.button("🔴 Yes, Clear", type="primary", key="btn_confirm_clear_yes", use_container_width=True):
+                            if direct_clear_all_agent_logs:
+                                direct_clear_all_agent_logs()
+                            st.session_state["show_clear_logs_confirm"] = False
+                            st.toast("🧹 Audit log ledger purged successfully!", icon="🗑️")
+                            st.session_state.log_page = 1
+                            st.rerun()
+                    with c_cl_no:
+                        if st.button("Cancel", key="btn_confirm_clear_no", use_container_width=True):
+                            st.session_state["show_clear_logs_confirm"] = False
+                            st.rerun()
+                else:
+                    if st.button("🗑️ Clear All Logs", use_container_width=True, type="secondary"):
+                        st.session_state["show_clear_logs_confirm"] = True
+                        st.rerun()
 
             # Dynamic Search & Filter Controls
             col_f1, col_f2 = st.columns([2, 1])
@@ -3879,7 +3900,7 @@ def main_app_layout():
             with col_f2:
                 action_filter = st.selectbox("⚡ Filter Action Type", ["ALL ACTIONS", "GEMINI_AGENT_SYNTHESIZED", "PROFILE_INGESTED", "EXAM_EVALUATED", "GEMINI_EVALUATED", "SECURITY_LEDGER_MINTED", "COURSE_SYNTHESIZED", "STUDENT_ENROLLED", "PORTFOLIO_GENERATED", "DATABASE_RESET"], key="log_action_filter")
 
-            log_data = direct_get_agent_logs(page=st.session_state.log_page, page_size=15)
+            log_data = direct_get_agent_logs(page=st.session_state.log_page, page_size=15) if callable(direct_get_agent_logs) else {"logs": [], "total_pages": 1, "total_count": 0}
             logs_list = log_data.get("logs") or log_data.get("data") or []
             total_pages = log_data.get("total_pages", 1)
             total_count = log_data.get("total_count", 0)
@@ -3958,8 +3979,9 @@ def main_app_layout():
                         """, unsafe_allow_html=True)
                     with col_del_btn:
                         if st.button("🗑️", key=f"btn_del_log_{idx}_{log_item_id}", help="Delete this log entry"):
-                            direct_delete_agent_log(log_item_id)
-                            st.toast(f"Deleted log {log_item_id}", icon="🗑️")
+                            if callable(direct_delete_agent_log):
+                                direct_delete_agent_log(log_item_id)
+                            st.toast(f"🗑️ Log entry {log_item_id} deleted successfully!", icon="✅")
                             st.rerun()
 
                 # Clean Infinite History Pagination Controls

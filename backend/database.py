@@ -316,22 +316,7 @@ def init_complete_db():
             except Exception:
                 pass
 
-    # Seed initial operational activity logs if database is empty
-    c.execute("SELECT COUNT(*) FROM agent_activity_logs")
-    if c.fetchone()[0] == 0:
-        seed_logs = [
-            ("SYSTEM_BOOT", "system", "SYS-001", "[0.2ms] KaushalSetu Autonomous Taskmaster Engine initialized & PRAGMA WAL enabled."),
-            ("INSTITUTE_NETWORK_ACTIVE", "institute", "SKILLFORGE-HQ", "[1.4ms] Connected SkillForge Vocational Foundation HQ & Nangloi Center Node."),
-            ("AGENT_ROUTING_ONLINE", "agent", "AGENT-MAIN", "[0.8ms] Dual-AI Multimodal Screener & Gemini 2.5 Multi-Tenant Agent online."),
-            ("COURSE_SYNTHESIZED", "course", "CRS-MAIN", "[14.2ms] Synthesized vocational diagnostic curriculum for Vocational Mechatronics."),
-            ("SECURITY_LEDGER_MINTED", "ledger", "0x27A524D65BA86A69", "[0.5ms] Minted SHA-256 tamper-proof ledger root seal for institutional verification.")
-        ]
-        for act, etype, eid, det in seed_logs:
-            c.execute("""
-                INSERT INTO agent_activity_logs (action, action_type, entity_type, entity_id, details, description, timestamp)
-                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """, (act, act, etype, eid, det, det))
-        conn.commit()
+    # Table agent_activity_logs initialized cleanly without mandatory seed injection
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS placement_ledger (
@@ -930,7 +915,15 @@ def reset_database_clean_slate() -> bool:
     # 3. Re-initialize clean database schema without mock data
     init_db()
 
-    # 4. Clean up generated static portfolio HTML files
+    # 4. Wipe persistent snapshot files completely
+    for s_file in [SNAPSHOT_FILE, ROOT_SNAPSHOT]:
+        if os.path.exists(s_file):
+            try:
+                os.remove(s_file)
+            except Exception:
+                pass
+
+    # 5. Clean up generated static portfolio HTML files
     portfolio_dir = os.path.join(base_dir, "static", "portfolios")
     if os.path.exists(portfolio_dir):
         for f in os.listdir(portfolio_dir):
